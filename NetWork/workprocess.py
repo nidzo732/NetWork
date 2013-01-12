@@ -1,11 +1,10 @@
-######################################################################
-#Module that implements a WorkProcess class. 
-#This class will be used as a wrapper for real long running
-#processes that will be created on the worker computers
-#
-#Created on Jan 8, 2013
-#author: Nikola Pavlović <nikola825@gmail.com>
-#####################################################################
+"""
+Module that implements a WorkProcess class. 
+This class will be used as a wrapper for real long running
+rocesses that will be created on the worker computers
+
+Created on Jan 8, 2013
+"""
 
 from multiprocessing import Process, Manager, Event
 
@@ -19,7 +18,7 @@ _RS_RUNNING=1
 _RS_FINISHED=2
 
 
-#Keys used for the Manager WorkProcess.WorkStatus list that comunicates
+#Positions in the WorkProcess.WorkStatus list that comunicates
 #with the running process
 #Internal use only
 
@@ -65,7 +64,7 @@ class WorkProcess:
         Run the process
         If running multiple times do a .reset before each run
         """
-        if not self.workStatus[_WS_RUNSTATE]==_RS_STOPPED:  #Can't run the process twice
+        if not self.workStatus[_WS_RUNSTATE]==_RS_STOPPED: #Can't run twice
             raise AlreadyRunningError("WorkProcess is already running")    
         self.finishedEvent.clear()    
         self.worker.start()
@@ -129,7 +128,11 @@ class WorkProcess:
         if self.worker.is_alive():
             self.worker.terminate()
         self.worker.join()
-        self.worker=Process(target=self.runner, args=(self.target, self.workStatus, self.finishedEvent, self.args, self.kwargs,))
+        self.worker=Process(target=self.runner, 
+                            args=(self.target, self.workStatus, 
+                                  self.finishedEvent, self.args, 
+                                  self.kwargs,)
+                            )
         self.worker.daemon=True
     
     def __getattr__(self, key):
@@ -151,6 +154,5 @@ class WorkProcess:
         finally:
             manager[_WS_RUNSTATE]=_RS_FINISHED
             finish_event.set()
-            
             
     
