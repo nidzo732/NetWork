@@ -7,27 +7,21 @@ Created on Jan 11, 2013
 
 from .parsers import parseIPRange
 from .worker import Worker
-from multiprocessing import Process, Queue, Manager
+from multiprocessing import Process, Queue, Manager, Event
+import socket
+from .networking import getLocalIP, parseRequest
 
 #Positions in the WorkGroup.controlls list that is used for communication between
 #the processes
-_CNT_WORKERS=0
+CNT_WORKERS=0
+CNT_PORT=1
+CNT_SHOULD_STOP=2
+
+CMD_HALT=b"HLT"     #Put this on the queue to stop the _mainloopcontroll
 
 #Exceptions used by workgroup
 class NoWorkersError(Exception):pass
 
-#An event loop that will receive the network input from the worker computers
-#and sends it to the comm Queue
-def _mainloopReceiver(comm, controlls):     #Not yet implemented
-    pass
-
-#An event loop that will receive tasks through the comm Queue and act
-#accordingly
-def _mainloopControll(comm, controlls):     #Not yet implemented
-    job=comm.get()
-    while job!="HALT":
-        print("GOT A JOB", job)
-        job=comm.get()
 
 class WorkGroup:    #Not yet implemented
     """
@@ -53,15 +47,17 @@ class WorkGroup:    #Not yet implemented
         will be raised
         """
         self.controlls=Manager().list(range(10)) #Will be used for communication 
-        self.controlls[_CNT_WORKERS]=[]          #between the mainloops
+        self.controlls[CNT_WORKERS]=[]          #between the mainloops
+        self.controlls[CNT_PORT]=port
+        self.controlls[CNT_SHOULD_STOP]=False
         if iprange:                             
             for i in parseIPRange(iprange):     #parse the iprange if given
-                self.controlls[_CNT_WORKERS]+=[Worker((i, port)),]
+                self.controlls[CNT_WORKERS]+=[Worker((i, port)),]
         
         if workers:     #Use the workers in the workers paramerer if given
             for i in workers:
                 if i.testConnection():
-                    self.workers.append(i)
+                    self.controlls[CNT_WORKERS]+=[workers[i]]
         if not (iprange or workers):        #Cant work without workers
             raise NoWorkersError("No workers given")
         self.queue=Queue()      #Will be used to give orders to the mainloop
@@ -70,17 +66,46 @@ class WorkGroup:    #Not yet implemented
         """
         Run the event loop, this should be started before doing any real work
         """
-        self._mainloocontroll=Process(target=_mainloopControll, 
+        self._mainloopcontroll=Process(target=WorkGroup._mainloopControll, 
                                       args=(self.queue, self.controlls))
-        self._mainloopreceiver=Process(target=_mainloopReceiver, 
+        self._mainloopreceiver=Process(target=WorkGroup._mainloopReceiver, 
                                        args=(self.queue, self.controlls))
-        self._mainloocontroll.daemon=True
+        self._mainloopcontroll.daemon=True
         self._mainloopreceiver.daemon=True
-        self._mainloocontroll.start()
+        self._mainloopcontroll.start()
         self._mainloopreceiver.start()
     
-   
+    def halt(self):
+        """
+        Halt the mainloops
+        """
+        self.queue.put(CMD_HALT)
+        self._mainloopreceiver.join()
+        self._mainloopcontroll.join()
     
+    def __del__(self):
+        if self._mainloopcontroll.is_alive() or self._mainloopreceiver.is_alive():
+            self.halt()
     
-            
-            
+    #An event loop that will receive the network input from the worker computers
+    #and sends it to the comm Queue
+    @staticmethod
+    def _mainloopReceiver(commqueue, controlls):     #Not yet implemented
+        receiverSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        receiverSocket.bind((getLocalIP(), controlls[CNT_PORT]))
+        receiverSocket.listen(5)
+        while True and not controlls[CNT_SHOULD_STOP]:
+            commSocket, comAddr=receiverSocket.accept()
+            parseRequest(commSocket, commqueue)
+        receiverSocket.close()
+        
+
+    #An event loop that will receive tasks through the commqueue Queue and act
+    #accordingly
+    @staticmethod
+    def _mainloopControll(commqueue, controlls):     #Not yet implemented
+        job=commqueue.get()
+        while job!=CMD_HALT:
+            print("GOT A JOB", job)
+            job=commqueue.get()
+        controlls[CNT_SHOULD_STOP]=True
