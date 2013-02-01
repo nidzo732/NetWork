@@ -6,3 +6,5 @@ from NetWork.workgroup import WorkGroup
 import time
 w=WorkGroup(iprange=("192.168.1.2", "192.168.1.3"))
 w.mainloop()
+time.sleep(15)
+w.halt()

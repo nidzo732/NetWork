@@ -9,13 +9,16 @@ from .parsers import parseIPRange
 from .worker import Worker
 from multiprocessing import Process, Queue, Manager, Event
 import socket
-from .networking import getLocalIP, parseRequest
+from .networking import getLocalIP
+from .handlers import handleRequestMaster
+from threading import Thread
 
 #Positions in the WorkGroup.controlls list that is used for communication between
 #the processes
 CNT_WORKERS=0
 CNT_PORT=1
 CNT_SHOULD_STOP=2
+CNT_LISTEN_SOCKET=3
 
 CMD_HALT=b"HLT"     #Put this on the queue to stop the _mainloopcontroll
 
@@ -49,7 +52,8 @@ class WorkGroup:    #Not yet implemented
         self.controlls=Manager().list(range(10)) #Will be used for communication 
         self.controlls[CNT_WORKERS]=[]          #between the mainloops
         self.controlls[CNT_PORT]=port
-        self.controlls[CNT_SHOULD_STOP]=False
+        self.listenerSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #self.controlls[CNT_SHOULD_STOP]=False
         if iprange:                             
             for i in parseIPRange(iprange):     #parse the iprange if given
                 self.controlls[CNT_WORKERS]+=[Worker((i, port)),]
@@ -69,7 +73,7 @@ class WorkGroup:    #Not yet implemented
         self._mainloopcontroll=Process(target=WorkGroup._mainloopControll, 
                                       args=(self.queue, self.controlls))
         self._mainloopreceiver=Process(target=WorkGroup._mainloopReceiver, 
-                                       args=(self.queue, self.controlls))
+                                       args=(self.queue, self.controlls, self.listenerSocket))
         self._mainloopcontroll.daemon=True
         self._mainloopreceiver.daemon=True
         self._mainloopcontroll.start()
@@ -80,24 +84,25 @@ class WorkGroup:    #Not yet implemented
         Halt the mainloops
         """
         self.queue.put(CMD_HALT)
-        self._mainloopreceiver.join()
+        self.listenerSocket.close()
         self._mainloopcontroll.join()
+        self._mainloopreceiver.terminate()
     
     def __del__(self):
         if self._mainloopcontroll.is_alive() or self._mainloopreceiver.is_alive():
             self.halt()
     
-    #An event loop that will receive the network input from the worker computers
+    #An event loop that receives the network input from the worker computers
     #and sends it to the comm Queue
     @staticmethod
-    def _mainloopReceiver(commqueue, controlls):     #Not yet implemented
-        receiverSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        receiverSocket.bind((getLocalIP(), controlls[CNT_PORT]))
-        receiverSocket.listen(5)
-        while True and not controlls[CNT_SHOULD_STOP]:
-            commSocket, comAddr=receiverSocket.accept()
-            parseRequest(commSocket, commqueue)
-        receiverSocket.close()
+    def _mainloopReceiver(commqueue, controlls, listenerSocket):     #Not yet implemented
+        
+        listenerSocket.bind(("0.0.0.0", controlls[CNT_PORT]))
+        listenerSocket.listen(5)
+        while True:
+            commSocket, comAddr=listenerSocket.accept()
+            handlerThread=Thread(target=handleRequestMaster, args=(commSocket, commqueue))
+            handlerThread.start()
         
 
     #An event loop that will receive tasks through the commqueue Queue and act
@@ -108,4 +113,4 @@ class WorkGroup:    #Not yet implemented
         while job!=CMD_HALT:
             print("GOT A JOB", job)
             job=commqueue.get()
-        controlls[CNT_SHOULD_STOP]=True
+        #controlls[CNT_SHOULD_STOP]=True
