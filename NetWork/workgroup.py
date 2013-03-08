@@ -9,12 +9,13 @@ from .parsers import parseIPRange
 from .worker import Worker
 from multiprocessing import Process, Queue, Manager, Event
 import socket
-from .networking import getLocalIP
+from .networking import nwSocket 
 from .handlers import handleRequestMaster
 from threading import Thread
 
-#Positions in the WorkGroup.controlls list that is used for communication between
-#the processes
+
+#Positions in the WorkGroup.controlls list that is used for communication 
+#between the processes
 CNT_WORKERS=0
 CNT_PORT=1
 CNT_SHOULD_STOP=2
@@ -49,10 +50,11 @@ class WorkGroup:    #Not yet implemented
         If both iprange and workers are empty or none, NoWorkersError 
         will be raised
         """
-        self.controlls=Manager().list(range(10)) #Will be used for communication 
-        self.controlls[CNT_WORKERS]=[]          #between the mainloops
+        #The manager will be used for communication between the mainloops
+        self.controlls=Manager().list(range(10)) 
+        self.controlls[CNT_WORKERS]=[]
         self.controlls[CNT_PORT]=port
-        self.listenerSocket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.listenerSocket=nwSocket()
         #self.controlls[CNT_SHOULD_STOP]=False
         if iprange:                             
             for i in parseIPRange(iprange):     #parse the iprange if given
@@ -73,7 +75,8 @@ class WorkGroup:    #Not yet implemented
         self._mainloopcontroll=Process(target=WorkGroup._mainloopControll, 
                                       args=(self.queue, self.controlls))
         self._mainloopreceiver=Process(target=WorkGroup._mainloopReceiver, 
-                                       args=(self.queue, self.controlls, self.listenerSocket))
+                                       args=(self.queue, self.controlls, 
+                                             self.listenerSocket))
         self._mainloopcontroll.daemon=True
         self._mainloopreceiver.daemon=True
         self._mainloopcontroll.start()
@@ -95,20 +98,21 @@ class WorkGroup:    #Not yet implemented
     #An event loop that receives the network input from the worker computers
     #and sends it to the comm Queue
     @staticmethod
-    def _mainloopReceiver(commqueue, controlls, listenerSocket):     #Not yet implemented
+    def _mainloopReceiver(commqueue, controlls, listenerSocket):     
+        #Not yet implemented
         
-        listenerSocket.bind(("0.0.0.0", controlls[CNT_PORT]))
-        listenerSocket.listen(5)
+        listenerSocket.bind()
+        listenerSocket.listen()
         while True:
-            commSocket, comAddr=listenerSocket.accept()
-            handlerThread=Thread(target=handleRequestMaster, args=(commSocket, commqueue))
+            receivedRequestData=listenerSocket.accept()
+            handlerThread=Thread(target=handleRequestMaster, args=(receivedRequestData, commqueue))
             handlerThread.start()
         
 
     #An event loop that will receive tasks through the commqueue Queue and act
     #accordingly
     @staticmethod
-    def _mainloopControll(commqueue, controlls):     #Not yet implemented
+    def _mainloopControll(commqueue: Queue, controlls):     #Not yet implemented
         job=commqueue.get()
         while job!=CMD_HALT:
             print("GOT A JOB", job)
