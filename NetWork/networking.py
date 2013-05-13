@@ -5,20 +5,19 @@ the package
 Created on Jan 13, 2013
 """
 import socket
-
-COMCODE_CHECKALIVE=b"ALV"
+COMCODE_CHECKALIVE=b"ALV?"
 COMCODE_ISALIVE=b"IMALIVE"
 ISALIVE_TIMEOUT=10
-DEFAULT_LISTENING_PORT=32151
+DEFAULT_TCP_PORT=32151
 BUFFER_READ_LENGTH=4096
 MESSAGE_LENGTH_DELIMITER=b"MLEN"
-class acceptedRequest:
-    def __init__(self, commSocket, address):
-        self.address=address
-        self.commSocket=commSocket
+DEFAULT_LISTENING_ADDRESS="0.0.0.0"
+LISTEN_QUEUE_LENGTH=5
 
+class InvalidMessageFormatError(Exception):pass
 
-class nwSocket:
+    
+class NWSocketTCP:
 
     def __init__(self, socketToUse=None):
         if socketToUse:
@@ -29,42 +28,82 @@ class nwSocket:
         
         self.internalSocket.setsockopt(socket.SOL_SOCKET, 
                                        socket.SO_REUSEADDR, 1)
-    def bind(self):
-        self.internalSocket.bind(("0.0.0.0", DEFAULT_LISTENING_PORT))
-
+        
     def listen(self):
-        self.internalSocket.listen(5)
+        self.internalSocket.bind((DEFAULT_LISTENING_ADDRESS, DEFAULT_TCP_PORT))
+        self.internalSocket.listen(LISTEN_QUEUE_LENGTH)
     
     def recv(self):
         receivedData=b""
         while receivedData.find(MESSAGE_LENGTH_DELIMITER)==-1:
-            receivedData+=self.internalSocket.recv(4096)
+            if not NWSocketTCP.checkMessageFormat(receivedData):
+                raise InvalidMessageFormatError("Received string not\
+                                                formatted properly")
+            receivedData+=self.internalSocket.recv(BUFFER_READ_LENGTH)
+        if not NWSocket.checkMessageFormat(receivedData):
+            raise InvalidMessageFormatError("Received string not\
+                                            formatted properly")
         sizelen=receivedData.find(MESSAGE_LENGTH_DELIMITER)
-        messageLenght=int(receivedData[0:sizelen])
-        receivedData=receivedData[sizelen+4:]
-        while len(receivedData)<messageLenght:
-            receivedData+=self.internalSocket.recv(messageLenght)
-        self.internalSocket.close()
+        messageLength=int(receivedData[0:sizelen])
+        receivedData=receivedData[sizelen+len(MESSAGE_LENGTH_DELIMITER):]
+        while len(receivedData)<messageLength:
+            receivedData+=self.internalSocket.recv(messageLength)
         return receivedData
 
     def send(self, data: bytes)-> bytes:
-        dataLength=bytes(str(len(data)), encoding="utf-8")
+        dataLength=str(len(data)).encode()
         message=dataLength+MESSAGE_LENGTH_DELIMITER+data
         self.internalSocket.sendall(message)
     
-    def connect(self, *connectparams):
-        self.internalSocket.connect(*connectparams)
+    def connect(self, address):
+        self.internalSocket.connect((address, DEFAULT_TCP_PORT))
     
     def accept(self):
         requestData=self.internalSocket.accept()
-        return acceptedRequest(nwSocket(requestData[0]), requestData[1])
+        return NWSocket(requestData[0])
     
     
     def close(self):
         self.internalSocket.close()
     
+    @staticmethod
+    def checkAvailability(address):     
+        testSocket=NWSocket()
+        try:   
+            testSocket.send(COMCODE_CHECKALIVE)
+            response=testSocket.recv()
+        except:     #NETWORK ERROR HERE####################################
+            return False
+            
+        return response==COMCODE_ISALIVE
+    
+    @staticmethod
+    def checkMessageFormat(message):
+        if not message:
+            return True
+        message=message.decode()
+        if message.isdecimal():
+            return True
+        else:
+            for i in message:
+                if not i in "0123456789":
+                    p=message.find(i)
+                    break
+            else:
+                return True
+            message=message[p:]
+            if len(message)==len(MESSAGE_LENGTH_DELIMITER):
+                return message==MESSAGE_LENGTH_DELIMITER.decode()
+            elif len(message)<len(MESSAGE_LENGTH_DELIMITER):
+                return message==MESSAGE_LENGTH_DELIMITER.decode()[:len(message)]
+            else:
+                return message[:len(MESSAGE_LENGTH_DELIMITER)]==MESSAGE_LENGTH_DELIMITER.decode()
+                    
+        return True
+    
     def __del__(self):
         self.close()
-
+    
+NWSocket=NWSocketTCP
 
     
