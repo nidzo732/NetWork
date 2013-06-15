@@ -5,6 +5,7 @@ the package
 Created on Jan 13, 2013
 """
 import socket
+
 COMCODE_CHECKALIVE=b"ALV?"
 COMCODE_ISALIVE=b"IMALIVE"
 ISALIVE_TIMEOUT=10
@@ -13,8 +14,9 @@ BUFFER_READ_LENGTH=4096
 MESSAGE_LENGTH_DELIMITER=b"MLEN"
 DEFAULT_LISTENING_ADDRESS="0.0.0.0"
 LISTEN_QUEUE_LENGTH=5
+DEFAULT_SOCKET_TIMEOUT=5.0
 
-class InvalidMessageFormatError(Exception):pass
+class InvalidMessageFormatError(OSError):pass
 
     
 class NWSocketTCP:
@@ -28,6 +30,7 @@ class NWSocketTCP:
         
         self.internalSocket.setsockopt(socket.SOL_SOCKET, 
                                        socket.SO_REUSEADDR, 1)
+        self.internalSocket.settimeout(DEFAULT_SOCKET_TIMEOUT)
         
     def listen(self):
         self.internalSocket.bind((DEFAULT_LISTENING_ADDRESS, DEFAULT_TCP_PORT))
@@ -49,9 +52,9 @@ class NWSocketTCP:
         while len(receivedData)<messageLength:
             receivedData+=self.internalSocket.recv(messageLength)
         return receivedData
-
-    def send(self, data: bytes)-> bytes:
-        dataLength=str(len(data)).encode()
+    
+    def send(self, data):
+        dataLength=str(len(data)).encode(encoding="ASCII")
         message=dataLength+MESSAGE_LENGTH_DELIMITER+data
         self.internalSocket.sendall(message)
     
@@ -69,10 +72,11 @@ class NWSocketTCP:
     @staticmethod
     def checkAvailability(address):     
         testSocket=NWSocket()
-        try:   
+        try:  
+            testSocket.connect(address) 
             testSocket.send(COMCODE_CHECKALIVE)
             response=testSocket.recv()
-        except:     #NETWORK ERROR HERE####################################
+        except OSError:
             return False
             
         return response==COMCODE_ISALIVE
@@ -81,23 +85,22 @@ class NWSocketTCP:
     def checkMessageFormat(message):
         if not message:
             return True
-        message=message.decode()
-        if message.isdecimal():
-            return True
+        elif not (message[0] in range(48, 59)):
+            return False
         else:
-            for i in message:
-                if not i in "0123456789":
-                    p=message.find(i)
+            for i in enumerate(message):
+                if not i[1] in range(48, 59):
+                    p=i[0]
                     break
             else:
                 return True
             message=message[p:]
             if len(message)==len(MESSAGE_LENGTH_DELIMITER):
-                return message==MESSAGE_LENGTH_DELIMITER.decode()
+                return message==MESSAGE_LENGTH_DELIMITER
             elif len(message)<len(MESSAGE_LENGTH_DELIMITER):
-                return message==MESSAGE_LENGTH_DELIMITER.decode()[:len(message)]
+                return message==MESSAGE_LENGTH_DELIMITER[:len(message)]
             else:
-                return message[:len(MESSAGE_LENGTH_DELIMITER)]==MESSAGE_LENGTH_DELIMITER.decode()
+                return message[:len(MESSAGE_LENGTH_DELIMITER)]==MESSAGE_LENGTH_DELIMITER
                     
         return True
     
@@ -105,5 +108,3 @@ class NWSocketTCP:
         self.close()
     
 NWSocket=NWSocketTCP
-
-    
