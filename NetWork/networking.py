@@ -33,6 +33,7 @@ class NWSocketTCP:
         self.internalSocket.settimeout(DEFAULT_SOCKET_TIMEOUT)
         
     def listen(self):
+        self.internalSocket.settimeout(None)
         self.internalSocket.bind((DEFAULT_LISTENING_ADDRESS, DEFAULT_TCP_PORT))
         self.internalSocket.listen(LISTEN_QUEUE_LENGTH)
     

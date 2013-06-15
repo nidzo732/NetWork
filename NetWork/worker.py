@@ -11,8 +11,6 @@ from .networking import NWSocket
 class Worker:   
     #Not yet implemented
     def __init__(self, address, id):
-        workerSocket=NWSocket()
-        workerSocket.connect(address)
         workerAvailable=NWSocket.checkAvailability(address)
         if not workerAvailable:
             #Need a better message, I know 
@@ -20,6 +18,9 @@ class Worker:
         else:
             self.address=address
             self.id=id
+    
+    def executeTask(self, task):
+        pass
     
             
             
