@@ -4,12 +4,12 @@
 
 The aim of this project is to create a package that will enable its users
 to run multiple processes on multiple networked computers. It tries to mimic
-the standard Python multiprocessing module, but instead of being limited to 
-CPUs and cores on local computer you get to run the function on any computer you can
-access. Basically this should be a library for creating and running a simple
-computing cluster. I've just started this project, when it's finished it will
-be capable of creating a multiprocessing environment on networked computers with
-all the controll tools such as Locks, Events, Managers...
+the standard Python concurrent.futures and multiprocessing module, but instead 
+of being limited to CPUs and cores on local computer you get to run the function 
+on any computer you can access. Basically this should be a library for creating 
+and running a simple computing cluster. I've just started this project, when it's 
+finished it will be capable of creating a multiprocessing environment on networked 
+computers with all the controll tools such as Locks, Events, Managers...
 
 ###How it works?
 ####(high level overview)

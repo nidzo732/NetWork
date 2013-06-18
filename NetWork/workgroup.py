@@ -26,28 +26,33 @@ def receiveSocketData(socket, commqueue):
     commqueue.put(CMD_SOCKET_MESSAGE+socket.recv())
 
 
-class Workgroup:    #Not yet implemented
+class Workgroup:
 
     def __init__(self, workerAddresses, skipBadWorkers=True):
         self.controlls=Manager().list(range(10)) 
-        self.controlls[CNT_WORKERS]=[]
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
         self.listenerSocket=NWSocket()
-        workerList=[]
+        self.workerList=[]
         for workerAddress in workerAddresses:
             try:
                 newWorker=Worker(workerAddress,
                                  self.controlls[CNT_WORKER_COUNT+1])
-                workerList.append(newWorker)
+                self.workerList.append(newWorker)
                 self.controlls[CNT_WORKER_COUNT]+=1
             except WorkerUnavailableError as workerError:
                 if not skipBadWorkers:
                     raise workerError
-        self.controlls[CNT_WORKERS]=workerList
         self.currentWorker=-1
         self.commqueue=Queue()
+        self.running=False
+    
+    def __enter__(self):
         self.startServing()
+        return self
+    
+    def __exit__(self, exceptionType, exceptionValue, traceBack):
+        self.stopServing()
     
     def startServing(self):
         self.listenerSocket.listen()
@@ -57,19 +62,37 @@ class Workgroup:    #Not yet implemented
                                 args=(self.commqueue, self.controlls))
         self.dispatcher.start()
         self.networkListener.start()
+        self.running=True
     
     def submit(self, target, args=(), kwargs={}):
         self.currentWorker+=1
         self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
         self.controlls[CNT_TASK_COUNT]+=1
-        newTask=Task(target, kwargs, self.controlls[CNT_TASK_COUNT])
-        self.controlls[CNT_WORKERS][self.currentWorker].executeTask(newTask)
+        newTask=Task(target=target, args=args, kwargs=kwargs, 
+                     id=self.controlls[CNT_TASK_COUNT])
+        self.workerList[self.currentWorker].executeTask(newTask)
         return TaskHandler(newTask.id, self, self.currentWorker)
     
-    def __del__(self):
-        self.networkListener.terminate()
-        self.dispatcher.terminate()
-        self.listenerSocket.close()
+    def getResult(self, id, worker):
+        return self.workerList[worker].getResult(id)
+    
+    def cancelTask(self, id, worker):
+        return self.workerList[worker].cancelTask(id)
+    
+    def taskCancelled(self, id, worker):
+        return self.workerList[worker].taskCancelled(id)
+    
+    def taskRunning(self, id, worker):
+        return self.workerList[worker].taskRunning(id)
+    
+    def done(self, id, worker):
+        return self.workerList[worker].taskDone(id)
+    
+    def getException(self, id, worker):
+        return self.workerList[worker].getException(id)
+    
+    def stopServing(self):
+        Workgroup.onExit(self)
         
     
     @staticmethod
@@ -87,6 +110,15 @@ class Workgroup:    #Not yet implemented
         while not request==CMD_HALT:
             print(request)
             request=commqueue.get()
+    
+    @staticmethod
+    def onExit(target):
+        #CLEAN UP WORKERS#####################################
+        if (target.running):
+            target.networkListener.terminate()
+            target.dispatcher.terminate()
+            target.listenerSocket.close()
+            target.running=False
         
     
             

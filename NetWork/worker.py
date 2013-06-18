@@ -6,10 +6,9 @@ Created on Jan 12, 2013
 """
 class WorkerUnavailableError(Exception):pass
 from .networking import NWSocket
-
+from concurrent.futures import ProcessPoolExecutor
 
 class Worker:   
-    #Not yet implemented
     def __init__(self, address, id):
         workerAvailable=NWSocket.checkAvailability(address)
         if not workerAvailable:
@@ -18,8 +17,11 @@ class Worker:
         else:
             self.address=address
             self.id=id
-    
+        
     def executeTask(self, task):
+        pass
+        
+    def getResult(self, id):
         pass
     
             
