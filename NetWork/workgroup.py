@@ -9,7 +9,7 @@ from multiprocessing import Process, Queue, Manager, Event
 from .networking import NWSocket
 from .handlers import receiveSocketData
 from threading import Thread
-from .worker import Worker, WorkerUnavailableError
+from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
 
 CNT_WORKERS=0
@@ -63,14 +63,17 @@ class Workgroup:
         self.dispatcher.start()
         self.networkListener.start()
         self.running=True
-    
+         
     def submit(self, target, args=(), kwargs={}):
         self.currentWorker+=1
         self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
         self.controlls[CNT_TASK_COUNT]+=1
         newTask=Task(target=target, args=args, kwargs=kwargs, 
                      id=self.controlls[CNT_TASK_COUNT])
-        self.workerList[self.currentWorker].executeTask(newTask)
+        try:
+            self.workerList[self.currentWorker].executeTask(newTask)
+        except DeadWorkerError:
+            self
         return TaskHandler(newTask.id, self, self.currentWorker)
     
     def getResult(self, id, worker):
@@ -91,8 +94,13 @@ class Workgroup:
     def getException(self, id, worker):
         return self.workerList[worker].getException(id)
     
+    def fixDeadWorker(self, id, worker):
+        pass
+    
     def stopServing(self):
         Workgroup.onExit(self)
+    
+        
         
     
     @staticmethod

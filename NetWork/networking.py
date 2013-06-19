@@ -21,7 +21,7 @@ class InvalidMessageFormatError(OSError):pass
     
 class NWSocketTCP:
 
-    def __init__(self, socketToUse=None):
+    def __init__(self, socketToUse=None, address=None):
         if socketToUse:
             self.internalSocket=socketToUse
         else:
@@ -31,6 +31,7 @@ class NWSocketTCP:
         self.internalSocket.setsockopt(socket.SOL_SOCKET, 
                                        socket.SO_REUSEADDR, 1)
         self.internalSocket.settimeout(DEFAULT_SOCKET_TIMEOUT)
+        self.address=address
         
     def listen(self):
         self.internalSocket.settimeout(None)
@@ -64,7 +65,7 @@ class NWSocketTCP:
     
     def accept(self):
         requestData=self.internalSocket.accept()
-        return NWSocket(requestData[0])
+        return NWSocket(requestData[0], requestData[1])
     
     
     def close(self):
