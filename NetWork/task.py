@@ -73,19 +73,56 @@ class TaskHandler:
         self.worker=worker
     
     def result(self):
-        return self.workgroup.getResult(self.id, self.worker)
+        try:
+            return self.workgroup.getResult(self.id, self.worker)
+        except DeadWorkerError:
+            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
+            self.id=newHandler.id
+            self.worker=newHandler.worker
+            return self.result()
     
     def cancel(self):
-        return self.workgroup.cancelTask(self.id, self.worker)
-    
+        try:
+            return self.workgroup.cancelTask(self.id, self.worker)
+        except DeadWorkerError:
+            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
+            self.id=newHandler.id
+            self.worker=newHandler.worker
+            return self.cancel()
+        
     def cancelled(self):
-        return self.workgroup.taskCancelled(self.id, self.worker)
-    
+        try:
+            return self.workgroup.taskCancelled(self.id, self.worker)
+        except DeadWorkerError:
+            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
+            self.id=newHandler.id
+            self.worker=newHandler.worker
+            return self.cancelled()
+        
     def running(self):
-        return self.workgroup.taskRunning(self.id, self.worker)
-    
+        try:
+            return self.workgroup.taskRunning(self.id, self.worker)
+        except DeadWorkerError:
+            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
+            self.id=newHandler.id
+            self.worker=newHandler.worker
+            return self.running()
+        
     def done(self):
-        return self.workgroup.taskDone(self.id, self.worker)
+        try:
+            return self.workgroup.taskDone(self.id, self.worker)
+        except DeadWorkerError:
+            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
+            self.id=newHandler.id
+            self.worker=newHandler.worker
+            return self.done()
+        
     
     def exception(self):
-        return self.workgroup.getException(self.id, self.worker)
+        try:
+            return self.workgroup.getException(self.id, self.worker)
+        except DeadWorkerError:
+            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
+            self.id=newHandler.id
+            self.worker=newHandler.worker
+            return self.exception()

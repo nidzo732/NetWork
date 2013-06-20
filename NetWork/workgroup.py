@@ -17,10 +17,12 @@ CNT_SHOULD_STOP=2
 CNT_LISTEN_SOCKET=3
 CNT_WORKER_COUNT=4
 CNT_TASK_COUNT=5
+CNT_LIVE_WORKERS=6
 
 CMD_HALT=b"HLT"  
 
 class NoWorkersError(Exception):pass
+class AllWorkersDeadError(Exception):pass
 
 def receiveSocketData(socket, commqueue):
     commqueue.put(CMD_SOCKET_MESSAGE+socket.recv())
@@ -44,6 +46,7 @@ class Workgroup:
                 if not skipBadWorkers:
                     raise workerError
         self.currentWorker=-1
+        self.controlls[CNT_LIVE_WORKERS]=self.controlls[CNT_WORKER_COUNT]
         self.commqueue=Queue()
         self.running=False
     
@@ -67,13 +70,17 @@ class Workgroup:
     def submit(self, target, args=(), kwargs={}):
         self.currentWorker+=1
         self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
+        while not self.workerList[self.currentWorker].alive:
+            self.currentWorker+=1
+            self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
         self.controlls[CNT_TASK_COUNT]+=1
         newTask=Task(target=target, args=args, kwargs=kwargs, 
                      id=self.controlls[CNT_TASK_COUNT])
         try:
             self.workerList[self.currentWorker].executeTask(newTask)
         except DeadWorkerError:
-            self
+            self.fixDeadWorker(worker=currentWorker)
+            return self.submit(target, args, kwargs)
         return TaskHandler(newTask.id, self, self.currentWorker)
     
     def getResult(self, id, worker):
@@ -94,8 +101,22 @@ class Workgroup:
     def getException(self, id, worker):
         return self.workerList[worker].getException(id)
     
-    def fixDeadWorker(self, id, worker):
-        pass
+    def fixDeadWorker(self, id=None, worker=None):
+        if id:
+            if self.workerList[worker].alive:
+                self.controlls[CNT_LIVE_WORKERS]-=1
+                if not self.controlls[CNT_LIVE_WORKERS]:
+                    raise AllWorkersDeadError("Lost connection to all workers")
+                self.workerList[worker].alive=False
+            failedTask=self.workerList[worker].myTasks[id]
+            newHandler=self.submit(failedTask.target, failedTask.args, 
+                                   failedTask.kwargs)
+            return newHandler
+        else:
+            self.controlls[CNT_LIVE_WORKERS]-=1
+            if not self.controlls[CNT_LIVE_WORKERS]:
+                raise AllWorkersDeadError("Lost connection to all workers")
+            self.workerList[worker].alive=False
     
     def stopServing(self):
         Workgroup.onExit(self)
