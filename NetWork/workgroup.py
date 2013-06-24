@@ -11,6 +11,7 @@ from .handlers import receiveSocketData
 from threading import Thread
 from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
+from .deadWorkerHandler import salvageDeadWorker
 
 CNT_WORKERS=0
 CNT_SHOULD_STOP=2
@@ -22,7 +23,6 @@ CNT_LIVE_WORKERS=6
 CMD_HALT=b"HLT"  
 
 class NoWorkersError(Exception):pass
-class AllWorkersDeadError(Exception):pass
 
 def receiveSocketData(socket, commqueue):
     commqueue.put(CMD_SOCKET_MESSAGE+socket.recv())
@@ -30,7 +30,8 @@ def receiveSocketData(socket, commqueue):
 
 class Workgroup:
 
-    def __init__(self, workerAddresses, skipBadWorkers=True):
+    def __init__(self, workerAddresses, skipBadWorkers=True, 
+                 handleDeadWorkers=False):
         self.controlls=Manager().list(range(10)) 
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
@@ -48,8 +49,9 @@ class Workgroup:
         self.currentWorker=-1
         self.controlls[CNT_LIVE_WORKERS]=self.controlls[CNT_WORKER_COUNT]
         self.commqueue=Queue()
+        self.handleDeadWorkers=handleDeadWorkers
         self.running=False
-    
+        
     def __enter__(self):
         self.startServing()
         return self
@@ -102,21 +104,7 @@ class Workgroup:
         return self.workerList[worker].getException(id)
     
     def fixDeadWorker(self, id=None, worker=None):
-        if id:
-            if self.workerList[worker].alive:
-                self.controlls[CNT_LIVE_WORKERS]-=1
-                if not self.controlls[CNT_LIVE_WORKERS]:
-                    raise AllWorkersDeadError("Lost connection to all workers")
-                self.workerList[worker].alive=False
-            failedTask=self.workerList[worker].myTasks[id]
-            newHandler=self.submit(failedTask.target, failedTask.args, 
-                                   failedTask.kwargs)
-            return newHandler
-        else:
-            self.controlls[CNT_LIVE_WORKERS]-=1
-            if not self.controlls[CNT_LIVE_WORKERS]:
-                raise AllWorkersDeadError("Lost connection to all workers")
-            self.workerList[worker].alive=False
+        salvageDeadWorker(self, id, worker)
     
     def stopServing(self):
         Workgroup.onExit(self)
