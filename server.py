@@ -4,28 +4,29 @@ For now you may see some random code i used to test the package
 """
 from NetWork.networking import NWSocket, COMCODE_CHECKALIVE, COMCODE_ISALIVE
 from NetWork.task import Task
-from concurrent.futures import ProcessPoolExecutor
+from NetWork.workerprocess import WorkerProcess
 from threading import Thread
 import atexit
 import pickle
-executor=ProcessPoolExecutor()
-tasks={"-1":None}
 class BadRequestError(Exception): pass
+tasks={-1:None}
 
 def executeTask(request, requestSocket):
     newTask=Task(marshaled=request)
-    handler=executor.submit(newTask.target, *newTask.args, **newTask.kwargs)
-    tasks[newTask.id]=handler
-    requestSocket.send(COMCODE_TASK_STARTED)
+    newProcess=WorkerProcess(request)
+    tasks[newTask.id]=b=newProcess
+    tasks[newTask.id].start()
+    requestSocket.send(COMCODE_ISALIVE)
 
 def getResult(request, requestSocket):
-    result=tasks[int(request)].result()
+    id=int(request)
+    result=tasks[id].getResult()
     requestSocket.send(pickle.dumps(result))
     
 handlers={"TSK":executeTask, "RSL":getResult}
 def requestHandler(requestSocket):
     request=requestSocket.recv()
-    handlers[request[:3]](request[3:])
+    handlers[request[:3]](request[3:], requestSocket)
 
 def onExit(listenerSocket):
     listenerSocket.close()  
@@ -52,4 +53,5 @@ if __name__=="__main__":
     while True:
         requestSocket=listenerSocket.accept()
         handlerThread=Thread(target=requestHandler, args=(requestSocket,))
+        handlerThread.start()
     

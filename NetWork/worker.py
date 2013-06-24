@@ -31,7 +31,7 @@ class Worker:
             workerSocket=NWSocket()
             workerSocket.connect(self.address)
             workerSocket.send(b"TSK"+task.marshal())
-            if workerSocket.recv()==COMCODE_TASK_STARTED:
+            if True:#workerSocket.recv()==COMCODE_TASK_STARTED:
                 return True
             else:
                 raise DeadWorkerError()

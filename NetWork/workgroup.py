@@ -144,8 +144,9 @@ class Workgroup:
     def onExit(target):
         #CLEAN UP WORKERS#####################################
         if (target.running):
+            #Need to fix this for a nice exit, preferably with join#########
             target.networkListener.terminate()
-            target.dispatcher.terminate()
+            target.dispatcher.terminate() 
             target.listenerSocket.close()
             target.running=False
         
