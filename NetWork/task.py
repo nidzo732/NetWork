@@ -126,3 +126,12 @@ class TaskHandler:
             self.id=newHandler.id
             self.worker=newHandler.worker
             return self.exception()
+    
+    def exceptionRaised(self):
+        try:
+            return self.workgroup.exceptionRaised(self.id, self.worker)
+        except DeadWorkerError:
+            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
+            self.id=newHandler.id
+            self.worker=newHandler.worker
+            return self.exception()

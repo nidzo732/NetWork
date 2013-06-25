@@ -22,8 +22,13 @@ def getResult(request, requestSocket):
     id=int(request)
     result=tasks[id].getResult()
     requestSocket.send(pickle.dumps(result))
+
+def exceptionRaised(request, requestSocket):
+    id=int(request)
+    exceptionTest=tasks[id].exceptionRaised()
+    requestSocket.send(pickle.dumps(exceptionTest))
     
-handlers={"TSK":executeTask, "RSL":getResult}
+handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised}
 def requestHandler(requestSocket):
     request=requestSocket.recv()
     handlers[request[:3]](request[3:], requestSocket)
@@ -42,6 +47,7 @@ if __name__=="__main__":
             requestSocket.send(COMCODE_ISALIVE)
             masterAddress=requestSocket.address
             requestSocket.close()
+            print("MASTER REGISTERED")
         else:
             raise BadRequestError
     except OSError:

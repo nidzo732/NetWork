@@ -11,7 +11,7 @@ from .handlers import receiveSocketData
 from threading import Thread
 from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
-from .deadWorkerHandler import salvageDeadWorker
+from .deadworkerhandler import salvageDeadWorker
 
 CNT_WORKERS=0
 CNT_SHOULD_STOP=2
@@ -81,7 +81,7 @@ class Workgroup:
         try:
             self.workerList[self.currentWorker].executeTask(newTask)
         except DeadWorkerError:
-            self.fixDeadWorker(worker=currentWorker)
+            self.fixDeadWorker(worker=self.currentWorker)
             return self.submit(target, args, kwargs)
         return TaskHandler(newTask.id, self, self.currentWorker)
     
@@ -102,6 +102,9 @@ class Workgroup:
     
     def getException(self, id, worker):
         return self.workerList[worker].getException(id)
+    
+    def exceptionRaised(self, id, worker):
+        return self.workerList[worker].exceptionRaised(id)
     
     def fixDeadWorker(self, id=None, worker=None):
         salvageDeadWorker(self, id, worker)

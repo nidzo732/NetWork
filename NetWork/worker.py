@@ -112,6 +112,18 @@ class Worker:
             self.alive=False
             raise DeadWorkerError()
     
+    def exceptionRaised(self, id):
+        if not self.alive:
+            raise DeadWorkerError
+        try:
+            workerSocket=NWSocket()
+            workerSocket.connect(self.address)
+            workerSocket.send(b"EXR"+str(id).encode(encoding="ASCII"))
+            return (pickle.loads(workerSocket.recv()))
+        except OSError:
+            self.alive=False
+            raise DeadWorkerError()
+    
     
     
             
