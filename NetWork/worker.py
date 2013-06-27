@@ -52,26 +52,13 @@ class Worker:
             self.alive=False
             raise DeadWorkerError()
     
-    def cancelTask(self, id):
+    def terminateTask(self, id):
         if not self.alive:
             raise DeadWorkerError
         try:
             workerSocket=NWSocket()
             workerSocket.connect(self.address)
-            workerSocket.send(b"CNC"+str(id).encode(encoding="ASCII"))
-            return (pickle.loads(workerSocket.recv()))
-        except OSError:
-            self.alive=False
-            raise DeadWorkerError()
-    
-    def taskCancelled(self, id):
-        if not self.alive:
-            raise DeadWorkerError
-        try:
-            workerSocket=NWSocket()
-            workerSocket.connect(self.address)
-            workerSocket.send(b"TCN"+str(id).encode(encoding="ASCII"))
-            return (pickle.loads(workerSocket.recv()))
+            workerSocket.send(b"TRM"+str(id).encode(encoding="ASCII"))
         except OSError:
             self.alive=False
             raise DeadWorkerError()
@@ -83,18 +70,6 @@ class Worker:
             workerSocket=NWSocket()
             workerSocket.connect(self.address)
             workerSocket.send(b"TRN"+str(id).encode(encoding="ASCII"))
-            return (pickle.loads(workerSocket.recv()))
-        except OSError:
-            self.alive=False
-            raise DeadWorkerError()
-    
-    def done(self, id):
-        if not self.alive:
-            raise DeadWorkerError
-        try:
-            workerSocket=NWSocket()
-            workerSocket.connect(self.address)
-            workerSocket.send(b"DON"+str(id).encode(encoding="ASCII"))
             return (pickle.loads(workerSocket.recv()))
         except OSError:
             self.alive=False

@@ -14,7 +14,7 @@ class WorkerProcess:
         self.manager[CNT_EXCEPTION_RAISED]=False
         self.manager[CNT_EXCEPTION]=None
         self.manager[CNT_RUNNING]=False
-        self.process=Process(target=WorkerProcess.runner, args=(marshaledTask, self.manager))
+        self.process=Process(target=WorkerProcess.runner, args=(marshaledTask, self.manager, tgs))
     
     def start(self):
         self.manager[CNT_RUNNING]=True
@@ -35,9 +35,10 @@ class WorkerProcess:
     def getException(self):
         return self.manager[CNT_EXCEPTION]
     
-    def kill(self):
+    def terminate(self):
         if self.manager[CNT_RUNNING]:
             self.process.terminate()
+            self.manager[CNT_RUNNING]=False
     
     def join(self):
         if self.manager[CNT_RUNNING]:

@@ -6,7 +6,7 @@ class Task:
     
     def __init__(self, target=None, args=(), kwargs={}, id=None, marshaled=None):
         if marshaled:
-            self.unmarshal(marshaled)
+            self.unmarshal(marshaled, globs=globs)
         else:
             self.target=target
             self.target
@@ -62,7 +62,8 @@ class Task:
         
         self.kwargs=pickle.loads(marshaledKwargs)
         self.args=pickle.loads(marshaledArgs)
-        self.target=FunctionType(code=marshal.loads(marshaledTarget), globals=globals())
+        self.target=FunctionType(code=marshal.loads(marshaledTarget), 
+                                 globals=globals())
         self.id=int(marshaledTask)
 
 class TaskHandler:
@@ -81,7 +82,7 @@ class TaskHandler:
             self.worker=newHandler.worker
             return self.result()
     
-    def cancel(self):
+    def terminate(self):
         try:
             return self.workgroup.cancelTask(self.id, self.worker)
         except DeadWorkerError:
@@ -89,15 +90,6 @@ class TaskHandler:
             self.id=newHandler.id
             self.worker=newHandler.worker
             return self.cancel()
-        
-    def cancelled(self):
-        try:
-            return self.workgroup.taskCancelled(self.id, self.worker)
-        except DeadWorkerError:
-            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
-            self.id=newHandler.id
-            self.worker=newHandler.worker
-            return self.cancelled()
         
     def running(self):
         try:
@@ -107,15 +99,6 @@ class TaskHandler:
             self.id=newHandler.id
             self.worker=newHandler.worker
             return self.running()
-        
-    def done(self):
-        try:
-            return self.workgroup.taskDone(self.id, self.worker)
-        except DeadWorkerError:
-            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
-            self.id=newHandler.id
-            self.worker=newHandler.worker
-            return self.done()
         
     
     def exception(self):

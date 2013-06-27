@@ -89,16 +89,11 @@ class Workgroup:
         return self.workerList[worker].getResult(id)
     
     def cancelTask(self, id, worker):
-        return self.workerList[worker].cancelTask(id)
+        return self.workerList[worker].terminateTask(id)
     
-    def taskCancelled(self, id, worker):
-        return self.workerList[worker].taskCancelled(id)
     
     def taskRunning(self, id, worker):
         return self.workerList[worker].taskRunning(id)
-    
-    def done(self, id, worker):
-        return self.workerList[worker].taskDone(id)
     
     def getException(self, id, worker):
         return self.workerList[worker].getException(id)

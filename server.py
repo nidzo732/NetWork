@@ -27,11 +27,27 @@ def exceptionRaised(request, requestSocket):
     id=int(request)
     exceptionTest=tasks[id].exceptionRaised()
     requestSocket.send(pickle.dumps(exceptionTest))
+
+def terminateTask(request, requestSocket):
+    id=int(request)
+    tasks[id].terminate()
+
+def taskRunning(request, requestSocket):
+    id=int(request)
+    status=tasks[id].running()
+    requestSocket.send(pickle.dumps(status))
+
+def getException(request, requestSocket):
+    id=int(request)
+    exception=tasks[id].getException()
+    requestSocket.send(pickle.dumps(exception))
     
-handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised}
+handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
+          b"TRM":terminateTask, b"TRN":taskRunning, b"EXC":getException}
 def requestHandler(requestSocket):
     request=requestSocket.recv()
     handlers[request[:3]](request[3:], requestSocket)
+    requestSocket.close()
 
 def onExit(listenerSocket):
     listenerSocket.close()  
