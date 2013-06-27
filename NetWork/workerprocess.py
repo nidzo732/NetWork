@@ -7,14 +7,15 @@ CNT_EXCEPTION_RAISED=3
 CNT_EXCEPTION=4
 CNT_RUNNING=5
 class WorkerProcess:
-    def __init__(self, marshaledTask):
+    def __init__(self, marshaledTask, globalVariables=None):
         self.manager=Manager().list(range(20))
         self.manager[CNT_DONE]=False
         self.manager[CNT_RETURN]=None
         self.manager[CNT_EXCEPTION_RAISED]=False
         self.manager[CNT_EXCEPTION]=None
         self.manager[CNT_RUNNING]=False
-        self.process=Process(target=WorkerProcess.runner, args=(marshaledTask, self.manager, tgs))
+        self.process=Process(target=WorkerProcess.runner, 
+                             args=(marshaledTask, self.manager, globalVariables))
     
     def start(self):
         self.manager[CNT_RUNNING]=True
@@ -45,8 +46,8 @@ class WorkerProcess:
             self.process.join()
     
     @staticmethod
-    def runner(marshaledTask, manager):
-        task=Task(marshaled=marshaledTask)
+    def runner(marshaledTask, manager, globalVariables):
+        task=Task(marshaled=marshaledTask, globalVariables=globalVariables)
         returnValue=None
         try:
             returnValue=task.target(*task.args, **task.kwargs)

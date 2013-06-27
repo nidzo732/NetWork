@@ -4,9 +4,10 @@ from types import FunctionType
 #import .handlers
 class Task:
     
-    def __init__(self, target=None, args=(), kwargs={}, id=None, marshaled=None):
+    def __init__(self, target=None, args=(), kwargs={}, id=None, marshaled=None, 
+                 globalVariables=None):
         if marshaled:
-            self.unmarshal(marshaled, globs=globs)
+            self.unmarshal(marshaled, globalVariables)
         else:
             self.target=target
             self.target
@@ -43,7 +44,7 @@ class Task:
 
 
     
-    def unmarshal(self, marshaledTask):
+    def unmarshal(self, marshaledTask, globalVariables=None):
         targetLength=int(marshaledTask[:marshaledTask.find(b"TRG")])
         marshaledTask=marshaledTask[marshaledTask.find(b"TRG")+3:]
         marshaledTarget=marshaledTask[:targetLength]
@@ -62,8 +63,12 @@ class Task:
         
         self.kwargs=pickle.loads(marshaledKwargs)
         self.args=pickle.loads(marshaledArgs)
-        self.target=FunctionType(code=marshal.loads(marshaledTarget), 
-                                 globals=globals())
+        if not globalVariables:
+            self.target=FunctionType(code=marshal.loads(marshaledTarget), 
+                                     globals=globals())
+        else:
+            self.target=FunctionType(code=marshal.loads(marshaledTarget), 
+                                     globals=globalVariables)
         self.id=int(marshaledTask)
 
 class TaskHandler:

@@ -5,11 +5,15 @@ For now you may see some random code i used to test the package
 from NetWork.networking import NWSocket, COMCODE_CHECKALIVE, COMCODE_ISALIVE
 from NetWork.task import Task
 from NetWork.workerprocess import WorkerProcess
+import NetWork.event as event
 from threading import Thread
+from multiprocessing import Manager
 import atexit
 import pickle
 class BadRequestError(Exception): pass
 tasks={-1:None}
+workerManager=Manager().list(range(20))
+event.workerManager=workerManager
 
 def executeTask(request, requestSocket):
     newTask=Task(marshaled=request)
