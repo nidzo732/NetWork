@@ -13,7 +13,7 @@ import pickle
 class BadRequestError(Exception): pass
 tasks={-1:None}
 workerManager=Manager().list(range(20))
-event.workerManager=workerManager
+event.eventManager=workerManager
 
 def executeTask(request, requestSocket):
     newTask=Task(marshaled=request)
@@ -45,6 +45,9 @@ def getException(request, requestSocket):
     id=int(request)
     exception=tasks[id].getException()
     requestSocket.send(pickle.dumps(exception))
+
+def setEvent(request, requestSocket):
+    event.eventManager[int(request)].set()
     
 handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           b"TRM":terminateTask, b"TRN":taskRunning, b"EXC":getException}

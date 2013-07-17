@@ -99,6 +99,16 @@ class Worker:
             self.alive=False
             raise DeadWorkerError()
     
+    def setEvent(self, id):
+        if not self.alive:
+            raise DeadWorkerError
+        try:
+            workerSocket=NWSocket()
+            workerSocket.connect(self.address)
+            workerSocket.send(b"EVS"+str(id).encode(encoding="ASCII"))
+        except OSError:
+            self.alive=False
+            raise DeadWorkerError()
     
     
             

@@ -7,7 +7,7 @@ Created on Jan 11, 2013
 
 from multiprocessing import Process, Queue, Manager, Event
 from .networking import NWSocket
-from .handlers import receiveSocketData
+from .handlers import receiveSocketData, handlerList
 from threading import Thread
 from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
@@ -19,8 +19,10 @@ CNT_LISTEN_SOCKET=3
 CNT_WORKER_COUNT=4
 CNT_TASK_COUNT=5
 CNT_LIVE_WORKERS=6
+CNT_EVENTS=7
 
-CMD_HALT=b"HLT"  
+CMD_HALT=b"HLT"
+CMD_SET_EVENT=b"EVS"
 
 class NoWorkersError(Exception):pass
 
@@ -35,6 +37,7 @@ class Workgroup:
         self.controlls=Manager().list(range(10)) 
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
+        self.controlls[CNT_EVENTS]={-1:None,}
         self.listenerSocket=NWSocket()
         self.workerList=[]
         for workerAddress in workerAddresses:
@@ -48,6 +51,7 @@ class Workgroup:
                     raise workerError
         self.currentWorker=-1
         self.controlls[CNT_LIVE_WORKERS]=self.controlls[CNT_WORKER_COUNT]
+        self.controlls[CNT_WORKERS]=self.workerList
         self.commqueue=Queue()
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
@@ -72,34 +76,40 @@ class Workgroup:
     def submit(self, target, args=(), kwargs={}):
         self.currentWorker+=1
         self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
-        while not self.workerList[self.currentWorker].alive:
+        while not self.controlls[CNT_WORKERS][self.currentWorker].alive:
             self.currentWorker+=1
             self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
         self.controlls[CNT_TASK_COUNT]+=1
         newTask=Task(target=target, args=args, kwargs=kwargs, 
                      id=self.controlls[CNT_TASK_COUNT])
         try:
-            self.workerList[self.currentWorker].executeTask(newTask)
+            self.controlls[CNT_WORKERS][self.currentWorker].executeTask(newTask)
         except DeadWorkerError:
             self.fixDeadWorker(worker=self.currentWorker)
             return self.submit(target, args, kwargs)
         return TaskHandler(newTask.id, self, self.currentWorker)
     
     def getResult(self, id, worker):
-        return self.workerList[worker].getResult(id)
+        return self.controlls[CNT_WORKERS][worker].getResult(id)
     
     def cancelTask(self, id, worker):
-        return self.workerList[worker].terminateTask(id)
+        return self.controlls[CNT_WORKERS][worker].terminateTask(id)
     
     
     def taskRunning(self, id, worker):
-        return self.workerList[worker].taskRunning(id)
+        return self.controlls[CNT_WORKERS][worker].taskRunning(id)
     
     def getException(self, id, worker):
-        return self.workerList[worker].getException(id)
+        return self.controlls[CNT_WORKERS][worker].getException(id)
     
     def exceptionRaised(self, id, worker):
-        return self.workerList[worker].exceptionRaised(id)
+        return self.controlls[CNT_WORKERS][worker].exceptionRaised(id)
+    
+    def waitForEvent(self, id):
+        self.controlls[CNT_EVENTS][id].wait()
+    
+    def setEvent(self, id):
+        self.commqueue.put(CMD_SET_EVENT+str(id).encode(encoding='ASCII'))
     
     def fixDeadWorker(self, id=None, worker=None):
         salvageDeadWorker(self, id, worker)
@@ -125,6 +135,7 @@ class Workgroup:
         while not request==CMD_HALT:
             print(request)
             request=commqueue.get()
+            handlerList[request[:3]](request, controlls, commqueue)
     
     @staticmethod
     def onExit(target):
