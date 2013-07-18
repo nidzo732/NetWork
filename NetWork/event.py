@@ -13,7 +13,7 @@ class WorkerEvent:
     
     def wait(self):
         self.verifiyWorker()
-        eventManager[self.eventId].wait()
+        eventManager[self.eventId][0].recv()
     
     def set(self):
         self.verifiyWorker()

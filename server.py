@@ -7,13 +7,10 @@ from NetWork.task import Task
 from NetWork.workerprocess import WorkerProcess
 import NetWork.event as event
 from threading import Thread
-from multiprocessing import Manager
+from multiprocessing import Manager, Event, Pipe
 import atexit
 import pickle
 class BadRequestError(Exception): pass
-tasks={-1:None}
-workerManager=Manager().list(range(20))
-event.eventManager=workerManager
 
 def executeTask(request, requestSocket):
     newTask=Task(marshaled=request)
@@ -47,10 +44,15 @@ def getException(request, requestSocket):
     requestSocket.send(pickle.dumps(exception))
 
 def setEvent(request, requestSocket):
-    event.eventManager[int(request)].set()
+    event.eventManager[int(request)][1].send(b"EVS")
+
+def registerEvent(request, requestSocket):
+    event.eventManager[int(request)]=Pipe()
     
 handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
-          b"TRM":terminateTask, b"TRN":taskRunning, b"EXC":getException}
+          b"TRM":terminateTask, b"TRN":taskRunning, b"EXC":getException,
+          b"EVS":setEvent, b"EVR":registerEvent,}
+
 def requestHandler(requestSocket):
     request=requestSocket.recv()
     handlers[request[:3]](request[3:], requestSocket)
@@ -79,8 +81,11 @@ if __name__=="__main__":
     except BadRequestError:
         print("Master did not send a proper request")
         exit()
+    tasks={-1:None}
+    workerManager=Manager().list(range(20))
+    event.eventManager=Manager().list(range(20))
+    event.runningOnMaster=False
     while True:
         requestSocket=listenerSocket.accept()
-        handlerThread=Thread(target=requestHandler, args=(requestSocket,))
-        handlerThread.start()
+        requestHandler(requestSocket)
     

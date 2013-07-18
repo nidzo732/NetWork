@@ -12,6 +12,7 @@ from threading import Thread
 from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
 from .deadworkerhandler import salvageDeadWorker
+from NetWork import event
 
 CNT_WORKERS=0
 CNT_SHOULD_STOP=2
@@ -19,10 +20,11 @@ CNT_LISTEN_SOCKET=3
 CNT_WORKER_COUNT=4
 CNT_TASK_COUNT=5
 CNT_LIVE_WORKERS=6
-CNT_EVENTS=7
+CNT_EVENT_COUNT=7
 
 CMD_HALT=b"HLT"
 CMD_SET_EVENT=b"EVS"
+CMD_REGISTER_EVENT=b"EVR"
 
 class NoWorkersError(Exception):pass
 
@@ -37,7 +39,7 @@ class Workgroup:
         self.controlls=Manager().list(range(10)) 
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
-        self.controlls[CNT_EVENTS]={-1:None,}
+        self.controlls[CNT_EVENT_COUNT]=0
         self.listenerSocket=NWSocket()
         self.workerList=[]
         for workerAddress in workerAddresses:
@@ -53,6 +55,7 @@ class Workgroup:
         self.controlls[CNT_LIVE_WORKERS]=self.controlls[CNT_WORKER_COUNT]
         self.controlls[CNT_WORKERS]=self.workerList
         self.commqueue=Queue()
+        event.runningOnMaster=True
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
         
@@ -111,6 +114,13 @@ class Workgroup:
     def setEvent(self, id):
         self.commqueue.put(CMD_SET_EVENT+str(id).encode(encoding='ASCII'))
     
+    def registerEvent(self):
+        self.controlls[CNT_EVENT_COUNT]+=1
+        self.commqueue.put(CMD_REGISTER_EVENT+
+                           str(self.controlls[CNT_EVENT_COUNT]).encode(encoding='ASCII'))
+        return (event.MasterEvent(self.controlls[CNT_EVENT_COUNT], self),
+                event.WorkerEvent(self.controlls[CNT_EVENT_COUNT]))
+    
     def fixDeadWorker(self, id=None, worker=None):
         salvageDeadWorker(self, id, worker)
     
@@ -134,8 +144,8 @@ class Workgroup:
         request=commqueue.get()
         while not request==CMD_HALT:
             print(request)
+            handlerList[request[:3]](request[3:], controlls, commqueue)
             request=commqueue.get()
-            handlerList[request[:3]](request, controlls, commqueue)
     
     @staticmethod
     def onExit(target):
