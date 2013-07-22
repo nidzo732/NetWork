@@ -21,6 +21,7 @@ CNT_WORKER_COUNT=4
 CNT_TASK_COUNT=5
 CNT_LIVE_WORKERS=6
 CNT_EVENT_COUNT=7
+CNT_EVENTS=8
 
 CMD_HALT=b"HLT"
 CMD_SET_EVENT=b"EVS"
@@ -40,8 +41,9 @@ class Workgroup:
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
         self.controlls[CNT_EVENT_COUNT]=0
+        self.controlls[CNT_EVENTS]=[None]
         self.listenerSocket=NWSocket()
-        self.workerList=[]
+        self.workerList={-1:None}
         for workerAddress in workerAddresses:
             try:
                 newWorker=Worker(workerAddress,
@@ -56,6 +58,7 @@ class Workgroup:
         self.controlls[CNT_WORKERS]=self.workerList
         self.commqueue=Queue()
         event.runningOnMaster=True
+        event.eventLocks={-1:None}
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
         
@@ -109,17 +112,24 @@ class Workgroup:
         return self.controlls[CNT_WORKERS][worker].exceptionRaised(id)
     
     def waitForEvent(self, id):
-        self.controlls[CNT_EVENTS][id].wait()
+        waiterPipe=controlls[CNT_EVENTS][id].wait()
+        event.eventLocks[self.id].acquire()
+        event.eventManager[self.id]=eventManager[self.id]
+        event.eventLocks[self.id].release()
+        if waiterPipe:
+            waiterPipe.recv()
+            return True
+        return True
     
     def setEvent(self, id):
         self.commqueue.put(CMD_SET_EVENT+str(id).encode(encoding='ASCII'))
     
     def registerEvent(self):
         self.controlls[CNT_EVENT_COUNT]+=1
+        event.eventLocks[CNT_EVENT_COUNT]=Lock()
         self.commqueue.put(CMD_REGISTER_EVENT+
                            str(self.controlls[CNT_EVENT_COUNT]).encode(encoding='ASCII'))
-        return (event.MasterEvent(self.controlls[CNT_EVENT_COUNT], self),
-                event.WorkerEvent(self.controlls[CNT_EVENT_COUNT]))
+        return event.NWEvent(self.controlls[CNT_EVENT_COUNT], self)
     
     def fixDeadWorker(self, id=None, worker=None):
         salvageDeadWorker(self, id, worker)
