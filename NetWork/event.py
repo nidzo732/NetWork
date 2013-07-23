@@ -1,36 +1,41 @@
 from .networking import NWSocket
+from multiprocessing import Pipe
 class WrongComputerError(Exception):pass
-eventManager=None
 runningOnMaster=None
 masterAddress=None
 eventLocks=None
+eventPipes=None
+eventStates=None
 class NWEvent:
-    def __init__(self, eventId, workgroup=None):
-        self.eventId=eventId
+    def __init__(self, id, workgroup=None):
+        self.id=id
         self.workgroup=workgroup
     
     def waitOnWorker(self):
-        waiterPipe=eventManager[self.id].wait()
         eventLocks[self.id].acquire()
-        eventManager[self.id]=eventManager[self.id]
-        eventLocks[self.id].release()
-        if waiterPipe:
-            waiterPipe.recv()
+        if eventStates[self.id]:
+            eventLocks[self.id].release()
             return True
-        return True
+        else:
+            pipeList=eventPipes[self.id]
+            pipeList.append(Pipe())
+            myPipe=len(pipeList)-1
+            eventPipes[self.id]=pipeList
+            eventLocks[self.id].release()
+            eventPipes[self.id][myPipe][1].recv()
+            return True
     
     def setOnWorker(self):
-        self.verifiyWorker()
         masterSocket=NWSocket()
         masterSocket.connect(masterAddress)
-        masterSocket.send(b"EVS"+str(self.eventId).encode(encoding='ASCII'))
+        masterSocket.send(b"EVS"+str(self.id).encode(encoding='ASCII'))
         masterSocket.close()
     
     def waitOnMaster(self):
-        return self.workgroup.waitForEvent(self.eventId)
+        return self.workgroup.waitForEvent(self.id)
     
     def setOnMaster(self):
-        self.workgroup.setEvent(self.eventId)
+        self.workgroup.setEvent(self.id)
     
     def set(self):
         if runningOnMaster:
@@ -43,30 +48,13 @@ class NWEvent:
             self.waitOnMaster()
         else:
             self.waitOnWorker()
-
-class LocalEventHandler:
     
-    def __init__(self, id):
-        self.id=id
-        self.isSet=False
-        self.pipes=[]
-    
-    def set(self):
-        eventLocks[self.id].acquire()
-        self.isSet=True
-        for currentPipe in self.pipes:
-            currentPipe[0].send(b"SET")
-        eventLocks[self.id].release()
-    
-    def wait(self):
-        eventLocks[self.id].acquire()
-        if self.isSet:
-            eventLocks[self.id].release()
-            return None
-        else:
-            self.pipes.append(Pipe())
-            pipeIndex=len(self.pipes)-1
-            eventLocks[self.id].release()
-            return self.pipes[pipeIndex]
+    @staticmethod
+    def setLocalEvent(id):
+        eventLocks[id].acquire()
+        eventStates[id]=True
+        for pipePair in eventPipes[id]:
+            pipePair[0].send(b"EVS")
+        eventLocks[id].release()
     
     

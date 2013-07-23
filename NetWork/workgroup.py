@@ -5,7 +5,7 @@ computers, distribute their work and provide communication between them.
 Created on Jan 11, 2013
 """
 
-from multiprocessing import Process, Queue, Manager, Event
+from multiprocessing import Process, Queue, Manager, Pipe
 from .networking import NWSocket
 from .handlers import receiveSocketData, handlerList
 from threading import Thread
@@ -21,7 +21,8 @@ CNT_WORKER_COUNT=4
 CNT_TASK_COUNT=5
 CNT_LIVE_WORKERS=6
 CNT_EVENT_COUNT=7
-CNT_EVENTS=8
+CNT_EVENT_PIPES=8
+CNT_EVENT_STATES=9
 
 CMD_HALT=b"HLT"
 CMD_SET_EVENT=b"EVS"
@@ -37,11 +38,12 @@ class Workgroup:
 
     def __init__(self, workerAddresses, skipBadWorkers=True, 
                  handleDeadWorkers=False):
-        self.controlls=Manager().list(range(10)) 
+        self.controlls=Manager().list(range(20)) 
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
         self.controlls[CNT_EVENT_COUNT]=0
-        self.controlls[CNT_EVENTS]=[None]
+        self.controlls[CNT_EVENT_PIPES]=[None]
+        self.controlls[CNT_EVENT_STATES]=[None]
         self.listenerSocket=NWSocket()
         self.workerList={-1:None}
         for workerAddress in workerAddresses:
@@ -112,14 +114,18 @@ class Workgroup:
         return self.controlls[CNT_WORKERS][worker].exceptionRaised(id)
     
     def waitForEvent(self, id):
-        waiterPipe=controlls[CNT_EVENTS][id].wait()
-        event.eventLocks[self.id].acquire()
-        event.eventManager[self.id]=eventManager[self.id]
-        event.eventLocks[self.id].release()
-        if waiterPipe:
-            waiterPipe.recv()
+        event.eventLocks[id].acquire()
+        if controlls[CNT_EVENT_STATES][id]:
+            event.eventLocks[id].release()
             return True
-        return True
+        else:
+            pipeList=controlls[CNT_EVENT_PIPES][id]
+            pipeList.append(Pipe())
+            myPipe=len(pipeList)-1
+            controlls[CNT_EVENT_PIPES]=pipeList
+            event.eventLocks[id].release()
+            controlls[CNT_EVENT_PIPES][id][myPipe][1].recv()
+            return True
     
     def setEvent(self, id):
         self.commqueue.put(CMD_SET_EVENT+str(id).encode(encoding='ASCII'))

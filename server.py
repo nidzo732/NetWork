@@ -44,10 +44,13 @@ def getException(request, requestSocket):
     requestSocket.send(pickle.dumps(exception))
 
 def setEvent(request, requestSocket):
-    event.eventManager[int(request)][1].send(b"EVS")
+    event.NWEvent.setLocalEvent(int(request))
 
 def registerEvent(request, requestSocket):
-    event.eventManager[int(request)]=event.LocalEventHandler(int(request))
+    id=int(request)
+    event.eventPipes[id]=[]
+    event.eventLocks[id]=Lock()
+    event.eventStates[id]=False
     
 handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           b"TRM":terminateTask, b"TRN":taskRunning, b"EXC":getException,
