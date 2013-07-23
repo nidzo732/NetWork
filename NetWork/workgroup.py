@@ -21,8 +21,6 @@ CNT_WORKER_COUNT=4
 CNT_TASK_COUNT=5
 CNT_LIVE_WORKERS=6
 CNT_EVENT_COUNT=7
-CNT_EVENT_PIPES=8
-CNT_EVENT_STATES=9
 
 CMD_HALT=b"HLT"
 CMD_SET_EVENT=b"EVS"
@@ -42,8 +40,6 @@ class Workgroup:
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
         self.controlls[CNT_EVENT_COUNT]=0
-        self.controlls[CNT_EVENT_PIPES]=[None]
-        self.controlls[CNT_EVENT_STATES]=[None]
         self.listenerSocket=NWSocket()
         self.workerList={-1:None}
         for workerAddress in workerAddresses:
@@ -59,8 +55,7 @@ class Workgroup:
         self.controlls[CNT_LIVE_WORKERS]=self.controlls[CNT_WORKER_COUNT]
         self.controlls[CNT_WORKERS]=self.workerList
         self.commqueue=Queue()
-        event.runningOnMaster=True
-        event.eventLocks={-1:None}
+        event.events={-1:None}
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
         
@@ -132,7 +127,7 @@ class Workgroup:
     
     def registerEvent(self):
         self.controlls[CNT_EVENT_COUNT]+=1
-        event.eventLocks[CNT_EVENT_COUNT]=Lock()
+        event.events[controlls[CNT_EVENT_COUNT]]=Event()
         self.commqueue.put(CMD_REGISTER_EVENT+
                            str(self.controlls[CNT_EVENT_COUNT]).encode(encoding='ASCII'))
         return event.NWEvent(self.controlls[CNT_EVENT_COUNT], self)

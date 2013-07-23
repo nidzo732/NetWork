@@ -7,7 +7,7 @@ from NetWork.task import Task
 from NetWork.workerprocess import WorkerProcess
 import NetWork.event as event
 from threading import Thread
-from multiprocessing import Manager, Pipe
+from multiprocessing import Manager, Event
 import atexit
 import pickle
 class BadRequestError(Exception): pass
@@ -44,13 +44,11 @@ def getException(request, requestSocket):
     requestSocket.send(pickle.dumps(exception))
 
 def setEvent(request, requestSocket):
-    event.NWEvent.setLocalEvent(int(request))
+    event.events[int(request)].set()
 
 def registerEvent(request, requestSocket):
     id=int(request)
-    event.eventPipes[id]=[]
-    event.eventLocks[id]=Lock()
-    event.eventStates[id]=False
+    event.events[id]=Event()
     
 handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           b"TRM":terminateTask, b"TRN":taskRunning, b"EXC":getException,
@@ -87,9 +85,7 @@ if __name__=="__main__":
         exit()
     tasks={-1:None}
     workerManager=Manager().list(range(20))
-    event.eventManager=Manager().list(range(20))
-    event.runningOnMaster=False
-    event.eventLocks={-1:None}
+    event.events={-1:None}
     while True:
         requestSocket=listenerSocket.accept()
         requestHandler(requestSocket)

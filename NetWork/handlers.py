@@ -20,22 +20,16 @@ def receiveSocketData(socket, commqueue):
 
 def setEvent(request, controlls, commqueue):
     id=int(request)
-    eventLocks[id].acquire()
     for worker in controlls[CNT_WORKERS]:
         if worker.alive:
             worker.setEvent(id)
-    controlls[CNT_EVENT_STATES][id]=True
-    for currentEvent in controlls[CNT_EVENT_PIPES][id]:
-        currentEvent[0].send(b"EVS")
-    eventLocks[id].release()
+    event.events[id].set()
     
 def registerEvent(request, controlls, commqueue):
     id=int(request)
     for worker in controlls[CNT_WORKERS]:
         if worker.alive:
             worker.registerEvent(id)
-    controlls[CNT_EVENT_STATES].append(False)
-    controlls[CNT_EVENT_PIPES].append([])
     
         
 handlerList={b"EVS":setEvent, b"EVR":registerEvent}

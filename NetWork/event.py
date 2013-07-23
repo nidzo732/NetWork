@@ -3,27 +3,14 @@ from multiprocessing import Pipe
 class WrongComputerError(Exception):pass
 runningOnMaster=None
 masterAddress=None
-eventLocks=None
-eventPipes=None
-eventStates=None
+events=None
 class NWEvent:
     def __init__(self, id, workgroup=None):
         self.id=id
         self.workgroup=workgroup
     
     def waitOnWorker(self):
-        eventLocks[self.id].acquire()
-        if eventStates[self.id]:
-            eventLocks[self.id].release()
-            return True
-        else:
-            pipeList=eventPipes[self.id]
-            pipeList.append(Pipe())
-            myPipe=len(pipeList)-1
-            eventPipes[self.id]=pipeList
-            eventLocks[self.id].release()
-            eventPipes[self.id][myPipe][1].recv()
-            return True
+        events[self.id].wait()
     
     def setOnWorker(self):
         masterSocket=NWSocket()
@@ -48,13 +35,5 @@ class NWEvent:
             self.waitOnMaster()
         else:
             self.waitOnWorker()
-    
-    @staticmethod
-    def setLocalEvent(id):
-        eventLocks[id].acquire()
-        eventStates[id]=True
-        for pipePair in eventPipes[id]:
-            pipePair[0].send(b"EVS")
-        eventLocks[id].release()
     
     
