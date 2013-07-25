@@ -5,7 +5,7 @@ computers, distribute their work and provide communication between them.
 Created on Jan 11, 2013
 """
 
-from multiprocessing import Process, Queue, Manager, Pipe
+from multiprocessing import Process, Queue, Manager, Event
 from .networking import NWSocket
 from .handlers import receiveSocketData, handlerList
 from threading import Thread
@@ -29,19 +29,19 @@ CMD_REGISTER_EVENT=b"EVR"
 class NoWorkersError(Exception):pass
 
 def receiveSocketData(socket, commqueue):
-    commqueue.put(CMD_SOCKET_MESSAGE+socket.recv())
+    commqueue.put(socket.recv())
 
 
 class Workgroup:
 
-    def __init__(self, workerAddresses, skipBadWorkers=True, 
+    def __init__(self, workerAddresses, skipBadWorkers=False, 
                  handleDeadWorkers=False):
         self.controlls=Manager().list(range(20)) 
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
         self.controlls[CNT_EVENT_COUNT]=0
         self.listenerSocket=NWSocket()
-        self.workerList={-1:None}
+        self.workerList=[]
         for workerAddress in workerAddresses:
             try:
                 newWorker=Worker(workerAddress,
@@ -56,6 +56,7 @@ class Workgroup:
         self.controlls[CNT_WORKERS]=self.workerList
         self.commqueue=Queue()
         event.events={-1:None}
+        event.runningOnMaster=True
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
         
@@ -70,7 +71,7 @@ class Workgroup:
         self.listenerSocket.listen()
         self.networkListener=Process(target=self.listenerProcess, 
                                      args=(self.listenerSocket, self.commqueue))
-        self.dispatcher=Process(target=self.dispatcherProcess, 
+        self.dispatcher=Thread(target=self.dispatcherProcess, 
                                 args=(self.commqueue, self.controlls))
         self.dispatcher.start()
         self.networkListener.start()
@@ -109,25 +110,14 @@ class Workgroup:
         return self.controlls[CNT_WORKERS][worker].exceptionRaised(id)
     
     def waitForEvent(self, id):
-        event.eventLocks[id].acquire()
-        if controlls[CNT_EVENT_STATES][id]:
-            event.eventLocks[id].release()
-            return True
-        else:
-            pipeList=controlls[CNT_EVENT_PIPES][id]
-            pipeList.append(Pipe())
-            myPipe=len(pipeList)-1
-            controlls[CNT_EVENT_PIPES]=pipeList
-            event.eventLocks[id].release()
-            controlls[CNT_EVENT_PIPES][id][myPipe][1].recv()
-            return True
+        event.events[id].wait()
     
     def setEvent(self, id):
         self.commqueue.put(CMD_SET_EVENT+str(id).encode(encoding='ASCII'))
     
     def registerEvent(self):
         self.controlls[CNT_EVENT_COUNT]+=1
-        event.events[controlls[CNT_EVENT_COUNT]]=Event()
+        event.events[self.controlls[CNT_EVENT_COUNT]]=Event()
         self.commqueue.put(CMD_REGISTER_EVENT+
                            str(self.controlls[CNT_EVENT_COUNT]).encode(encoding='ASCII'))
         return event.NWEvent(self.controlls[CNT_EVENT_COUNT], self)
@@ -154,7 +144,7 @@ class Workgroup:
     def dispatcherProcess(commqueue, controlls):
         request=commqueue.get()
         while not request==CMD_HALT:
-            print(request)
+            #print(request)
             handlerList[request[:3]](request[3:], controlls, commqueue)
             request=commqueue.get()
     
@@ -164,7 +154,8 @@ class Workgroup:
         if (target.running):
             #Need to fix this for a nice exit, preferably with join#########
             target.networkListener.terminate()
-            target.dispatcher.terminate() 
+            target.commqueue.put(CMD_HALT)
+            target.dispatcher.join()
             target.listenerSocket.close()
             target.running=False
         

@@ -1,5 +1,5 @@
 from .networking import NWSocket
-from multiprocessing import Pipe
+from multiprocessing import Manager
 class WrongComputerError(Exception):pass
 runningOnMaster=None
 masterAddress=None
@@ -35,5 +35,12 @@ class NWEvent:
             self.waitOnMaster()
         else:
             self.waitOnWorker()
+    
+    def __setstate__(self, state):
+        self.id=state["id"]
+        self.workgroup=state["workgroup"]
+    
+    def __getstate__(self):
+        return {"id":self.id, "workgroup":None}
     
     

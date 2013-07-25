@@ -11,8 +11,6 @@ CNT_WORKER_COUNT=4
 CNT_TASK_COUNT=5
 CNT_LIVE_WORKERS=6
 CNT_EVENT_COUNT=7
-CNT_EVENT_PIPES=8
-CNT_EVENT_STATES=9
 
 def receiveSocketData(socket, commqueue):
     commqueue.put(socket.recv())

@@ -6,7 +6,7 @@ Created on Jan 13, 2013
 """
 import socket
 
-COMCODE_CHECKALIVE=b"ALV?"
+COMCODE_CHECKALIVE=b"ALV"
 COMCODE_ISALIVE=b"IMALIVE"
 ISALIVE_TIMEOUT=10
 DEFAULT_TCP_PORT=32151
@@ -65,7 +65,7 @@ class NWSocketTCP:
     
     def accept(self):
         requestData=self.internalSocket.accept()
-        return NWSocket(requestData[0], requestData[1])
+        return NWSocket(requestData[0], requestData[1][0])
     
     
     def close(self):

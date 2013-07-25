@@ -1,5 +1,5 @@
 """
-This file implements a worker class that is used to describe
+This file implements a worker class that is used to represent
 one worker computer
 
 Created on Jan 12, 2013
@@ -7,7 +7,6 @@ Created on Jan 12, 2013
 class WorkerUnavailableError(Exception):pass
 class DeadWorkerError(Exception): pass
 from .networking import NWSocket
-from concurrent.futures import ProcessPoolExecutor
 import pickle
 COMCODE_TASK_STARTED=b"TASKSTART"
 

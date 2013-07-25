@@ -49,10 +49,14 @@ def setEvent(request, requestSocket):
 def registerEvent(request, requestSocket):
     id=int(request)
     event.events[id]=Event()
+
+def checkAlive(request, requestSocket):
+    if requestSocket.address==masterAddress:
+        requestSocket.send(COMCODE_ISALIVE)
     
 handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           b"TRM":terminateTask, b"TRN":taskRunning, b"EXC":getException,
-          b"EVS":setEvent, b"EVR":registerEvent,}
+          b"EVS":setEvent, b"EVR":registerEvent, b"ALV":checkAlive}
 
 def requestHandler(requestSocket):
     request=requestSocket.recv()
@@ -72,9 +76,9 @@ if __name__=="__main__":
         if request==COMCODE_CHECKALIVE:
             requestSocket.send(COMCODE_ISALIVE)
             masterAddress=requestSocket.address
-            event.MasterAddress=masterAddress
+            event.masterAddress=masterAddress
             requestSocket.close()
-            print("MASTER REGISTERED")
+            print("MASTER REGISTERED with address", masterAddress)
         else:
             raise BadRequestError
     except OSError:
@@ -86,6 +90,7 @@ if __name__=="__main__":
     tasks={-1:None}
     workerManager=Manager().list(range(20))
     event.events={-1:None}
+    event.runningOnMaster=False
     while True:
         requestSocket=listenerSocket.accept()
         requestHandler(requestSocket)
