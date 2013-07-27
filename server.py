@@ -5,9 +5,10 @@ For now you may see some random code i used to test the package
 from NetWork.networking import NWSocket, COMCODE_CHECKALIVE, COMCODE_ISALIVE
 from NetWork.task import Task
 from NetWork.workerprocess import WorkerProcess
+import NetWork.queue as queue
 import NetWork.event as event
 from threading import Thread
-from multiprocessing import Manager, Event
+from multiprocessing import Manager, Event, Queue
 import atexit
 import pickle
 class BadRequestError(Exception): pass
@@ -53,10 +54,20 @@ def registerEvent(request, requestSocket):
 def checkAlive(request, requestSocket):
     if requestSocket.address==masterAddress:
         requestSocket.send(COMCODE_ISALIVE)
+
+def putOnQueue(request, requestSocket):
+    idLength=request.find(b"ID")
+    id=int(request[:idLength])
+    queue.queues[id].put(request[idLength+2:])
+
+def putOnQueue(request, requestSocket):
+    queue.queues[int(request)]=Queue()
+    
     
 handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           b"TRM":terminateTask, b"TRN":taskRunning, b"EXC":getException,
-          b"EVS":setEvent, b"EVR":registerEvent, b"ALV":checkAlive}
+          b"EVS":setEvent, b"EVR":registerEvent, b"ALV":checkAlive, 
+          b"QUP":putOnQueue, b"QUR":registerQueue}
 
 def requestHandler(requestSocket):
     request=requestSocket.recv()

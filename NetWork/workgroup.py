@@ -12,7 +12,7 @@ from threading import Thread
 from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
 from .deadworkerhandler import salvageDeadWorker
-from NetWork import event
+from NetWork import event, queue
 
 CNT_WORKERS=0
 CNT_SHOULD_STOP=2
@@ -21,15 +21,37 @@ CNT_WORKER_COUNT=4
 CNT_TASK_COUNT=5
 CNT_LIVE_WORKERS=6
 CNT_EVENT_COUNT=7
+CNT_QUEUE_COUNT=8
 
 CMD_HALT=b"HLT"
 CMD_SET_EVENT=b"EVS"
 CMD_REGISTER_EVENT=b"EVR"
+CMD_REGISTER_QUEUE=b"QUR"
+CMD_PUT_ON_QUEUE=b"QUP"
+CMD_GET_FROM_QUEUE=b"QUG"
 
 class NoWorkersError(Exception):pass
 
-def receiveSocketData(socket, commqueue):
-    commqueue.put(socket.recv())
+class Command:
+    def __init__(self, contents, requester):
+        self.contents=contents
+        self.requester=requester
+    
+    def getContents(self):
+        return self.contents[3:]
+    
+    def type(self):
+        return self.contents[:3]
+
+def receiveSocketData(socket, commqueue, controlls):
+    workerId=0
+    for worker in controlls[CNT_WORKERS]:
+        if socket.address==worker.address:
+            workerId=worker.id
+    if not workerId:
+        return
+    commqueue.put(Command(workerId, socker.recv()))
+    socket.close()
 
 
 class Workgroup:
@@ -40,6 +62,7 @@ class Workgroup:
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
         self.controlls[CNT_EVENT_COUNT]=0
+        self.controlls[CNT_QUEUE_COUNT]=0
         self.listenerSocket=NWSocket()
         self.workerList=[]
         for workerAddress in workerAddresses:
@@ -57,6 +80,9 @@ class Workgroup:
         self.commqueue=Queue()
         event.events={-1:None}
         event.runningOnMaster=True
+        queue.queues={-1:None}
+        queue.queueHandlers=Manager().dict()
+        queue.queueLocks={-1:None}
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
         
@@ -70,7 +96,8 @@ class Workgroup:
     def startServing(self):
         self.listenerSocket.listen()
         self.networkListener=Process(target=self.listenerProcess, 
-                                     args=(self.listenerSocket, self.commqueue))
+                                     args=(self.listenerSocket, self.commqueue,
+                                           self.controlls))
         self.dispatcher=Thread(target=self.dispatcherProcess, 
                                 args=(self.commqueue, self.controlls))
         self.dispatcher.start()
@@ -113,14 +140,32 @@ class Workgroup:
         event.events[id].wait()
     
     def setEvent(self, id):
-        self.commqueue.put(CMD_SET_EVENT+str(id).encode(encoding='ASCII'))
+        self.commqueue.put(Command(CMD_SET_EVENT+str(id).encode(encoding='ASCII'), 0))
     
     def registerEvent(self):
         self.controlls[CNT_EVENT_COUNT]+=1
-        event.events[self.controlls[CNT_EVENT_COUNT]]=Event()
-        self.commqueue.put(CMD_REGISTER_EVENT+
-                           str(self.controlls[CNT_EVENT_COUNT]).encode(encoding='ASCII'))
-        return event.NWEvent(self.controlls[CNT_EVENT_COUNT], self)
+        id=self.controlls[CNT_EVENT_COUNT]
+        event.events[id]=Event()
+        self.commqueue.put(Command(CMD_REGISTER_EVENT+
+                           str(id).encode(encoding='ASCII'), 0))
+        return event.NWEvent(id, self)
+    
+    def registerQueue(self):
+        self.controlls[CNT_QUEUE_COUNT]+=1
+        id=self.controlls[CNT_QUEUE_COUNT]
+        queue.queueHandlers[id]=queue.MasterQueueHandler(id)
+        queue.queues[id]=Queue()
+        queue.queueLocks[id]=Lock()
+        self.commqueue.put(Command(CMD_REGISTER_QUEUE+str(id).encode(encoding='ASCII'), 0))
+        return queue.NWQueue(id, self)
+    
+    def putOnQueue(self, id, data):
+        self.commqueue.put(Command(CMD_PUT_ON_QUEUE+str(id).encode(encoding='ASCII')+
+                           b"ID"+data, 0))
+    
+    def getFromQueue(self, id):
+        self.commqueue.put(Command(CMD_GET_FROM_QUEUE+str(id).encode(encoding='ASCII'), 0))
+        return queue.queues[id].get()
     
     def fixDeadWorker(self, id=None, worker=None):
         salvageDeadWorker(self, id, worker)
@@ -132,11 +177,11 @@ class Workgroup:
         
     
     @staticmethod
-    def listenerProcess(listenerSocket, commqueue):
+    def listenerProcess(listenerSocket, commqueue, controlls):
         while True:
             receivedRequest=listenerSocket.accept()
             handlerThread=Thread(target=receiveSocketData, 
-                                 args=(receivedRequest, commqueue))
+                                 args=(receivedRequest, commqueue, controlls))
             handlerThread.start()
                 
     
@@ -145,7 +190,7 @@ class Workgroup:
         request=commqueue.get()
         while not request==CMD_HALT:
             #print(request)
-            handlerList[request[:3]](request[3:], controlls, commqueue)
+            handlerList[request.type()](request, controlls, commqueue)
             request=commqueue.get()
     
     @staticmethod
