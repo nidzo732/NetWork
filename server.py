@@ -60,7 +60,7 @@ def putOnQueue(request, requestSocket):
     id=int(request[:idLength])
     queue.queues[id].put(request[idLength+2:])
 
-def putOnQueue(request, requestSocket):
+def registerQueue(request, requestSocket):
     queue.queues[int(request)]=Queue()
     
     

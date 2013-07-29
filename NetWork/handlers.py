@@ -44,10 +44,23 @@ def getFromQueue(request, controlls, commqueue):
     temporaryHandler.distributeContents(controlls)
     queue.queueHandlers[id]=temporaryHandler
     queue.queueLocks[id].release()
+
+def putOnQueue(request, controlls, commqueue):
+    contents=request.getContents()
+    id=int(request[:request.find(b"ID")])
+    data=request[request.find(b"ID")+2:]
+    queue.queueLocks[id].acquire()
+    temporaryHandler=queue.queueHandlers[id]
+    temporaryHandler.putItem(workerId)
+    temporaryHandler.distributeContents(controlls)
+    queue.queueHandlers[id]=temporaryHandler
+    queue.queueLocks[id].release()
+    
+    
     
 
 
     
         
 handlerList={b"EVS":setEvent, b"EVR":registerEvent, b"QUR":registerQueue,
-             b"QUG":getFromQueue}
+             b"QUG":getFromQueue, b"QUP":putOnQueue}
