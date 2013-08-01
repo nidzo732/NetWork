@@ -25,15 +25,12 @@ class Worker:
     def executeTask(self, task):
         if not self.alive:
             raise DeadWorkerError
-        self.myTasks[task.id]=task
+        #self.myTasks[task.id]=task
         try:
             workerSocket=NWSocket()
             workerSocket.connect(self.address)
-            workerSocket.send(b"TSK"+task.marshal())
-            if True:#workerSocket.recv()==COMCODE_TASK_STARTED:
-                return True
-            else:
-                raise DeadWorkerError()
+            workerSocket.send(b"TSK"+task)
+            workerSocket.close()
         except OSError:
             self.alive=False
             raise DeadWorkerError()

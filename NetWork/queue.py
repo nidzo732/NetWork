@@ -88,7 +88,7 @@ class MasterQueueHandler:
     
     def hasItems(self):
         return self.items
-    
+
     def distributeContents(self, controlls):
         #print("DISTRIBUTING", self.id, self.items, self.waiters)
         while self.hasItems() and self.hasWaiters():
