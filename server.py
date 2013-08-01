@@ -71,6 +71,7 @@ handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
 
 def requestHandler(requestSocket):
     request=requestSocket.recv()
+    #print(request)
     handlers[request[:3]](request[3:], requestSocket)
     requestSocket.close()
 

@@ -132,6 +132,7 @@ class Worker:
             raise DeadWorkerError()
     
     def putOnQueue(self, id, data):
+        #print("WORKER", self.id, "(", self.address, ")", "PUTTING", data, "ON QUEUE", id)
         if not self.alive:
             raise DeadWorkerError
         try:
