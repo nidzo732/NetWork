@@ -120,6 +120,30 @@ class Worker:
             self.alive=False
             raise DeadWorkerError()
     
+    def registerQueue(self, id):
+        if not self.alive:
+            raise DeadWorkerError
+        try:
+            workerSocket=NWSocket()
+            workerSocket.connect(self.address)
+            workerSocket.send(b"QUR"+str(id).encode(encoding="ASCII"))
+        except OSError:
+            self.alive=False
+            raise DeadWorkerError()
+    
+    def putOnQueue(self, id, data):
+        #print("WORKER", self.id, "(", self.address, ")", "PUTTING", data, "ON QUEUE", id)
+        if not self.alive:
+            raise DeadWorkerError
+        try:
+            workerSocket=NWSocket()
+            workerSocket.connect(self.address)
+            workerSocket.send(b"QUP"+str(id).encode(encoding="ASCII")+
+                              b"ID"+data)
+        except OSError:
+            self.alive=False
+            raise DeadWorkerError()
+    
     
             
             
