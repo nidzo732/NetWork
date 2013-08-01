@@ -13,6 +13,7 @@ from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
 from .deadworkerhandler import salvageDeadWorker
 from NetWork import event, queue
+from pickle import dumps
 
 CNT_WORKERS=0
 CNT_SHOULD_STOP=2
@@ -22,6 +23,7 @@ CNT_TASK_COUNT=5
 CNT_LIVE_WORKERS=6
 CNT_EVENT_COUNT=7
 CNT_QUEUE_COUNT=8
+CNT_TASK_EXECUTORS=9
 
 CMD_HALT=b"HLT"
 CMD_SET_EVENT=b"EVS"
@@ -29,6 +31,12 @@ CMD_REGISTER_EVENT=b"EVR"
 CMD_REGISTER_QUEUE=b"QUR"
 CMD_PUT_ON_QUEUE=b"QUP"
 CMD_GET_FROM_QUEUE=b"QUG"
+CMD_SUBMIT_TASK=b"TSK"
+CMD_TERMINATE_TASK=b"TRM"
+CMD_GET_RESULT=b"RSL"
+CMD_TASK_RUNNING=b"TRN"
+CMD_GET_EXCEPTION=b"EXC"
+CMD_CHECK_EXCEPTION=b"EXR"
 
 class NoWorkersError(Exception):pass
 
@@ -63,6 +71,8 @@ class Workgroup:
         self.controlls[CNT_TASK_COUNT]=0
         self.controlls[CNT_EVENT_COUNT]=0
         self.controlls[CNT_QUEUE_COUNT]=0
+        self.controlls[CNT_TASK_EXECUTORS]={-1:None}
+        self.currentWorker=-1
         self.listenerSocket=NWSocket()
         self.workerList=[]
         for workerAddress in workerAddresses:
@@ -76,7 +86,6 @@ class Workgroup:
                     raise workerError
         if not self.controlls[CNT_WORKER_COUNT]:
             raise NoWorkersError("No workers were successfully added to workgroup")
-        self.currentWorker=-1
         self.controlls[CNT_LIVE_WORKERS]=self.controlls[CNT_WORKER_COUNT]
         self.controlls[CNT_WORKERS]=self.workerList
         self.commqueue=Queue()
@@ -110,34 +119,55 @@ class Workgroup:
     def submit(self, target, args=(), kwargs={}):
         self.currentWorker+=1
         self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
-        while not self.controlls[CNT_WORKERS][self.currentWorker].alive:
-            self.currentWorker+=1
-            self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
         self.controlls[CNT_TASK_COUNT]+=1
         newTask=Task(target=target, args=args, kwargs=kwargs, 
                      id=self.controlls[CNT_TASK_COUNT])
-        try:
-            self.controlls[CNT_WORKERS][self.currentWorker].executeTask(newTask)
-        except DeadWorkerError:
-            self.fixDeadWorker(worker=self.currentWorker)
-            return self.submit(target, args, kwargs)
+        self.commqueue.put(Command(CMD_SUBMIT_TASK+
+                           str(self.currentWorker).encode(encoding='ASCII')+
+                           b"WID"+newTask.marshal(), -1))
+        executors=self.controlls[CNT_TASK_EXECUTORS]
+        executors[newTask.id]=self.currentWorker
+        self.controlls[CNT_TASK_EXECUTORS]=executors
         return TaskHandler(newTask.id, self, self.currentWorker)
     
     def getResult(self, id, worker):
-        return self.controlls[CNT_WORKERS][worker].getResult(id)
+        resultQueue=self.registerQueue()
+        self.commqueue.put(Command(CMD_GET_RESULT+str(id).encode(encoding="ASCII")+
+                           b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
+        result=resultQueue.get()
+        del resultQueue
+        return result
+        
     
     def cancelTask(self, id, worker):
-        return self.controlls[CNT_WORKERS][worker].terminateTask(id)
+        #return self.controlls[CNT_WORKERS][worker].terminateTask(id)
+        self.commqueue.put(Command(CMD_TERMINATE_TASK+
+                           str(id).encode(encoding='ASCII'), -1))
     
     
     def taskRunning(self, id, worker):
-        return self.controlls[CNT_WORKERS][worker].taskRunning(id)
+        resultQueue=self.registerQueue()
+        self.commqueue.put(Command(CMD_TASK_RUNNING+str(id).encode(encoding="ASCII")+
+                           b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
+        result=resultQueue.get()
+        del resultQueue
+        return result
     
     def getException(self, id, worker):
-        return self.controlls[CNT_WORKERS][worker].getException(id)
+        resultQueue=self.registerQueue()
+        self.commqueue.put(Command(CMD_GET_EXCEPTION+str(id).encode(encoding="ASCII")+
+                           b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
+        result=resultQueue.get()
+        del resultQueue
+        return result
     
     def exceptionRaised(self, id, worker):
-        return self.controlls[CNT_WORKERS][worker].exceptionRaised(id)
+        resultQueue=self.registerQueue()
+        self.commqueue.put(Command(CMD_CHECK_EXCEPTION+str(id).encode(encoding="ASCII")+
+                           b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
+        result=resultQueue.get()
+        del resultQueue
+        return result
     
     def waitForEvent(self, id):
         event.events[id].wait()

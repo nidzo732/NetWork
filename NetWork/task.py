@@ -2,6 +2,7 @@ import marshal
 import pickle
 from types import FunctionType
 #import .handlers
+
 class Task:
     
     def __init__(self, target=None, args=(), kwargs={}, id=None, marshaled=None, 
