@@ -38,7 +38,7 @@ def registerQueue(request, controlls, commqueue):
 def getFromQueue(request, controlls, commqueue):
     id=int(request.getContents())
     queue.queueLocks[id].acquire()
-    workerId=request.requester()
+    workerId=request.requester
     temporaryHandler=queue.queueHandlers[id]
     temporaryHandler.putWaiter(workerId)
     temporaryHandler.distributeContents(controlls)
@@ -47,11 +47,11 @@ def getFromQueue(request, controlls, commqueue):
 
 def putOnQueue(request, controlls, commqueue):
     contents=request.getContents()
-    id=int(request[:request.find(b"ID")])
-    data=request[request.find(b"ID")+2:]
+    id=int(contents[:contents.find(b"ID")])
+    data=contents[contents.find(b"ID")+2:]
     queue.queueLocks[id].acquire()
     temporaryHandler=queue.queueHandlers[id]
-    temporaryHandler.putItem(workerId)
+    temporaryHandler.putItem(data)
     temporaryHandler.distributeContents(controlls)
     queue.queueHandlers[id]=temporaryHandler
     queue.queueLocks[id].release()

@@ -44,13 +44,13 @@ class Command:
         return self.contents[:3]
 
 def receiveSocketData(socket, commqueue, controlls):
-    workerId=0
+    workerId=-1
     for worker in controlls[CNT_WORKERS]:
         if socket.address==worker.address:
             workerId=worker.id
-    if not workerId:
+    if workerId==-1:
         return
-    commqueue.put(Command(workerId, socker.recv()))
+    commqueue.put(Command(socket.recv(), workerId))
     socket.close()
 
 
@@ -68,12 +68,14 @@ class Workgroup:
         for workerAddress in workerAddresses:
             try:
                 newWorker=Worker(workerAddress,
-                                 self.controlls[CNT_WORKER_COUNT+1])
+                                 self.controlls[CNT_WORKER_COUNT])
                 self.workerList.append(newWorker)
                 self.controlls[CNT_WORKER_COUNT]+=1
             except WorkerUnavailableError as workerError:
                 if not skipBadWorkers:
                     raise workerError
+        if not self.controlls[CNT_WORKER_COUNT]:
+            raise NoWorkersError("No workers were successfully added to workgroup")
         self.currentWorker=-1
         self.controlls[CNT_LIVE_WORKERS]=self.controlls[CNT_WORKER_COUNT]
         self.controlls[CNT_WORKERS]=self.workerList
@@ -83,6 +85,7 @@ class Workgroup:
         queue.queues={-1:None}
         queue.queueHandlers=Manager().dict()
         queue.queueLocks={-1:None}
+        queue.runningOnMaster=True
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
         
@@ -140,32 +143,30 @@ class Workgroup:
         event.events[id].wait()
     
     def setEvent(self, id):
-        self.commqueue.put(Command(CMD_SET_EVENT+str(id).encode(encoding='ASCII'), 0))
+        self.commqueue.put(Command(CMD_SET_EVENT+str(id).encode(encoding='ASCII'), -1))
     
     def registerEvent(self):
         self.controlls[CNT_EVENT_COUNT]+=1
         id=self.controlls[CNT_EVENT_COUNT]
         event.events[id]=Event()
         self.commqueue.put(Command(CMD_REGISTER_EVENT+
-                           str(id).encode(encoding='ASCII'), 0))
+                           str(id).encode(encoding='ASCII'), -1))
         return event.NWEvent(id, self)
     
     def registerQueue(self):
         self.controlls[CNT_QUEUE_COUNT]+=1
         id=self.controlls[CNT_QUEUE_COUNT]
-        queue.queueHandlers[id]=queue.MasterQueueHandler(id)
-        queue.queues[id]=Queue()
-        queue.queueLocks[id]=Lock()
-        self.commqueue.put(Command(CMD_REGISTER_QUEUE+str(id).encode(encoding='ASCII'), 0))
+        self.commqueue.put(Command(CMD_REGISTER_QUEUE+str(id).encode(encoding='ASCII'), -1))
         return queue.NWQueue(id, self)
     
     def putOnQueue(self, id, data):
         self.commqueue.put(Command(CMD_PUT_ON_QUEUE+str(id).encode(encoding='ASCII')+
-                           b"ID"+data, 0))
+                           b"ID"+data, -1))
     
     def getFromQueue(self, id):
-        self.commqueue.put(Command(CMD_GET_FROM_QUEUE+str(id).encode(encoding='ASCII'), 0))
-        return queue.queues[id].get()
+        self.commqueue.put(Command(CMD_GET_FROM_QUEUE+str(id).encode(encoding='ASCII'), -1))
+        data=queue.queues[id].get()
+        return data
     
     def fixDeadWorker(self, id=None, worker=None):
         salvageDeadWorker(self, id, worker)
@@ -189,7 +190,7 @@ class Workgroup:
     def dispatcherProcess(commqueue, controlls):
         request=commqueue.get()
         while not request==CMD_HALT:
-            #print(request)
+            #print("REQUEST", request.contents, "FROM", request.requester)
             handlerList[request.type()](request, controlls, commqueue)
             request=commqueue.get()
     

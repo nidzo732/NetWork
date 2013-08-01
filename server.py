@@ -88,6 +88,7 @@ if __name__=="__main__":
             requestSocket.send(COMCODE_ISALIVE)
             masterAddress=requestSocket.address
             event.masterAddress=masterAddress
+            queue.masterAddress=masterAddress
             requestSocket.close()
             print("MASTER REGISTERED with address", masterAddress)
         else:
@@ -102,6 +103,8 @@ if __name__=="__main__":
     workerManager=Manager().list(range(20))
     event.events={-1:None}
     event.runningOnMaster=False
+    queue.queues={-1:None}
+    queue.runningOnMaster=False
     while True:
         requestSocket=listenerSocket.accept()
         requestHandler(requestSocket)
