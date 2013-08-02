@@ -178,7 +178,6 @@ class Workgroup:
     def registerEvent(self):
         self.controlls[CNT_EVENT_COUNT]+=1
         id=self.controlls[CNT_EVENT_COUNT]
-        event.events[id]=Event()
         self.commqueue.put(Command(CMD_REGISTER_EVENT+
                            str(id).encode(encoding='ASCII'), -1))
         return event.NWEvent(id, self)

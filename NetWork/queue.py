@@ -98,4 +98,31 @@ class MasterQueueHandler:
                 queues[self.id].put(item)
             else:
                 controlls[CNT_WORKERS][waiter].putOnQueue(self.id, item)
+
+def registerQueue(request, controlls, commqueue):
+    id=int(request.getContents())
+    for worker in controlls[CNT_WORKERS]:
+        if worker.alive:
+            worker.registerQueue(id)
+
+def getFromQueue(request, controlls, commqueue):
+    id=int(request.getContents())
+    queueLocks[id].acquire()
+    workerId=request.requester
+    temporaryHandler=queueHandlers[id]
+    temporaryHandler.putWaiter(workerId)
+    temporaryHandler.distributeContents(controlls)
+    queueHandlers[id]=temporaryHandler
+    queueLocks[id].release()
+
+def putOnQueue(request, controlls, commqueue):
+    contents=request.getContents()
+    id=int(contents[:contents.find(b"ID")])
+    data=contents[contents.find(b"ID")+2:]
+    queueLocks[id].acquire()
+    temporaryHandler=queueHandlers[id]
+    temporaryHandler.putItem(data)
+    temporaryHandler.distributeContents(controlls)
+    queueHandlers[id]=temporaryHandler
+    queueLocks[id].release()
         

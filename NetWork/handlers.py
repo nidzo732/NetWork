@@ -5,6 +5,8 @@ Created on Feb 1, 2013
 '''
 from NetWork import event, queue
 from pickle import dumps
+from .event import setEvent, registerEvent
+from queue import registerQueue, putOnQueue, getFromQueue
 CNT_WORKERS=0
 CNT_SHOULD_STOP=2
 CNT_LISTEN_SOCKET=3
@@ -31,46 +33,6 @@ CMD_CHECK_EXCEPTION=b"EXR"
 def receiveSocketData(socket, commqueue):
     commqueue.put(socket.recv())
     socket.close()
-
-def setEvent(request, controlls, commqueue):
-    id=int(request.getContents())
-    for worker in controlls[CNT_WORKERS]:
-        if worker.alive:
-            worker.setEvent(id)
-    event.events[id].set()
-    
-def registerEvent(request, controlls, commqueue):
-    id=int(request.getContents())
-    for worker in controlls[CNT_WORKERS]:
-        if worker.alive:
-            worker.registerEvent(id)
-    
-def registerQueue(request, controlls, commqueue):
-    id=int(request.getContents())
-    for worker in controlls[CNT_WORKERS]:
-        if worker.alive:
-            worker.registerQueue(id)
-
-def getFromQueue(request, controlls, commqueue):
-    id=int(request.getContents())
-    queue.queueLocks[id].acquire()
-    workerId=request.requester
-    temporaryHandler=queue.queueHandlers[id]
-    temporaryHandler.putWaiter(workerId)
-    temporaryHandler.distributeContents(controlls)
-    queue.queueHandlers[id]=temporaryHandler
-    queue.queueLocks[id].release()
-
-def putOnQueue(request, controlls, commqueue):
-    contents=request.getContents()
-    id=int(contents[:contents.find(b"ID")])
-    data=contents[contents.find(b"ID")+2:]
-    queue.queueLocks[id].acquire()
-    temporaryHandler=queue.queueHandlers[id]
-    temporaryHandler.putItem(data)
-    temporaryHandler.distributeContents(controlls)
-    queue.queueHandlers[id]=temporaryHandler
-    queue.queueLocks[id].release()
 
 def submitTask(request, controlls, commqueue):
     contents=request.getContents()
