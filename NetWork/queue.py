@@ -1,15 +1,8 @@
 import pickle
 from .networking import NWSocket
+from .commcodes import CMD_PUT_ON_QUEUE, CMD_GET_FROM_QUEUE
+from .workgroup import CNT_WORKERS
 from multiprocessing import Lock, Queue
-
-CNT_WORKERS=0
-CNT_SHOULD_STOP=2
-CNT_LISTEN_SOCKET=3
-CNT_WORKER_COUNT=4
-CNT_TASK_COUNT=5
-CNT_LIVE_WORKERS=6
-CNT_EVENT_COUNT=7
-CNT_QUEUE_COUNT=8
 
 queues=None
 queueHandlers=None
@@ -29,7 +22,7 @@ class NWQueue:
     def putOnWorker(self, data):
         masterSocket=NWSocket()
         masterSocket.connect(masterAddress)
-        masterSocket.send(b"QUP"+str(self.id).encode(encoding='ASCII')+b"ID"+data)
+        masterSocket.send(CMD_PUT_ON_QUEUE+str(self.id).encode(encoding='ASCII')+b"ID"+data)
         masterSocket.close()
     
     def putOnMaster(self, data):
@@ -38,7 +31,7 @@ class NWQueue:
     def getOnWorker(self):
         masterSocket=NWSocket()
         masterSocket.connect(masterAddress)
-        masterSocket.send(b"QUG"+str(self.id).encode(encoding='ASCII'))
+        masterSocket.send(CMD_GET_FROM_QUEUE+str(self.id).encode(encoding='ASCII'))
         masterSocket.close()
         return queues[self.id].get()
     

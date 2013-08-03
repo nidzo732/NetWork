@@ -1,5 +1,7 @@
 from .networking import NWSocket
 from multiprocessing import Event
+from .commcodes import CMD_SET_EVENT
+from .workgroup import CNT_WORKERS
 class WrongComputerError(Exception):pass
 runningOnMaster=None
 masterAddress=None
@@ -16,7 +18,7 @@ class NWEvent:
     def setOnWorker(self):
         masterSocket=NWSocket()
         masterSocket.connect(masterAddress)
-        masterSocket.send(b"EVS"+str(self.id).encode(encoding='ASCII'))
+        masterSocket.send(CMD_SET_EVENT+str(self.id).encode(encoding='ASCII'))
         masterSocket.close()
     
     def waitOnMaster(self):

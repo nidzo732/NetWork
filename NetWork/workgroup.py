@@ -5,16 +5,6 @@ computers, distribute their work and provide communication between them.
 Created on Jan 11, 2013
 """
 
-from multiprocessing import Process, Queue, Manager, Event
-from .networking import NWSocket
-from .handlers import receiveSocketData, handlerList
-from threading import Thread
-from .worker import Worker, WorkerUnavailableError, DeadWorkerError
-from .task import Task, TaskHandler
-from .deadworkerhandler import salvageDeadWorker
-from NetWork import event, queue
-from pickle import dumps
-
 CNT_WORKERS=0
 CNT_SHOULD_STOP=2
 CNT_LISTEN_SOCKET=3
@@ -25,18 +15,19 @@ CNT_EVENT_COUNT=7
 CNT_QUEUE_COUNT=8
 CNT_TASK_EXECUTORS=9
 
-CMD_HALT=b"HLT"
-CMD_SET_EVENT=b"EVS"
-CMD_REGISTER_EVENT=b"EVR"
-CMD_REGISTER_QUEUE=b"QUR"
-CMD_PUT_ON_QUEUE=b"QUP"
-CMD_GET_FROM_QUEUE=b"QUG"
-CMD_SUBMIT_TASK=b"TSK"
-CMD_TERMINATE_TASK=b"TRM"
-CMD_GET_RESULT=b"RSL"
-CMD_TASK_RUNNING=b"TRN"
-CMD_GET_EXCEPTION=b"EXC"
-CMD_CHECK_EXCEPTION=b"EXR"
+from multiprocessing import Process, Queue, Manager, Event
+from .networking import NWSocket
+from .handlers import receiveSocketData, handlerList
+from threading import Thread
+from .worker import Worker, WorkerUnavailableError, DeadWorkerError
+from .task import Task, TaskHandler
+from .deadworkerhandler import salvageDeadWorker
+from .commcodes import *
+from NetWork import event, queue
+from pickle import dumps
+
+
+
 
 class NoWorkersError(Exception):pass
 
@@ -155,7 +146,7 @@ class Workgroup:
     
     def getException(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Command(CMD_GET_EXCEPTION+str(id).encode(encoding="ASCII")+
+        self.commqueue.put(Command(CMD_GET_EXCEPTION+cistr(id).encode(encoding="ASCII")+
                            b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
         result=resultQueue.get()
         del resultQueue
