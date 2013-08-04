@@ -1,7 +1,7 @@
 from .networking import NWSocket
 from multiprocessing import Event
 from .commcodes import CMD_SET_EVENT
-from .workgroup import CNT_WORKERS
+from .cntcodes import CNT_WORKERS
 class WrongComputerError(Exception):pass
 runningOnMaster=None
 masterAddress=None

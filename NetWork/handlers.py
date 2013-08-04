@@ -3,11 +3,12 @@ Created on Feb 1, 2013
 
 @author: nidzo
 '''
-from NetWork import event, queue
+from NetWork import event
+from NetWork import queue
 from pickle import dumps
 from .event import setEvent, registerEvent
 from .commcodes import *
-from .workgroup import *
+from .cntcodes import *
 from .queue import registerQueue, putOnQueue, getFromQueue
 
 def receiveSocketData(socket, commqueue):

@@ -1,7 +1,7 @@
 import pickle
 from .networking import NWSocket
 from .commcodes import CMD_PUT_ON_QUEUE, CMD_GET_FROM_QUEUE
-from .workgroup import CNT_WORKERS
+from .cntcodes  import CNT_WORKERS
 from multiprocessing import Lock, Queue
 
 queues=None

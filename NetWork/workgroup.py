@@ -5,16 +5,6 @@ computers, distribute their work and provide communication between them.
 Created on Jan 11, 2013
 """
 
-CNT_WORKERS=0
-CNT_SHOULD_STOP=2
-CNT_LISTEN_SOCKET=3
-CNT_WORKER_COUNT=4
-CNT_TASK_COUNT=5
-CNT_LIVE_WORKERS=6
-CNT_EVENT_COUNT=7
-CNT_QUEUE_COUNT=8
-CNT_TASK_EXECUTORS=9
-
 from multiprocessing import Process, Queue, Manager, Event
 from .networking import NWSocket
 from .handlers import receiveSocketData, handlerList
@@ -23,6 +13,7 @@ from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
 from .deadworkerhandler import salvageDeadWorker
 from .commcodes import *
+from .cntcodes import *
 from NetWork import event, queue
 from pickle import dumps
 
@@ -146,7 +137,7 @@ class Workgroup:
     
     def getException(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Command(CMD_GET_EXCEPTION+cistr(id).encode(encoding="ASCII")+
+        self.commqueue.put(Command(CMD_GET_EXCEPTION+str(id).encode(encoding="ASCII")+
                            b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
         result=resultQueue.get()
         del resultQueue
