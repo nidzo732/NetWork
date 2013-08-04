@@ -3,74 +3,17 @@ Created on Feb 1, 2013
 
 @author: nidzo
 '''
-from NetWork import event, queue
+from NetWork import event
+from NetWork import queue
 from pickle import dumps
-CNT_WORKERS=0
-CNT_SHOULD_STOP=2
-CNT_LISTEN_SOCKET=3
-CNT_WORKER_COUNT=4
-CNT_TASK_COUNT=5
-CNT_LIVE_WORKERS=6
-CNT_EVENT_COUNT=7
-CNT_QUEUE_COUNT=8
-CNT_TASK_EXECUTORS=9
-
-CMD_HALT=b"HLT"
-CMD_SET_EVENT=b"EVS"
-CMD_REGISTER_EVENT=b"EVR"
-CMD_REGISTER_QUEUE=b"QUR"
-CMD_PUT_ON_QUEUE=b"QUP"
-CMD_GET_FROM_QUEUE=b"QUG"
-CMD_SUBMIT_TASK=b"TSK"
-CMD_TERMINATE_TASK=b"TRM"
-CMD_GET_RESULT=b"RSL"
-CMD_TASK_RUNNING=b"TRN"
-CMD_GET_EXCEPTION=b"EXC"
-CMD_CHECK_EXCEPTION=b"EXR"
+from .event import setEvent, registerEvent
+from .commcodes import *
+from .cntcodes import *
+from .queue import registerQueue, putOnQueue, getFromQueue
 
 def receiveSocketData(socket, commqueue):
     commqueue.put(socket.recv())
     socket.close()
-
-def setEvent(request, controlls, commqueue):
-    id=int(request.getContents())
-    for worker in controlls[CNT_WORKERS]:
-        if worker.alive:
-            worker.setEvent(id)
-    event.events[id].set()
-    
-def registerEvent(request, controlls, commqueue):
-    id=int(request.getContents())
-    for worker in controlls[CNT_WORKERS]:
-        if worker.alive:
-            worker.registerEvent(id)
-    
-def registerQueue(request, controlls, commqueue):
-    id=int(request.getContents())
-    for worker in controlls[CNT_WORKERS]:
-        if worker.alive:
-            worker.registerQueue(id)
-
-def getFromQueue(request, controlls, commqueue):
-    id=int(request.getContents())
-    queue.queueLocks[id].acquire()
-    workerId=request.requester
-    temporaryHandler=queue.queueHandlers[id]
-    temporaryHandler.putWaiter(workerId)
-    temporaryHandler.distributeContents(controlls)
-    queue.queueHandlers[id]=temporaryHandler
-    queue.queueLocks[id].release()
-
-def putOnQueue(request, controlls, commqueue):
-    contents=request.getContents()
-    id=int(contents[:contents.find(b"ID")])
-    data=contents[contents.find(b"ID")+2:]
-    queue.queueLocks[id].acquire()
-    temporaryHandler=queue.queueHandlers[id]
-    temporaryHandler.putItem(data)
-    temporaryHandler.distributeContents(controlls)
-    queue.queueHandlers[id]=temporaryHandler
-    queue.queueLocks[id].release()
 
 def submitTask(request, controlls, commqueue):
     contents=request.getContents()
@@ -114,8 +57,9 @@ def getResult(request, controlls, commqueue):
 
     
         
-handlerList={b"EVS":setEvent, b"EVR":registerEvent, b"QUR":registerQueue,
-             b"QUG":getFromQueue, b"QUP":putOnQueue, b"TSK":submitTask,
+handlerList={CMD_SET_EVENT:setEvent, CMD_REGISTER_EVENT:registerEvent, 
+             CMD_REGISTER_QUEUE:registerQueue, CMD_GET_FROM_QUEUE:getFromQueue, 
+             CMD_PUT_ON_QUEUE:putOnQueue, CMD_SUBMIT_TASK:submitTask,
              CMD_TASK_RUNNING:taskRunning, CMD_GET_EXCEPTION:getException,
              CMD_CHECK_EXCEPTION:checkException, CMD_TERMINATE_TASK:terminateTask,
              CMD_GET_RESULT:getResult}

@@ -1,5 +1,7 @@
 from .networking import NWSocket
-from multiprocessing import Manager
+from multiprocessing import Event
+from .commcodes import CMD_SET_EVENT
+from .cntcodes import CNT_WORKERS
 class WrongComputerError(Exception):pass
 runningOnMaster=None
 masterAddress=None
@@ -8,6 +10,7 @@ class NWEvent:
     def __init__(self, id, workgroup=None):
         self.id=id
         self.workgroup=workgroup
+        events[id]=Event()
     
     def waitOnWorker(self):
         events[self.id].wait()
@@ -15,7 +18,7 @@ class NWEvent:
     def setOnWorker(self):
         masterSocket=NWSocket()
         masterSocket.connect(masterAddress)
-        masterSocket.send(b"EVS"+str(self.id).encode(encoding='ASCII'))
+        masterSocket.send(CMD_SET_EVENT+str(self.id).encode(encoding='ASCII'))
         masterSocket.close()
     
     def waitOnMaster(self):
@@ -42,5 +45,17 @@ class NWEvent:
     
     def __getstate__(self):
         return {"id":self.id, "workgroup":None}
+
+def setEvent(request, controlls, commqueue):
+    id=int(request.getContents())
+    for worker in controlls[CNT_WORKERS]:
+        if worker.alive:
+            worker.setEvent(id)
+    events[id].set()
     
+def registerEvent(request, controlls, commqueue):
+    id=int(request.getContents())
+    for worker in controlls[CNT_WORKERS]:
+        if worker.alive:
+            worker.registerEvent(id)
     

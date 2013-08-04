@@ -12,31 +12,13 @@ from threading import Thread
 from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
 from .deadworkerhandler import salvageDeadWorker
+from .commcodes import *
+from .cntcodes import *
 from NetWork import event, queue
 from pickle import dumps
 
-CNT_WORKERS=0
-CNT_SHOULD_STOP=2
-CNT_LISTEN_SOCKET=3
-CNT_WORKER_COUNT=4
-CNT_TASK_COUNT=5
-CNT_LIVE_WORKERS=6
-CNT_EVENT_COUNT=7
-CNT_QUEUE_COUNT=8
-CNT_TASK_EXECUTORS=9
 
-CMD_HALT=b"HLT"
-CMD_SET_EVENT=b"EVS"
-CMD_REGISTER_EVENT=b"EVR"
-CMD_REGISTER_QUEUE=b"QUR"
-CMD_PUT_ON_QUEUE=b"QUP"
-CMD_GET_FROM_QUEUE=b"QUG"
-CMD_SUBMIT_TASK=b"TSK"
-CMD_TERMINATE_TASK=b"TRM"
-CMD_GET_RESULT=b"RSL"
-CMD_TASK_RUNNING=b"TRN"
-CMD_GET_EXCEPTION=b"EXC"
-CMD_CHECK_EXCEPTION=b"EXR"
+
 
 class NoWorkersError(Exception):pass
 
@@ -178,7 +160,6 @@ class Workgroup:
     def registerEvent(self):
         self.controlls[CNT_EVENT_COUNT]+=1
         id=self.controlls[CNT_EVENT_COUNT]
-        event.events[id]=Event()
         self.commqueue.put(Command(CMD_REGISTER_EVENT+
                            str(id).encode(encoding='ASCII'), -1))
         return event.NWEvent(id, self)

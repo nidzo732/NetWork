@@ -21,128 +21,61 @@ class Worker:
             self.id=id
             self.myTasks={"-1":None}
             self.alive=True
-       
-    def executeTask(self, task):
+    
+    def sendMessage(self, message):
         if not self.alive:
             raise DeadWorkerError
-        #self.myTasks[task.id]=task
         try:
             workerSocket=NWSocket()
             workerSocket.connect(self.address)
-            workerSocket.send(b"TSK"+task)
+            workerSocket.send(message)
             workerSocket.close()
         except OSError:
             self.alive=False
             raise DeadWorkerError()
+    
+    def sendMessageWithResponse(self, message):
+        if not self.alive:
+            raise DeadWorkerError
+        try:
+            workerSocket=NWSocket()
+            workerSocket.connect(self.address)
+            workerSocket.send(message)
+            response=workerSocket.recv()
+            workerSocket.close()
+            return response
+        except OSError:
+            self.alive=False
+            raise DeadWorkerError()
+       
+    def executeTask(self, task):
+        #self.myTasks[task.id]=task
+        self.sendMessage(b"TSK"+task)
         
         
     def getResult(self, id):
-        if not self.alive:
-            raise DeadWorkerError
-        try:
-            workerSocket=NWSocket()
-            workerSocket.connect(self.address)
-            workerSocket.send(b"RSL"+str(id).encode(encoding="ASCII"))
-            return (pickle.loads(workerSocket.recv()))
-        except OSError:
-            self.alive=False
-            raise DeadWorkerError()
+        return pickle.loads(self.sendMessageWithResponse(b"RSL"+str(id).encode(encoding="ASCII")))
     
     def terminateTask(self, id):
-        if not self.alive:
-            raise DeadWorkerError
-        try:
-            workerSocket=NWSocket()
-            workerSocket.connect(self.address)
-            workerSocket.send(b"TRM"+str(id).encode(encoding="ASCII"))
-        except OSError:
-            self.alive=False
-            raise DeadWorkerError()
+        self.sendMessage(b"TRM"+str(id).encode(encoding="ASCII"))
     
     def taskRunning(self, id):
-        if not self.alive:
-            raise DeadWorkerError
-        try:
-            workerSocket=NWSocket()
-            workerSocket.connect(self.address)
-            workerSocket.send(b"TRN"+str(id).encode(encoding="ASCII"))
-            return (pickle.loads(workerSocket.recv()))
-        except OSError:
-            self.alive=False
-            raise DeadWorkerError()
+        return self.sendMessageWithResponse(b"TRN"+str(id).encode(encoding="ASCII"))
     
     def getException(self, id):
-        if not self.alive:
-            raise DeadWorkerError
-        try:
-            workerSocket=NWSocket()
-            workerSocket.connect(self.address)
-            workerSocket.send(b"EXC"+str(id).encode(encoding="ASCII"))
-            return (pickle.loads(workerSocket.recv()))
-        except OSError:
-            self.alive=False
-            raise DeadWorkerError()
+        return pickle.loads(self.sendMessageWithResponse(b"EXC"+str(id).encode(encoding="ASCII")))
     
     def exceptionRaised(self, id):
-        if not self.alive:
-            raise DeadWorkerError
-        try:
-            workerSocket=NWSocket()
-            workerSocket.connect(self.address)
-            workerSocket.send(b"EXR"+str(id).encode(encoding="ASCII"))
-            return (pickle.loads(workerSocket.recv()))
-        except OSError:
-            self.alive=False
-            raise DeadWorkerError()
+        return pickle.loads(self.sendMessageWithResponse(b"EXR"+str(id).encode(encoding="ASCII")))
     
     def setEvent(self, id):
-        if not self.alive:
-            raise DeadWorkerError
-        try:
-            workerSocket=NWSocket()
-            workerSocket.connect(self.address)
-            workerSocket.send(b"EVS"+str(id).encode(encoding="ASCII"))
-        except OSError:
-            self.alive=False
-            raise DeadWorkerError()
+        self.sendMessage(b"EVS"+str(id).encode(encoding="ASCII"))
     
     def registerEvent(self, id):
-        if not self.alive:
-            raise DeadWorkerError
-        try:
-            workerSocket=NWSocket()
-            workerSocket.connect(self.address)
-            workerSocket.send(b"EVR"+str(id).encode(encoding="ASCII"))
-        except OSError:
-            self.alive=False
-            raise DeadWorkerError()
+        self.sendMessage(b"EVR"+str(id).encode(encoding="ASCII"))
     
     def registerQueue(self, id):
-        if not self.alive:
-            raise DeadWorkerError
-        try:
-            workerSocket=NWSocket()
-            workerSocket.connect(self.address)
-            workerSocket.send(b"QUR"+str(id).encode(encoding="ASCII"))
-        except OSError:
-            self.alive=False
-            raise DeadWorkerError()
+        self.sendMessage(b"QUR"+str(id).encode(encoding="ASCII"))
     
     def putOnQueue(self, id, data):
-        #print("WORKER", self.id, "(", self.address, ")", "PUTTING", data, "ON QUEUE", id)
-        if not self.alive:
-            raise DeadWorkerError
-        try:
-            workerSocket=NWSocket()
-            workerSocket.connect(self.address)
-            workerSocket.send(b"QUP"+str(id).encode(encoding="ASCII")+
-                              b"ID"+data)
-        except OSError:
-            self.alive=False
-            raise DeadWorkerError()
-    
-    
-            
-            
-        
-        
+        self.sendMessage(b"QUP"+str(id).encode(encoding="ASCII")+b"ID"+data)
