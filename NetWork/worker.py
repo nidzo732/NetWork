@@ -8,6 +8,7 @@ class WorkerUnavailableError(Exception):pass
 class DeadWorkerError(Exception): pass
 from .networking import NWSocket
 import pickle
+from .commcodes import *
 COMCODE_TASK_STARTED=b"TASKSTART"
 
 class Worker:   
@@ -79,3 +80,9 @@ class Worker:
     
     def putOnQueue(self, id, data):
         self.sendMessage(b"QUP"+str(id).encode(encoding="ASCII")+b"ID"+data)
+    
+    def registerLock(self, id):
+        self.sendMessage(CMD_REGISTER_LOCK+str(id).encode(encoding="ASCII"))
+    
+    def registerLock(self, id):
+        self.sendMessage(CMD_RELEASE_LOCK+str(id).encode(encoding="ASCII"))
