@@ -14,7 +14,8 @@ from .task import Task, TaskHandler
 from .deadworkerhandler import salvageDeadWorker
 from .commcodes import *
 from .cntcodes import *
-from NetWork import event, queue
+from .lock import NWLock
+from NetWork import event, queue, lock
 from pickle import dumps
 
 
@@ -53,6 +54,7 @@ class Workgroup:
         self.controlls[CNT_TASK_COUNT]=0
         self.controlls[CNT_EVENT_COUNT]=0
         self.controlls[CNT_QUEUE_COUNT]=0
+        self.controlls[CNT_LOCK_COUNT]=0
         self.controlls[CNT_TASK_EXECUTORS]={-1:None}
         self.currentWorker=-1
         self.listenerSocket=NWSocket()
@@ -77,6 +79,10 @@ class Workgroup:
         queue.queueHandlers=Manager().dict()
         queue.queueLocks={-1:None}
         queue.runningOnMaster=True
+        lock.locks={-1:None}
+        lock.lockHandlers={-1:None}
+        lock.lockLocks={-1:None}
+        lock.runningOnMaster=True
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
         
@@ -178,6 +184,19 @@ class Workgroup:
         self.commqueue.put(Command(CMD_GET_FROM_QUEUE+str(id).encode(encoding='ASCII'), -1))
         data=queue.queues[id].get()
         return data
+    
+    def registerLock(self):
+        self.controlls[CNT_LOCK_COUNT]+=1
+        id=self.controlls[CNT_LOCK_COUNT]
+        self.commqueue.put(Command(CMD_REGISTER_LOCK+str(id).encode(encoding='ASCII'), -1))
+        return NWLock(id, self)
+    
+    def acquireLock(self, id):
+        self.commqueue.put(Command(CMD_ACQUIRE_LOCK+str(id).encode(encoding='ASCII'), -1))
+        lock.locks[id].acquire()
+    
+    def releaseLock(self, id):
+        self.commqueue.put(Command(CMD_RELEASE_LOCK+str(id).encode(encoding='ASCII'), -1))
     
     def fixDeadWorker(self, id=None, worker=None):
         salvageDeadWorker(self, id, worker)
