@@ -84,5 +84,5 @@ class Worker:
     def registerLock(self, id):
         self.sendMessage(CMD_REGISTER_LOCK+str(id).encode(encoding="ASCII"))
     
-    def registerLock(self, id):
+    def releaseLock(self, id):
         self.sendMessage(CMD_RELEASE_LOCK+str(id).encode(encoding="ASCII"))

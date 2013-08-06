@@ -79,6 +79,10 @@ class Workgroup:
         queue.queueHandlers=Manager().dict()
         queue.queueLocks={-1:None}
         queue.runningOnMaster=True
+        lock.locks={-1:None}
+        lock.lockHandlers={-1:None}
+        lock.lockLocks={-1:None}
+        lock.runningOnMaster=True
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
         

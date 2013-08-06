@@ -6,6 +6,7 @@ runningOnMaster=None
 locks=None
 lockHandlers=None
 lockLocks=None
+masterAddress=None
 
 class NWLock:
     
@@ -19,10 +20,10 @@ class NWLock:
         locks[id].acquire()
     
     def acquireOnMaster(self):
-        self.workgroup.acquireLock()
+        self.workgroup.acquireLock(self.id)
     
     def releaseOnMaster(self):
-        self.workgroup.releaseLock()
+        self.workgroup.releaseLock(self.id)
     
     def acquireOnWorker(self):
         masterSocket=NWSocket()
@@ -71,7 +72,10 @@ class MasterLockHandler:
             self.waiters.append(requester)
         else:
             self.locked=True
-            controlls[requester].releaseLock(self.id)
+            if requester==-1:
+                locks[self.id].release()
+            else:
+                controlls[CNT_WORKERS][requester].releaseLock(self.id)
         lockLocks[self.id].release()
     
     def release(self, controlls):
@@ -81,21 +85,21 @@ class MasterLockHandler:
             if id==-1:
                 locks[self.id].release()
             else:
-                controlls[CNT_WORKERS].releaseLock(self.id)
+                controlls[CNT_WORKERS][id].releaseLock(self.id)
         else:
             self.locked=False
         lockLocks[self.id].release()
 
 def registerLock(request, controlls, commqueue):
-    id=int(request.contents())
+    id=int(request.getContents())
     for worker in controlls[CNT_WORKERS]:
         worker.registerLock(id)
 
 def acquireLock(request, controlls, commqueue):
-    lockHandlers[int(request.contents())].acquire(request.requester, controlls)
+    lockHandlers[int(request.getContents())].acquire(request.requester, controlls)
 
 def releaseLock(request, controlls, commqueue):
-    lockHandlers[int(request.contents())].release(controlls)
+    lockHandlers[int(request.getContents())].release(controlls)
         
     
     

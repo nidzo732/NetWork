@@ -7,9 +7,10 @@ from NetWork.task import Task
 from NetWork.workerprocess import WorkerProcess
 import NetWork.queue as queue
 import NetWork.event as event
+import NetWork.lock as lock
 from threading import Thread
-from multiprocessing import Manager, Event, Queue
-from .commcodes import *
+from multiprocessing import Manager, Event, Queue, Lock
+from NetWork.commcodes import *
 import atexit
 import pickle
 class BadRequestError(Exception): pass
@@ -115,8 +116,8 @@ if __name__=="__main__":
     event.runningOnMaster=False
     queue.queues={-1:None}
     queue.runningOnMaster=False
-    locks.locks={-1:None}
-    locks.runningOnMaster=False
+    lock.locks={-1:None}
+    lock.runningOnMaster=False
     while True:
         requestSocket=listenerSocket.accept()
         requestHandler(requestSocket)

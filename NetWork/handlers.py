@@ -63,5 +63,5 @@ handlerList={CMD_SET_EVENT:setEvent, CMD_REGISTER_EVENT:registerEvent,
              CMD_PUT_ON_QUEUE:putOnQueue, CMD_SUBMIT_TASK:submitTask,
              CMD_TASK_RUNNING:taskRunning, CMD_GET_EXCEPTION:getException,
              CMD_CHECK_EXCEPTION:checkException, CMD_TERMINATE_TASK:terminateTask,
-             CMD_GET_RESULT:getResult, CMD_ACQURE_LOCK:acquireLock,
+             CMD_GET_RESULT:getResult, CMD_ACQUIRE_LOCK:acquireLock,
              CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock}
