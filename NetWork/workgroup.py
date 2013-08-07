@@ -24,15 +24,23 @@ from pickle import dumps
 class NoWorkersError(Exception):pass
 
 class Command:
-    def __init__(self, contents, requester):
+    def __init__(self, contents, requester, socket=None):
         self.contents=contents
         self.requester=requester
+        self.socket=socket
     
     def getContents(self):
         return self.contents[3:]
     
     def type(self):
         return self.contents[:3]
+    
+    def close(self):
+        if self.socket:
+            self.socket.close()
+    
+    def respond(self, response):
+        self.socket.send(response)
 
 def receiveSocketData(socket, commqueue, controlls):
     workerId=-1
@@ -41,8 +49,7 @@ def receiveSocketData(socket, commqueue, controlls):
             workerId=worker.id
     if workerId==-1:
         return
-    commqueue.put(Command(socket.recv(), workerId))
-    socket.close()
+    commqueue.put(Command(socket.recv(), workerId, socket))
 
 
 class Workgroup:
@@ -222,6 +229,7 @@ class Workgroup:
         while not request==CMD_HALT:
             #print("REQUEST", request.contents, "FROM", request.requester)
             handlerList[request.type()](request, controlls, commqueue)
+            request.close()
             request=commqueue.get()
     
     @staticmethod
