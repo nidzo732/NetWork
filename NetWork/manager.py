@@ -19,7 +19,7 @@ class NWManager:
         masterSocket=NWSocket()
         masterSocket.connect(masterAddress)
         masterSocket.send(CMD_GET_MANAGER_ITEM+pickle.dumps({"ID":self.id,
-                                                             "ITEM":self.item}))
+                                                             "ITEM":item}))
         value=pickle.loads(masterSocket.recv())
         masterSocket.close()
         return value
@@ -52,6 +52,13 @@ class NWManager:
     
     def namespace(self):
         return ManagerNamespace(self.id, self.workgroup)
+    
+    def __setstate__(self, state):
+        self.id=state["id"]
+        self.workgroup=state["workgroup"]
+    
+    def __getstate__(self):
+        return {"id":self.id, "workgroup":None}
 
 class ManagerDict(NWManager):
     def __init__(self, id, workgroup, initial=None):
@@ -75,14 +82,17 @@ class ManagerNamespace(NWManager):
     def __getattr__(self, key):
         return self.getItem(key)
     
-    def __setattr(self, key, value):
-        self.setItem(key, value)
+    def __setattr__(self, key, value):
+        if key=="id" or key=="workgroup":
+            self.__dict__[key]=value
+        else:
+            self.setItem(key, value)
 
 def setManagerItem(request, controlls, commqueue):
     contents=pickle.loads(request.getContents())
-    managers[contents["id"]][contents["item"]]=contents["value"]
+    managers[contents["ID"]][contents["ITEM"]]=contents["VALUE"]
 
 def getManagerItem(request, controlls, commqueue):
     contents=pickle.loads(request.getContents())
-    value=pickle.dumps(managers[contents["id"]][contents["item"]])
+    value=pickle.dumps(managers[contents["ID"]][contents["ITEM"]])
     request.respond(value)

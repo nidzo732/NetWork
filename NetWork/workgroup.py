@@ -16,7 +16,7 @@ from .commcodes import *
 from .cntcodes import *
 from .lock import NWLock
 from .manager import NWManager
-from NetWork import event, queue, lock
+from NetWork import event, queue, lock, manager
 import pickle
 
 
@@ -92,6 +92,8 @@ class Workgroup:
         lock.lockHandlers={-1:None}
         lock.lockLocks={-1:None}
         lock.runningOnMaster=True
+        manager.runningOnMaster=True
+        manager.managers={-1:None}
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
         
@@ -207,7 +209,7 @@ class Workgroup:
     def setManagerItem(self, id, item, value):
         self.commqueue.put(Command(CMD_SET_MANAGER_ITEM+pickle.dumps({"ID":id,
                                                                       "ITEM":item,
-                                                                      "VALUE":value})))
+                                                                      "VALUE":value}), -1))
     
     
         
