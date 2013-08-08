@@ -15,8 +15,9 @@ from .deadworkerhandler import salvageDeadWorker
 from .commcodes import *
 from .cntcodes import *
 from .lock import NWLock
+from .manager import NWManager
 from NetWork import event, queue, lock
-from pickle import dumps
+import pickle
 
 
 
@@ -63,6 +64,7 @@ class Workgroup:
         self.controlls[CNT_QUEUE_COUNT]=0
         self.controlls[CNT_LOCK_COUNT]=0
         self.controlls[CNT_TASK_EXECUTORS]={-1:None}
+        self.controlls[CNT_MANAGER_COUNT]=0
         self.currentWorker=-1
         self.listenerSocket=NWSocket()
         self.workerList=[]
@@ -197,6 +199,18 @@ class Workgroup:
         id=self.controlls[CNT_LOCK_COUNT]
         self.commqueue.put(Command(CMD_REGISTER_LOCK+str(id).encode(encoding='ASCII'), -1))
         return NWLock(id, self)
+    
+    def registerManager(self):
+        self.controlls[CNT_MANAGER_COUNT]+=1
+        return NWManager(self.controlls[CNT_MANAGER_COUNT], self)
+    
+    def setManagerItem(self, id, item, value):
+        self.commqueue.put(Command(CMD_SET_MANAGER_ITEM+pickle.dumps({"ID":id,
+                                                                      "ITEM":item,
+                                                                      "VALUE":value})))
+    
+    
+        
     
     def acquireLock(self, id):
         self.commqueue.put(Command(CMD_ACQUIRE_LOCK+str(id).encode(encoding='ASCII'), -1))
