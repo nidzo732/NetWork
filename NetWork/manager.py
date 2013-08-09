@@ -1,6 +1,6 @@
 import pickle
 from .networking import NWSocket
-from .commcodes import CMD_GET_MANAGER_ITEM, CMD_SET_MANAGER_ITEM
+from .commcodes import CMD_GET_MANAGER_ITEM, CMD_SET_MANAGER_ITEM, MANAGER_KEYERROR
 from multiprocessing import Manager
 runningOnMaster=None
 masterAddress=None
@@ -18,11 +18,13 @@ class NWManager:
     def getItemOnWorker(self, item):
         masterSocket=NWSocket()
         masterSocket.connect(masterAddress)
-        masterSocket.send(CMD_GET_MANAGER_ITEM+pickle.dumps({"ID":self.id,
-                                                             "ITEM":item}))
-        value=pickle.loads(masterSocket.recv())
+        masterSocket.send(CMD_GET_MANAGER_ITEM+pickle.dumps({"ID":self.id,                                                     "ITEM":item}))
+        value=masterSocket.recv()
         masterSocket.close()
-        return value
+        if value==MANAGER_KEYERROR:
+            raise KeyError(item)
+        else:
+            return pickle.loads(value)
     
     def setItemOnMaster(self, item, value):
         self.workgroup.setManagerItem(self.id, item, value)
@@ -94,5 +96,8 @@ def setManagerItem(request, controlls, commqueue):
 
 def getManagerItem(request, controlls, commqueue):
     contents=pickle.loads(request.getContents())
-    value=pickle.dumps(managers[contents["ID"]][contents["ITEM"]])
+    try:
+        value=pickle.dumps(managers[contents["ID"]][contents["ITEM"]])
+    except KeyError:
+        value=MANAGER_KEYERROR
     request.respond(value)
