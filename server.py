@@ -8,6 +8,7 @@ from NetWork.workerprocess import WorkerProcess
 import NetWork.queue as queue
 import NetWork.event as event
 import NetWork.lock as lock
+import NetWork.manager as manager
 from threading import Thread
 from multiprocessing import Manager, Event, Queue, Lock
 from NetWork.commcodes import *
@@ -100,6 +101,7 @@ if __name__=="__main__":
             event.masterAddress=masterAddress
             queue.masterAddress=masterAddress
             lock.masterAddress=masterAddress
+            manager.masterAddress=masterAddress
             requestSocket.close()
             print("MASTER REGISTERED with address", masterAddress)
         else:
@@ -118,6 +120,7 @@ if __name__=="__main__":
     queue.runningOnMaster=False
     lock.locks={-1:None}
     lock.runningOnMaster=False
+    manager.runningOnMaster=False
     while True:
         requestSocket=listenerSocket.accept()
         requestHandler(requestSocket)

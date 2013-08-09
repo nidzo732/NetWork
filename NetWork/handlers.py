@@ -11,6 +11,7 @@ from .commcodes import *
 from .cntcodes import *
 from .queue import registerQueue, putOnQueue, getFromQueue
 from .lock import registerLock, releaseLock, acquireLock
+from .manager import setManagerItem, getManagerItem
 
 def receiveSocketData(socket, commqueue):
     commqueue.put(socket.recv())
@@ -64,4 +65,6 @@ handlerList={CMD_SET_EVENT:setEvent, CMD_REGISTER_EVENT:registerEvent,
              CMD_TASK_RUNNING:taskRunning, CMD_GET_EXCEPTION:getException,
              CMD_CHECK_EXCEPTION:checkException, CMD_TERMINATE_TASK:terminateTask,
              CMD_GET_RESULT:getResult, CMD_ACQUIRE_LOCK:acquireLock,
-             CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock}
+             CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock,
+             CMD_SET_MANAGER_ITEM:setManagerItem, 
+             CMD_GET_MANAGER_ITEM:getManagerItem}
