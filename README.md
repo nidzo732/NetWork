@@ -1,50 +1,58 @@
 #NetWork
 
-##Note: this project is far from finished, actually it doesn't run at all currently. If you'd like to help please contact me (nidzo732).
 
-The aim of this project is to create a package that will enable its users
-to run multiple processes on multiple networked computers. It tries to mimic
-the standard Python concurrent.futures and multiprocessing module, but instead 
-of being limited to CPUs and cores on local computer you get to run the function 
-on any computer you can access. Basically this should be a library for creating 
-and running a simple computing cluster. I've just started this project, when it's 
-finished it will be capable of creating a multiprocessing environment on networked 
-computers with all the controll tools such as Locks, Events, Managers...
+The NetWork library gives you the ability to distibute tasks on multiple networked 
+computers. It tries to mimic the standard Python concurrent.futures and multiprocessing 
+module, but instead of being limited to CPUs and cores on local computer you get
+to run the function on any computer you can access. Basically this is a library
+for creating and running a computing cluster. 
+It gives you all the IPC an concurrency
+controll tools available in the Python multiprocessing module. The advantage of this
+library over other distributed computing tools like RPC systems is that it gives you
+better control of excecution and easier message passing, unlike RPC where programs always
+have to be avare that they are not running on a same computers, the NetWork library hides
+all the low level communication and gives you the standard tools like Locks an Queues for
+communication.
+NetWork mimics the Python multiprocessing module so it should be fairly easy to port Python
+programs to run on a cluster wit this library.
 
 ###How it works?
 ####(high level overview)
 
-You have one central computer and several "worker" computers. The central one
+You have one master computer and several "worker" computers. The central one
 runs the program you made that uses the NetWork library. The "worker" computers
 run a server that receives the orders from the central computer. When your program
 gives a request for a function to be executed, the NetWork sends it to one of the
-workers and starts the execution. Here's a Python like pseudocode description of
-the process
+workers and starts the execution.
+You get a handler object that can be used to controll the running process (get return value, 
+check for exceptions, terminate the process).
 
-The central computer runs:
+###How to use
+Basic usage instructions:
+* Make sure that the port 32151 is open on every computer you want to use
+* Run server.py and leave it running on every worker computer
+* On master computer create an instance of NetWork.workgroup.Workgroup class
+  and pass the IP addresses of all workers to the constructor, and run it's startServing method
+```Python
+   w=Workgroup(["135.179.12.11", "156.75.123.15", ..., "192.168.1.5"])
+   w.startServing()
+```
 
-    np=NetProcess(target=myFunction, args=(a1, a2), kwargs={"kw1":5, "kw2":6})
-    np.start()
-    returnValue=np.getReturnValue()
-    print("The function returned", returnValue)
-
-And the "worker":
-
-    task=getNextTask()
-    args=getrgs()
-    kwargs=getkwargs()
-    returnValue=task(*args, **kwargs)
-    commSocket.send(returnValue)
-
-This is a very simplified high level example. The point is to show that you don't need
-to care how the tasks are executed. You just use the tools very similar to those of the
-standard multiprocessing module.
+* Use submit method to tell the workgroup to run a function, optionally you can give it a
+  tuple with positional arguments and/or a dictionary of keyword arguments
+```Python
+   handler=w.submit(target=functionToRun, args=("arg1"), kwargs={"A1":"kwarg1})
+```
+* You get a handler and it's methods can be use to get the return value, get exceptions or terminate
+  the process
+* For more information and how to use multiprocessing tools visit the (not yet completed) documentation
+  on the project wiki
 
 ###Advantages
 
 * Portability (Python runs anywhere)
 * Ease of use (If you are familiar with the Python multiprocessing module, learning this should be easy)
-* Flexibility (Any type of computer or CPU or computer can be in the workgroup, anything that runs Python)
+* More controll (Better concurrency controll and message passing than most RPC systems)
 
 ###Disadvantages
 * Network latency and speed (of course networks are way slower than the internal computer busses
@@ -54,53 +62,7 @@ choose wisely what you send over the network
 implement the heavy stuff in C, make a library, put it on every "worker" and call it from a Python function)
 
 ###Current state of the project
-I've just started the project and it's nowhere near usability, don't expect anything great soon
-there's a lot of work
-
-###Will it realy work
-I've managed to make a basic proof of concept, everything else revolves arround this code. I've even
-managed to send a function from a PC to an Android phone. The phone runs the function and sends
-the result back to the PC. You can try it:<br/>
-Run this first on the "worker" computer that will run the function:
-
-    import socket
-    import marshal
-    import types
-    
-    WORKER_IP_ADDR="192.168.1.2" #Addres of the computer that runs the function
-    PORT=8888
-    s=socket.socket()
-    s.bind((WORKER_IP_ADDR, PORT))
-    s.listen(5)
-    sock, addr=s.accept()
-    fcode=sock.recv(8096)
-    myFunction=types.FunctionType(marshal.loads(fcode), globals())
-    returnValue=myFunction()
-    sock.send(returnValue)
-And run this on the computer that will request a function to be executed:
-
-    import socket
-    import marshal
-    def myFunction():
-        return b"Hello running from other place"
-    
-    WORKER_IP_ADDR="192.168.1.2" #Addres of the computer that runs the function
-    PORT=8888
-    s=socket.socket()
-    fcode=marshal.dumps(myFunction.__code__)
-    s.connect((WORKER_IP_ADDR, PORT))
-    s.send(fcode)
-    returnValue=s.recv(8096)
-    s.close()
-    print("Got a return value:", returnValue)
-
-Replace WORKER_IP_ADDR with the address of the "worker" computer. The function from the
-second file will be marshaled and sent to the "worker" computer over the network. The "worker"
-is running the first file and it receives the function, unmarshals it, runs it and sends
-its return value back to computer that runs the second file.<br/>
-You should get a following output on the computer that sent the function:<br/>
-    Got a return value: b'Hello running from other place'
-If you get a network error, try checking your network and firewall.
+The main features (running processes, Locks, Events, Queues, Managers) are working and are reasonably stable
 
 ###Can I help
 If this seems interesting try experimenting with the proof of concept, for example
