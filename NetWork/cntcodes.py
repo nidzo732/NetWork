@@ -1,3 +1,6 @@
+"""
+These numbers are indexes of properties in Workgroup.controls
+"""
 CNT_WORKERS=0
 CNT_SHOULD_STOP=2
 CNT_LISTEN_SOCKET=3

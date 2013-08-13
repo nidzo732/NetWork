@@ -1,3 +1,8 @@
+"""
+These 3-character codes are prepended to network messages and dispatcher
+requests to identify the type of message and which handler should be used
+for it
+"""
 CMD_HALT=b"HLT"
 CMD_SET_EVENT=b"EVS"
 CMD_REGISTER_EVENT=b"EVR"
