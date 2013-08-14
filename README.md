@@ -65,8 +65,6 @@ implement the heavy stuff in C, make a library, put it on every "worker" and cal
 The main features (running processes, Locks, Events, Queues, Managers) are working and are reasonably stable
 
 ###Can I help
-If this seems interesting try experimenting with the proof of concept, for example
-try sending function arguments.
 If you want to help, please contact me (nidzo732)
 
 
