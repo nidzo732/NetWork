@@ -1,6 +1,8 @@
 """
-This file implements a WorkGroup class. It will define a group of worker
-computers, distribute their work and provide communication between them.
+This file implements a Workgroup class. Workgroup class represents
+a group of worker computers and enables the user to give them tasks. 
+It also provides all the IPC and concurrency control tools and 
+manages inter-worker communication.
 
 Created on Jan 11, 2013
 """
