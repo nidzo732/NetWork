@@ -6,6 +6,8 @@
 Welcome to NetWork's documentation!
 ===================================
 
+**THIS DOCUMENTATION IS STILL INCOMPLETE**
+
 NetWork is a Python framework for distributed computing. It enables your program to make use of the processing power of computers on a local network.
 
 NetWork tries to imitate multithreading environment, but instead of limiting you to use only the processors on your local machines it will distribute the load between multiple connected machines.

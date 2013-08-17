@@ -57,12 +57,12 @@ class Workgroup:
     """
     Defines the group of computers that will execute the tasks, handles requests
     from the user and from the worker computers, controlls execution, messaging
-    and concurrency. Handles Locks, Queues, Managers, Events and other tools.
+    and concurrency. Handles Locks, Queues, :py:mod:`Managers <NetWork.manager>`, :py:mod:`Events <NetWork.event>` and other tools.
     
-    In order for the Workgroup to be functional, the dispatcher and listener 
+    In order for the Workgroup to be functional, the ``dispatcher`` and ``listener`` 
     threads must be started and they must be terminated properly on exit. The
-    recomended way to do this is to use the 'with' statement, it will ensure
-    proper termination event in case of an exception.
+    recomended way to do this is to use the ``with`` statement, it will ensure
+    proper termination even in case of an exception.
     
     ::
     
@@ -70,7 +70,7 @@ class Workgroup:
             w.doSomething()
         
     
-    If you don't want to use ``with``, you can use startServing and stopServing
+    If you don't want to use ``with``, you can use :py:meth:`startServing` and :py:meth:`stopServing`
     methods when starting and exiting.
 
     Constructor:
@@ -140,7 +140,7 @@ class Workgroup:
         Start the dipatcher and listener threads, the workgroup is ready
         for work after this.
         Instead of running this method manually it is recomened to use
-        the 'with' statement
+        the ``with`` statement
         """
         self.listenerSocket.listen()
         self.networkListener=Process(target=self.listenerProcess, 
@@ -163,7 +163,7 @@ class Workgroup:
          
          kwargs : optional dictionary of keyword arguments
          
-        :Return: a TaskHandler object from NetWork.handler
+        :Return: an instance of NetWork.task.TaskHandler
         """
         self.currentWorker+=1
         self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
@@ -226,7 +226,7 @@ class Workgroup:
     def registerEvent(self):
         """
         Create a new event to be used by the tasks
-        Returns an instance of NetWork.event.NWEvent
+        Returns an instance of :py:class:`NetWork.event.NWEvent`
         """
         self.controlls[CNT_EVENT_COUNT]+=1
         id=self.controlls[CNT_EVENT_COUNT]
@@ -292,7 +292,7 @@ class Workgroup:
     def stopServing(self):
         """
         Stop the dispatcher and listener threads
-        also invoked when exiting whe 'with' block
+        also invoked when exiting whe ``with`` block
         """
         Workgroup.onExit(self)
     

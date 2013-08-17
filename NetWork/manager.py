@@ -7,7 +7,7 @@ when reading it.
 For more info on managers and what they are see `Python documentation page <http://docs.python.org/3.3/library/multiprocessing.html#managers>`_
 
 There are three types of managers in NetWork, the classic :py:class:`NWManager` 
-that uses :py:meth:`NWManager.setItem` and :py:meth:`NWManager.getItem` methods to update and read items, :py:class:`ManagerDict` which beahaves
+that uses :py:meth:`setItem <NWManager.setItem>` and :py:meth:`getItem <NWManager.getItem>` methods to update and read items, :py:class:`ManagerDict` which beahaves
 like a dictionary that contains shared items, and :py:class:`ManagerNamespace` which contains
 shared items as variables.
 Here are the examples of all types
@@ -53,7 +53,7 @@ class NWManager:
     """
     The main manager class that manages a collection of shared data between 
     processes on multiple computers. 
-    A new instance is usually created by calling :py:meth:`NetWork.workgroup.Workgroup.registerManager`. 
+    A new instance is usually created by calling :py:meth:`Workgroup.registerManager <NetWork.workgroup.Workgroup.registerManager>`. 
     The data is managed by using :py:meth:`setItem` and :py:meth:`getItem` methods. 
     To get other types of managers use :py:meth:`dict` and :py:meth:`namespace` methods of :py:class:`NWManager`
     """
@@ -91,7 +91,7 @@ class NWManager:
     def getItem(self, item):
         """
         Get one of the shared data items in the manager. If the item doesn't 
-        exist a KeyError will be raised.
+        exist a ``KeyError`` will be raised.
         
         :Parameters:
           item : any variable that can be used as dict key
@@ -149,10 +149,10 @@ class NWManager:
 
 class ManagerDict(NWManager):
     """
-    A class that inherits :py:class:`NWManager` but adds ``__getitem__`` and 
-    ``__setitem__`` methods that enable it to behave like a dictionary
-    which might be more comfortable than using :py:meth:`getItem` and 
-    :py:meth:`setItem` methods of the :py:class:`NWManager`.
+    A class that inherits :py:class:`NWManager` but adds :py:meth:`__getitem__` and 
+    :py:meth:`__setitem__` methods that enable it to behave like a dictionary
+    which might be more comfortable than using :py:meth:`getItem <NWManager.getItem>` and 
+    :py:meth:`setItem <NWManager.setItem>` methods of the :py:class:`NWManager`.
     """
     def __init__(self, id, workgroup, initial=None):
         self.id=id
@@ -168,10 +168,11 @@ class ManagerDict(NWManager):
         self.setItem(key, value)
 
 class ManagerNamespace(NWManager):
-    """A class that inherits :py:class:`NWManager` but adds ``__getattr__`` 
-    and ``__setattr__`` methods that enable it to behave like an 
+    """A class that inherits :py:class:`NWManager` but adds :py:meth:`__getattr__` 
+    and :py:meth:`__setattr__` methods that enable it to behave like an 
     object containing shared variables which might be more comfortable
-    than using getItem and setItem methods of the :py:class:`NWManager`.
+    than using :py:meth:`getItem <NWManager.getItem>` and 
+    :py:meth:`setItem <NWManager.setItem>` methods of the :py:class:`NWManager`.
     """
     def __init__(self, id, workgroup):
         self.id=id
