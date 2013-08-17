@@ -25,7 +25,10 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="NetWork 0.1-alpha documentation" href="index.html" /> 
+    <link rel="top" title="NetWork 0.1-alpha documentation" href="index.html" />
+    <link rel="up" title="IPC and concurrency control tools" href="IPCTools.html" />
+    <link rel="next" title="Event" href="NetWork.event.html" />
+    <link rel="prev" title="IPC and concurrency control tools" href="IPCTools.html" /> 
   </head>
   <body>
     <div class="related">
@@ -37,7 +40,14 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="index.html">NetWork 0.1-alpha documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="NetWork.event.html" title="Event"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="IPCTools.html" title="IPC and concurrency control tools"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">NetWork 0.1-alpha documentation</a> &raquo;</li>
+          <li><a href="IPCTools.html" accesskey="U">IPC and concurrency control tools</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -54,7 +64,7 @@ share the item, when one task updates the item, another will see the new value
 when reading it.</p>
 <p>For more info on managers and what they are see <a class="reference external" href="http://docs.python.org/3.3/library/multiprocessing.html#managers">Python documentation page</a></p>
 <p>There are three types of managers in NetWork, the classic <a class="reference internal" href="#NetWork.manager.NWManager" title="NetWork.manager.NWManager"><tt class="xref py py-class docutils literal"><span class="pre">NWManager</span></tt></a> 
-that uses <a class="reference internal" href="#NetWork.manager.NWManager.setItem" title="NetWork.manager.NWManager.setItem"><tt class="xref py py-meth docutils literal"><span class="pre">NWManager.setItem()</span></tt></a> and <a class="reference internal" href="#NetWork.manager.NWManager.getItem" title="NetWork.manager.NWManager.getItem"><tt class="xref py py-meth docutils literal"><span class="pre">NWManager.getItem()</span></tt></a> methods to update and read items, <a class="reference internal" href="#NetWork.manager.ManagerDict" title="NetWork.manager.ManagerDict"><tt class="xref py py-class docutils literal"><span class="pre">ManagerDict</span></tt></a> which beahaves
+that uses <a class="reference internal" href="#NetWork.manager.NWManager.setItem" title="NetWork.manager.NWManager.setItem"><tt class="xref py py-meth docutils literal"><span class="pre">setItem</span></tt></a> and <a class="reference internal" href="#NetWork.manager.NWManager.getItem" title="NetWork.manager.NWManager.getItem"><tt class="xref py py-meth docutils literal"><span class="pre">getItem</span></tt></a> methods to update and read items, <a class="reference internal" href="#NetWork.manager.ManagerDict" title="NetWork.manager.ManagerDict"><tt class="xref py py-class docutils literal"><span class="pre">ManagerDict</span></tt></a> which beahaves
 like a dictionary that contains shared items, and <a class="reference internal" href="#NetWork.manager.ManagerNamespace" title="NetWork.manager.ManagerNamespace"><tt class="xref py py-class docutils literal"><span class="pre">ManagerNamespace</span></tt></a> which contains
 shared items as variables.
 Here are the examples of all types</p>
@@ -87,19 +97,20 @@ Here are the examples of all types</p>
 <dl class="class">
 <dt id="NetWork.manager.ManagerDict">
 <em class="property">class </em><tt class="descclassname">NetWork.manager.</tt><tt class="descname">ManagerDict</tt><big>(</big><em>id</em>, <em>workgroup</em>, <em>initial=None</em><big>)</big><a class="reference internal" href="_modules/NetWork/manager.html#ManagerDict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.manager.ManagerDict" title="Permalink to this definition">¶</a></dt>
-<dd><p>A class that inherits <a class="reference internal" href="#NetWork.manager.NWManager" title="NetWork.manager.NWManager"><tt class="xref py py-class docutils literal"><span class="pre">NWManager</span></tt></a> but adds <tt class="docutils literal"><span class="pre">__getitem__</span></tt> and 
-<tt class="docutils literal"><span class="pre">__setitem__</span></tt> methods that enable it to behave like a dictionary
-which might be more comfortable than using <tt class="xref py py-meth docutils literal"><span class="pre">getItem()</span></tt> and 
-<tt class="xref py py-meth docutils literal"><span class="pre">setItem()</span></tt> methods of the <a class="reference internal" href="#NetWork.manager.NWManager" title="NetWork.manager.NWManager"><tt class="xref py py-class docutils literal"><span class="pre">NWManager</span></tt></a>.</p>
+<dd><p>A class that inherits <a class="reference internal" href="#NetWork.manager.NWManager" title="NetWork.manager.NWManager"><tt class="xref py py-class docutils literal"><span class="pre">NWManager</span></tt></a> but adds <tt class="xref py py-meth docutils literal"><span class="pre">__getitem__()</span></tt> and 
+<tt class="xref py py-meth docutils literal"><span class="pre">__setitem__()</span></tt> methods that enable it to behave like a dictionary
+which might be more comfortable than using <a class="reference internal" href="#NetWork.manager.NWManager.getItem" title="NetWork.manager.NWManager.getItem"><tt class="xref py py-meth docutils literal"><span class="pre">getItem</span></tt></a> and 
+<a class="reference internal" href="#NetWork.manager.NWManager.setItem" title="NetWork.manager.NWManager.setItem"><tt class="xref py py-meth docutils literal"><span class="pre">setItem</span></tt></a> methods of the <a class="reference internal" href="#NetWork.manager.NWManager" title="NetWork.manager.NWManager"><tt class="xref py py-class docutils literal"><span class="pre">NWManager</span></tt></a>.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="NetWork.manager.ManagerNamespace">
 <em class="property">class </em><tt class="descclassname">NetWork.manager.</tt><tt class="descname">ManagerNamespace</tt><big>(</big><em>id</em>, <em>workgroup</em><big>)</big><a class="reference internal" href="_modules/NetWork/manager.html#ManagerNamespace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.manager.ManagerNamespace" title="Permalink to this definition">¶</a></dt>
-<dd><p>A class that inherits <a class="reference internal" href="#NetWork.manager.NWManager" title="NetWork.manager.NWManager"><tt class="xref py py-class docutils literal"><span class="pre">NWManager</span></tt></a> but adds <tt class="docutils literal"><span class="pre">__getattr__</span></tt> 
-and <tt class="docutils literal"><span class="pre">__setattr__</span></tt> methods that enable it to behave like an 
+<dd><p>A class that inherits <a class="reference internal" href="#NetWork.manager.NWManager" title="NetWork.manager.NWManager"><tt class="xref py py-class docutils literal"><span class="pre">NWManager</span></tt></a> but adds <tt class="xref py py-meth docutils literal"><span class="pre">__getattr__()</span></tt> 
+and <tt class="xref py py-meth docutils literal"><span class="pre">__setattr__()</span></tt> methods that enable it to behave like an 
 object containing shared variables which might be more comfortable
-than using getItem and setItem methods of the <a class="reference internal" href="#NetWork.manager.NWManager" title="NetWork.manager.NWManager"><tt class="xref py py-class docutils literal"><span class="pre">NWManager</span></tt></a>.</p>
+than using <a class="reference internal" href="#NetWork.manager.NWManager.getItem" title="NetWork.manager.NWManager.getItem"><tt class="xref py py-meth docutils literal"><span class="pre">getItem</span></tt></a> and 
+<a class="reference internal" href="#NetWork.manager.NWManager.setItem" title="NetWork.manager.NWManager.setItem"><tt class="xref py py-meth docutils literal"><span class="pre">setItem</span></tt></a> methods of the <a class="reference internal" href="#NetWork.manager.NWManager" title="NetWork.manager.NWManager"><tt class="xref py py-class docutils literal"><span class="pre">NWManager</span></tt></a>.</p>
 </dd></dl>
 
 <dl class="class">
@@ -107,7 +118,7 @@ than using getItem and setItem methods of the <a class="reference internal" href
 <em class="property">class </em><tt class="descclassname">NetWork.manager.</tt><tt class="descname">NWManager</tt><big>(</big><em>id</em>, <em>workgroup</em><big>)</big><a class="reference internal" href="_modules/NetWork/manager.html#NWManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.manager.NWManager" title="Permalink to this definition">¶</a></dt>
 <dd><p>The main manager class that manages a collection of shared data between 
 processes on multiple computers. 
-A new instance is usually created by calling <a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerManager" title="NetWork.workgroup.Workgroup.registerManager"><tt class="xref py py-meth docutils literal"><span class="pre">NetWork.workgroup.Workgroup.registerManager()</span></tt></a>. 
+A new instance is usually created by calling <a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerManager" title="NetWork.workgroup.Workgroup.registerManager"><tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.registerManager</span></tt></a>. 
 The data is managed by using <a class="reference internal" href="#NetWork.manager.NWManager.setItem" title="NetWork.manager.NWManager.setItem"><tt class="xref py py-meth docutils literal"><span class="pre">setItem()</span></tt></a> and <a class="reference internal" href="#NetWork.manager.NWManager.getItem" title="NetWork.manager.NWManager.getItem"><tt class="xref py py-meth docutils literal"><span class="pre">getItem()</span></tt></a> methods. 
 To get other types of managers use <a class="reference internal" href="#NetWork.manager.NWManager.dict" title="NetWork.manager.NWManager.dict"><tt class="xref py py-meth docutils literal"><span class="pre">dict()</span></tt></a> and <a class="reference internal" href="#NetWork.manager.NWManager.namespace" title="NetWork.manager.NWManager.namespace"><tt class="xref py py-meth docutils literal"><span class="pre">namespace()</span></tt></a> methods of <a class="reference internal" href="#NetWork.manager.NWManager" title="NetWork.manager.NWManager"><tt class="xref py py-class docutils literal"><span class="pre">NWManager</span></tt></a></p>
 <dl class="method">
@@ -136,7 +147,7 @@ To get other types of managers use <a class="reference internal" href="#NetWork.
 <dt id="NetWork.manager.NWManager.getItem">
 <tt class="descname">getItem</tt><big>(</big><em>item</em><big>)</big><a class="reference internal" href="_modules/NetWork/manager.html#NWManager.getItem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.manager.NWManager.getItem" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get one of the shared data items in the manager. If the item doesn&#8217;t 
-exist a KeyError will be raised.</p>
+exist a <tt class="docutils literal"><span class="pre">KeyError</span></tt> will be raised.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -199,6 +210,12 @@ exist it will be created.</p>
       </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="IPCTools.html"
+                        title="previous chapter">IPC and concurrency control tools</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="NetWork.event.html"
+                        title="next chapter">Event</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/NetWork.manager.txt"
@@ -230,7 +247,14 @@ exist it will be created.</p>
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="index.html">NetWork 0.1-alpha documentation</a> &raquo;</li> 
+        <li class="right" >
+          <a href="NetWork.event.html" title="Event"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="IPCTools.html" title="IPC and concurrency control tools"
+             >previous</a> |</li>
+        <li><a href="index.html">NetWork 0.1-alpha documentation</a> &raquo;</li>
+          <li><a href="IPCTools.html" >IPC and concurrency control tools</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

@@ -55,15 +55,15 @@ and functions.</p>
 <em class="property">class </em><tt class="descclassname">NetWork.workgroup.</tt><tt class="descname">Workgroup</tt><big>(</big><em>workerAddresses</em>, <em>skipBadWorkers=False</em>, <em>handleDeadWorkers=False</em><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup" title="Permalink to this definition">¶</a></dt>
 <dd><p>Defines the group of computers that will execute the tasks, handles requests
 from the user and from the worker computers, controlls execution, messaging
-and concurrency. Handles Locks, Queues, Managers, Events and other tools.</p>
-<p>In order for the Workgroup to be functional, the dispatcher and listener 
+and concurrency. Handles Locks, Queues, <a class="reference internal" href="NetWork.manager.html#module-NetWork.manager" title="NetWork.manager"><tt class="xref py py-mod docutils literal"><span class="pre">Managers</span></tt></a>, <a class="reference internal" href="NetWork.event.html#module-NetWork.event" title="NetWork.event"><tt class="xref py py-mod docutils literal"><span class="pre">Events</span></tt></a> and other tools.</p>
+<p>In order for the Workgroup to be functional, the <tt class="docutils literal"><span class="pre">dispatcher</span></tt> and <tt class="docutils literal"><span class="pre">listener</span></tt> 
 threads must be started and they must be terminated properly on exit. The
-recomended way to do this is to use the &#8216;with&#8217; statement, it will ensure
-proper termination event in case of an exception.</p>
+recomended way to do this is to use the <tt class="docutils literal"><span class="pre">with</span></tt> statement, it will ensure
+proper termination even in case of an exception.</p>
 <div class="highlight-python"><pre>with Workgroup (....) as w:
     w.doSomething()</pre>
 </div>
-<p>If you don&#8217;t want to use <tt class="docutils literal"><span class="pre">with</span></tt>, you can use startServing and stopServing
+<p>If you don&#8217;t want to use <tt class="docutils literal"><span class="pre">with</span></tt>, you can use <a class="reference internal" href="#NetWork.workgroup.Workgroup.startServing" title="NetWork.workgroup.Workgroup.startServing"><tt class="xref py py-meth docutils literal"><span class="pre">startServing()</span></tt></a> and <a class="reference internal" href="#NetWork.workgroup.Workgroup.stopServing" title="NetWork.workgroup.Workgroup.stopServing"><tt class="xref py py-meth docutils literal"><span class="pre">stopServing()</span></tt></a>
 methods when starting and exiting.</p>
 <p>Constructor:</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -88,7 +88,7 @@ continue to the next worker</p>
 <dt id="NetWork.workgroup.Workgroup.registerEvent">
 <tt class="descname">registerEvent</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup.registerEvent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup.registerEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a new event to be used by the tasks
-Returns an instance of NetWork.event.NWEvent</p>
+Returns an instance of <a class="reference internal" href="NetWork.event.html#NetWork.event.NWEvent" title="NetWork.event.NWEvent"><tt class="xref py py-class docutils literal"><span class="pre">NetWork.event.NWEvent</span></tt></a></p>
 </dd></dl>
 
 <dl class="method">
@@ -118,14 +118,14 @@ Returns an instance of NetWork.queue.NWQueue</p>
 <dd><p>Start the dipatcher and listener threads, the workgroup is ready
 for work after this.
 Instead of running this method manually it is recomened to use
-the &#8216;with&#8217; statement</p>
+the <tt class="docutils literal"><span class="pre">with</span></tt> statement</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="NetWork.workgroup.Workgroup.stopServing">
 <tt class="descname">stopServing</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup.stopServing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup.stopServing" title="Permalink to this definition">¶</a></dt>
 <dd><p>Stop the dispatcher and listener threads
-also invoked when exiting whe &#8216;with&#8217; block</p>
+also invoked when exiting whe <tt class="docutils literal"><span class="pre">with</span></tt> block</p>
 </dd></dl>
 
 <dl class="method">
@@ -141,7 +141,7 @@ also invoked when exiting whe &#8216;with&#8217; block</p>
 <p>kwargs : optional dictionary of keyword arguments</p>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return :</th><td class="field-body"><p class="first last">a TaskHandler object from NetWork.handler</p>
+<tr class="field-even field"><th class="field-name">Return :</th><td class="field-body"><p class="first last">an instance of NetWork.task.TaskHandler</p>
 </td>
 </tr>
 </tbody>
