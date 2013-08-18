@@ -18,7 +18,7 @@ Once you've set up the workers, you can create and run your distributed program 
 Creating a workgroup
 --------------------
 
-The key part of the program is an instance of :py:class:`NetWork.workgroup.Workgroup` class, you control everything from this object. It's constructor takes an iterable (list, tuple, whatever) of worker IPs like this:
+The key part of the program is an instance of :py:class:`Workgroup <NetWork.workgroup.Workgroup>` class, you control everything from this object. It's constructor takes an iterable (list, tuple, whatever) of worker IPs like this:
 
 ::
 
@@ -59,8 +59,8 @@ To give the workgroup a task to execute, use it's :py:meth:`submit <NetWork.work
 
 
 First argument is a function to be executed in the new task, the second optional argument is a tuple of positional arguments that will be given to the function, the third optional argument is a dictionary of keyword arguments given to the function.  
-The :py:meth:`submit <NetWork.workgroup.Workgroup.submit>` method returns an instance of NetWork.task.TaskHandler, which is use to control a running tasks. The handler has methods for getting the return value, terminating, checking exceptions etc.  
-In this turorial we will use two methods, result and running, for other methods see the documentation of NetWork.task.TaskHandler class.  
+The :py:meth:`submit <NetWork.workgroup.Workgroup.submit>` method returns an instance of :py:class:`TaskHandler <NetWork.task.TaskHandler>`, which is use to control a running tasks. The handler has methods for getting the return value, terminating, checking exceptions etc.  
+In this turorial we will use two methods, :py:meth:`result <NetWork.task.TaskHandler.result>` and :py:meth:`running <NetWork.task.TaskHandler.running>`, for other methods see the documentation of :py:class:`TaskHandler <NetWork.task.TaskHandler>` class.  
 Here is a program that gives three tasks to the workgroup, waits for them to finish and gets the results
 
 ::
@@ -75,8 +75,7 @@ Here is a program that gives three tasks to the workgroup, waits for them to fin
             sleep(0.5)
         print(handler1.result(), handler2.result(), handler3.result())
 
-
-This program gives the workgroup 3 tasks and checks if they're done every 0.5 seconds, when 'running' method returns ``False`` the tasks are done and their results are obtained with the result medod. Because we have 3 computers the execution time should theoretically be up to 3 times shorter than running these on a single computer. This method of waiting is used just for demonstration, the proper way would be to use events but that is beyond the scope of this beginner tutorial.
+This program gives the workgroup 3 tasks and checks if they're done every 0.5 seconds, when :py:meth:`running <NetWork.task.TaskHandler.running>` method returns ``False`` the tasks are done and their results are obtained with the :py:meth:`result <NetWork.task.TaskHandler.result>` medod. Because we have 3 computers the execution time should theoretically be up to 3 times shorter than running these on a single computer. This method of waiting is used just for demonstration, the proper way would be to use :doc:`events <NetWork.event>` but that is beyond the scope of this beginner tutorial.
 
 What next
 ---------

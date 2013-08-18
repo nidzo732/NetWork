@@ -163,7 +163,7 @@ class Workgroup:
          
          kwargs : optional dictionary of keyword arguments
          
-        :Return: an instance of NetWork.task.TaskHandler
+        :Return: an instance of :py:class:`TaskHandler <NetWork.task.TaskHandler>`
         """
         self.currentWorker+=1
         self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
@@ -226,7 +226,8 @@ class Workgroup:
     def registerEvent(self):
         """
         Create a new event to be used by the tasks
-        Returns an instance of :py:class:`NetWork.event.NWEvent`
+        
+        :Return: instance of :py:class:`NWEvent <NetWork.event.NWEvent>`
         """
         self.controlls[CNT_EVENT_COUNT]+=1
         id=self.controlls[CNT_EVENT_COUNT]
@@ -237,7 +238,8 @@ class Workgroup:
     def registerQueue(self):
         """
         Create a new queue to be used by the tasks
-        Returns an instance of :py:class:`NetWork.queue.NWQueue`
+        
+        :Return: instance of :py:class:`NWQueue <NetWork.queue.NWQueue>`
         """
         self.controlls[CNT_QUEUE_COUNT]+=1
         id=self.controlls[CNT_QUEUE_COUNT]
@@ -256,7 +258,8 @@ class Workgroup:
     def registerLock(self):
         """
         Create a new lock to be used by the tasks
-        Returns an instance of :py:class:`NetWork.lock.NWLock`
+        
+        :Return: instance of :py:class:`NWLock <NetWork.lock.NWLock>`
         """
         self.controlls[CNT_LOCK_COUNT]+=1
         id=self.controlls[CNT_LOCK_COUNT]
@@ -266,7 +269,8 @@ class Workgroup:
     def registerManager(self):
         """
         Create a new manager to be used by the tasks
-        Returns an instance of :py:class:`NetWork.manager.NWManager`
+        
+        :Return: instance of :py:class:`NWManager <NetWork.manager.NWManager>`
         """
         self.controlls[CNT_MANAGER_COUNT]+=1
         return NWManager(self.controlls[CNT_MANAGER_COUNT], self)
