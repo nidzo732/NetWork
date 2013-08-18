@@ -1,0 +1,272 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>NetWork.queue &mdash; NetWork 0.1-alpha documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1-alpha',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="NetWork 0.1-alpha documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">NetWork 0.1-alpha documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for NetWork.queue</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Queues are tools used for inter process communication, they are similar to</span>
+<span class="sd">pipes and fifos but they are thread-safe and can have multiple producers and</span>
+<span class="sd">consumers. </span>
+<span class="sd">Any pickleable object can be sent throug a Queue using it&#39;s :py:meth:`put &lt;NWQueue.put&gt;`</span>
+<span class="sd">method. One task puts an item and another task calls :py:meth:`get &lt;NWQueue.get&gt;` method</span>
+<span class="sd">of the same queue and receives the sent item, if the queue is empty the task sleeps</span>
+<span class="sd">until another task puts something on the queue.</span>
+<span class="sd">The items are aranged in FIFO order, first item given to the :py:meth:`put &lt;NWQueue.put&gt;` method</span>
+<span class="sd">is the first item returned by the :py:meth:`get &lt;NWQueue.get&gt;` method.</span>
+
+<span class="sd">For more info about queues see `Python documentation page &lt;http://docs.python.org/3.3/library/queue.html#module-queue&gt;`_</span>
+<span class="sd">::</span>
+<span class="sd">    </span>
+<span class="sd">    #Example of queue usage</span>
+<span class="sd">    #Tasks are linked in a chain</span>
+<span class="sd">    #Each task has inputQueue and outputQueue</span>
+<span class="sd">    #A task gets a number from it&#39;s inputQueue increments it and puts it to outputQueue</span>
+<span class="sd">    </span>
+<span class="sd">    def getIncrementPut(inputQueue, outputQueue):</span>
+<span class="sd">        number=inputQueue.get()</span>
+<span class="sd">        number+=1</span>
+<span class="sd">        outputQueue.put(number)</span>
+<span class="sd">    </span>
+<span class="sd">    with Workgroup(addresses) as w:</span>
+<span class="sd">        queue1=w.registerQueue()</span>
+<span class="sd">        queue2=w.registerQueue()</span>
+<span class="sd">        queue3=w.registerQueue()</span>
+<span class="sd">        queue4=w.registerQueue()</span>
+<span class="sd">        queue5=w.registerQueue()</span>
+<span class="sd">        task1=w.submit(target=getIncrementPut, args=(queue1, queue2))</span>
+<span class="sd">        task2=w.submit(target=getIncrementPut, args=(queue2, queue3))</span>
+<span class="sd">        task3=w.submit(target=getIncrementPut, args=(queue3, queue4))</span>
+<span class="sd">        task4=w.submit(target=getIncrementPut, args=(queue4, queue5))</span>
+<span class="sd">        queue1.put(1)</span>
+<span class="sd">        print(queue5.get())    #Prints &#39;5&#39;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">.networking</span> <span class="kn">import</span> <span class="n">NWSocket</span>
+<span class="kn">from</span> <span class="nn">.commcodes</span> <span class="kn">import</span> <span class="n">CMD_PUT_ON_QUEUE</span><span class="p">,</span> <span class="n">CMD_GET_FROM_QUEUE</span>
+<span class="kn">from</span> <span class="nn">.cntcodes</span>  <span class="kn">import</span> <span class="n">CNT_WORKERS</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Lock</span><span class="p">,</span> <span class="n">Queue</span>
+
+<span class="n">queues</span><span class="o">=</span><span class="bp">None</span>
+<span class="n">queueHandlers</span><span class="o">=</span><span class="bp">None</span>
+<span class="n">queueLocks</span><span class="o">=</span><span class="bp">None</span>
+<span class="n">runningOnMaster</span><span class="o">=</span><span class="bp">None</span>
+<span class="n">masterAddress</span><span class="o">=</span><span class="bp">None</span>
+<div class="viewcode-block" id="NWQueue"><a class="viewcode-back" href="../../NetWork.queue.html#NetWork.queue.NWQueue">[docs]</a><span class="k">class</span> <span class="nc">NWQueue</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The queue class used for inter-process communication.</span>
+<span class="sd">    New instance is usually created with :py:meth:`Workgroup.registerQueue &lt;NetWork.workgroup.Workgroup.registerQueue&gt;`.</span>
+<span class="sd">    </span>
+<span class="sd">    To put data on the queue call :py:meth:`put` and call :py:meth:`get` to get it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">workgroup</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="nb">id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">=</span><span class="n">workgroup</span>
+        <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
+            <span class="n">queueHandlers</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">=</span><span class="n">MasterQueueHandler</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+            <span class="n">queueLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">=</span><span class="n">Lock</span><span class="p">()</span>
+        <span class="n">queues</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">=</span><span class="n">Queue</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">putOnWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="n">masterSocket</span><span class="o">=</span><span class="n">NWSocket</span><span class="p">()</span>
+        <span class="n">masterSocket</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">masterAddress</span><span class="p">)</span>
+        <span class="n">masterSocket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">CMD_PUT_ON_QUEUE</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">)</span><span class="o">+</span><span class="n">b</span><span class="s">&quot;ID&quot;</span><span class="o">+</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">masterSocket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">putOnMaster</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">putOnQueue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">getOnWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">masterSocket</span><span class="o">=</span><span class="n">NWSocket</span><span class="p">()</span>
+        <span class="n">masterSocket</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">masterAddress</span><span class="p">)</span>
+        <span class="n">masterSocket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">CMD_GET_FROM_QUEUE</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">))</span>
+        <span class="n">masterSocket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">queues</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">getOnMaster</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">getFromQueue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="NWQueue.put"><a class="viewcode-back" href="../../NetWork.queue.html#NetWork.queue.NWQueue.put">[docs]</a>    <span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Put data on the queue. A task that calls get will get that data</span>
+<span class="sd">        </span>
+<span class="sd">        :Parameters:</span>
+<span class="sd">          data : any pickleable object</span>
+<span class="sd">            item to be put on the queue</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pickledData</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">putOnMaster</span><span class="p">(</span><span class="n">pickledData</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">putOnWorker</span><span class="p">(</span><span class="n">pickledData</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="NWQueue.get"><a class="viewcode-back" href="../../NetWork.queue.html#NetWork.queue.NWQueue.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get next item off the queue. If queue is emtpy sleep until something</span>
+<span class="sd">        gets put on it</span>
+<span class="sd">        </span>
+<span class="sd">        :Return: next item in the queue</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getOnMaster</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getOnWorker</span><span class="p">())</span>
+        </div>
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="n">state</span><span class="p">[</span><span class="s">&quot;id&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">=</span><span class="n">state</span><span class="p">[</span><span class="s">&quot;workgroup&quot;</span><span class="p">]</span>
+    
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&quot;id&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s">&quot;workgroup&quot;</span><span class="p">:</span><span class="bp">None</span><span class="p">}</span>
+</div>
+<span class="k">class</span> <span class="nc">MasterQueueHandler</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="nb">id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">=</span><span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">=</span><span class="p">[]</span>
+    
+    <span class="k">def</span> <span class="nf">putItem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">getItem</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">putWaiter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">getWaiter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">hasWaiters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span>
+    
+    <span class="k">def</span> <span class="nf">hasItems</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span>
+
+    <span class="k">def</span> <span class="nf">distributeContents</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controlls</span><span class="p">):</span>
+        <span class="c">#print(&quot;DISTRIBUTING&quot;, self.id, self.items, self.waiters)</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">hasItems</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">hasWaiters</span><span class="p">():</span>
+            <span class="n">waiter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">getWaiter</span><span class="p">()</span>
+            <span class="n">item</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">getItem</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">waiter</span><span class="o">==-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">queues</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">waiter</span><span class="p">]</span><span class="o">.</span><span class="n">putOnQueue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">registerQueue</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+    <span class="nb">id</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">getContents</span><span class="p">())</span>
+    <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">worker</span><span class="o">.</span><span class="n">alive</span><span class="p">:</span>
+            <span class="n">worker</span><span class="o">.</span><span class="n">registerQueue</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">getFromQueue</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+    <span class="nb">id</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">getContents</span><span class="p">())</span>
+    <span class="n">queueLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+    <span class="n">workerId</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">requester</span>
+    <span class="n">temporaryHandler</span><span class="o">=</span><span class="n">queueHandlers</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span>
+    <span class="n">temporaryHandler</span><span class="o">.</span><span class="n">putWaiter</span><span class="p">(</span><span class="n">workerId</span><span class="p">)</span>
+    <span class="n">temporaryHandler</span><span class="o">.</span><span class="n">distributeContents</span><span class="p">(</span><span class="n">controlls</span><span class="p">)</span>
+    <span class="n">queueHandlers</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">=</span><span class="n">temporaryHandler</span>
+    <span class="n">queueLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">putOnQueue</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+    <span class="n">contents</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">getContents</span><span class="p">()</span>
+    <span class="nb">id</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">contents</span><span class="p">[:</span><span class="n">contents</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">b</span><span class="s">&quot;ID&quot;</span><span class="p">)])</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">contents</span><span class="p">[</span><span class="n">contents</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">b</span><span class="s">&quot;ID&quot;</span><span class="p">)</span><span class="o">+</span><span class="mi">2</span><span class="p">:]</span>
+    <span class="n">queueLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+    <span class="n">temporaryHandler</span><span class="o">=</span><span class="n">queueHandlers</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span>
+    <span class="n">temporaryHandler</span><span class="o">.</span><span class="n">putItem</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">temporaryHandler</span><span class="o">.</span><span class="n">distributeContents</span><span class="p">(</span><span class="n">controlls</span><span class="p">)</span>
+    <span class="n">queueHandlers</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">=</span><span class="n">temporaryHandler</span>
+    <span class="n">queueLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+        
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">NetWork 0.1-alpha documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Nikola Pavlović.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -58,7 +58,7 @@
 <span class="sd">For more info on managers and what they are see `Python documentation page &lt;http://docs.python.org/3.3/library/multiprocessing.html#managers&gt;`_</span>
 
 <span class="sd">There are three types of managers in NetWork, the classic :py:class:`NWManager` </span>
-<span class="sd">that uses :py:meth:`NWManager.setItem` and :py:meth:`NWManager.getItem` methods to update and read items, :py:class:`ManagerDict` which beahaves</span>
+<span class="sd">that uses :py:meth:`setItem &lt;NWManager.setItem&gt;` and :py:meth:`getItem &lt;NWManager.getItem&gt;` methods to update and read items, :py:class:`ManagerDict` which beahaves</span>
 <span class="sd">like a dictionary that contains shared items, and :py:class:`ManagerNamespace` which contains</span>
 <span class="sd">shared items as variables.</span>
 <span class="sd">Here are the examples of all types</span>
@@ -104,7 +104,7 @@
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    The main manager class that manages a collection of shared data between </span>
 <span class="sd">    processes on multiple computers. </span>
-<span class="sd">    A new instance is usually created by calling :py:meth:`NetWork.workgroup.Workgroup.registerManager`. </span>
+<span class="sd">    A new instance is usually created by calling :py:meth:`Workgroup.registerManager &lt;NetWork.workgroup.Workgroup.registerManager&gt;`. </span>
 <span class="sd">    The data is managed by using :py:meth:`setItem` and :py:meth:`getItem` methods. </span>
 <span class="sd">    To get other types of managers use :py:meth:`dict` and :py:meth:`namespace` methods of :py:class:`NWManager`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -142,7 +142,7 @@
 <div class="viewcode-block" id="NWManager.getItem"><a class="viewcode-back" href="../../NetWork.manager.html#NetWork.manager.NWManager.getItem">[docs]</a>    <span class="k">def</span> <span class="nf">getItem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get one of the shared data items in the manager. If the item doesn&#39;t </span>
-<span class="sd">        exist a KeyError will be raised.</span>
+<span class="sd">        exist a ``KeyError`` will be raised.</span>
 <span class="sd">        </span>
 <span class="sd">        :Parameters:</span>
 <span class="sd">          item : any variable that can be used as dict key</span>
@@ -200,10 +200,10 @@
 </div>
 <div class="viewcode-block" id="ManagerDict"><a class="viewcode-back" href="../../NetWork.manager.html#NetWork.manager.ManagerDict">[docs]</a><span class="k">class</span> <span class="nc">ManagerDict</span><span class="p">(</span><span class="n">NWManager</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A class that inherits :py:class:`NWManager` but adds ``__getitem__`` and </span>
-<span class="sd">    ``__setitem__`` methods that enable it to behave like a dictionary</span>
-<span class="sd">    which might be more comfortable than using :py:meth:`getItem` and </span>
-<span class="sd">    :py:meth:`setItem` methods of the :py:class:`NWManager`.</span>
+<span class="sd">    A class that inherits :py:class:`NWManager` but adds :py:meth:`__getitem__` and </span>
+<span class="sd">    :py:meth:`__setitem__` methods that enable it to behave like a dictionary</span>
+<span class="sd">    which might be more comfortable than using :py:meth:`getItem &lt;NWManager.getItem&gt;` and </span>
+<span class="sd">    :py:meth:`setItem &lt;NWManager.setItem&gt;` methods of the :py:class:`NWManager`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">workgroup</span><span class="p">,</span> <span class="n">initial</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="nb">id</span>
@@ -219,10 +219,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="ManagerNamespace"><a class="viewcode-back" href="../../NetWork.manager.html#NetWork.manager.ManagerNamespace">[docs]</a><span class="k">class</span> <span class="nc">ManagerNamespace</span><span class="p">(</span><span class="n">NWManager</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;A class that inherits :py:class:`NWManager` but adds ``__getattr__`` </span>
-<span class="sd">    and ``__setattr__`` methods that enable it to behave like an </span>
+    <span class="sd">&quot;&quot;&quot;A class that inherits :py:class:`NWManager` but adds :py:meth:`__getattr__` </span>
+<span class="sd">    and :py:meth:`__setattr__` methods that enable it to behave like an </span>
 <span class="sd">    object containing shared variables which might be more comfortable</span>
-<span class="sd">    than using getItem and setItem methods of the :py:class:`NWManager`.</span>
+<span class="sd">    than using :py:meth:`getItem &lt;NWManager.getItem&gt;` and </span>
+<span class="sd">    :py:meth:`setItem &lt;NWManager.setItem&gt;` methods of the :py:class:`NWManager`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">workgroup</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="nb">id</span>
