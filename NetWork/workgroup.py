@@ -237,7 +237,7 @@ class Workgroup:
     def registerQueue(self):
         """
         Create a new queue to be used by the tasks
-        Returns an instance of NetWork.queue.NWQueue
+        Returns an instance of :py:class:`NetWork.queue.NWQueue`
         """
         self.controlls[CNT_QUEUE_COUNT]+=1
         id=self.controlls[CNT_QUEUE_COUNT]
@@ -256,7 +256,7 @@ class Workgroup:
     def registerLock(self):
         """
         Create a new lock to be used by the tasks
-        Returns an instance of NetWork.lock.NWLock
+        Returns an instance of :py:class:`NetWork.lock.NWLock`
         """
         self.controlls[CNT_LOCK_COUNT]+=1
         id=self.controlls[CNT_LOCK_COUNT]

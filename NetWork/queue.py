@@ -1,3 +1,41 @@
+"""
+Queues are tools used for inter process communication, they are similar to
+pipes and fifos but they are thread-safe and can have multiple producers and
+consumers. 
+Any pickleable object can be sent throug a Queue using it's :py:meth:`put <NWQueue.put>`
+method. One task puts an item and another task calls :py:meth:`get <NWQueue.get>` method
+of the same queue and receives the sent item, if the queue is empty the task sleeps
+until another task puts something on the queue.
+The items are aranged in FIFO order, first item given to the :py:meth:`put <NWQueue.put>` method
+is the first item returned by the :py:meth:`get <NWQueue.get>` method.
+
+For more info about queues see `Python documentation page <http://docs.python.org/3.3/library/queue.html#module-queue>`_
+::
+    
+    #Example of queue usage
+    #Tasks are linked in a chain
+    #Each task has inputQueue and outputQueue
+    #A task gets a number from it's inputQueue increments it and puts it to outputQueue
+    
+    def getIncrementPut(inputQueue, outputQueue):
+        number=inputQueue.get()
+        number+=1
+        outputQueue.put(number)
+    
+    with Workgroup(addresses) as w:
+        queue1=w.registerQueue()
+        queue2=w.registerQueue()
+        queue3=w.registerQueue()
+        queue4=w.registerQueue()
+        queue5=w.registerQueue()
+        task1=w.submit(target=getIncrementPut, args=(queue1, queue2))
+        task2=w.submit(target=getIncrementPut, args=(queue2, queue3))
+        task3=w.submit(target=getIncrementPut, args=(queue3, queue4))
+        task4=w.submit(target=getIncrementPut, args=(queue4, queue5))
+        queue1.put(1)
+        print(queue5.get())    #Prints '5'
+
+"""
 import pickle
 from .networking import NWSocket
 from .commcodes import CMD_PUT_ON_QUEUE, CMD_GET_FROM_QUEUE
@@ -10,6 +48,12 @@ queueLocks=None
 runningOnMaster=None
 masterAddress=None
 class NWQueue:
+    """
+    The queue class used for inter-process communication.
+    New instance is usually created with :py:meth:`Workgroup.registerQueue <NetWork.workgroup.Workgroup.registerQueue>`.
+    
+    To put data on the queue call :py:meth:`put` and call :py:meth:`get` to get it.
+    """
     
     def __init__(self, id, workgroup):
         self.id=id
@@ -39,6 +83,13 @@ class NWQueue:
         return self.workgroup.getFromQueue(self.id)
     
     def put(self, data):
+        """
+        Put data on the queue. A task that calls get will get that data
+        
+        :Parameters:
+          data : any pickleable object
+            item to be put on the queue
+        """
         pickledData=pickle.dumps(data)
         if runningOnMaster:
             self.putOnMaster(pickledData)
@@ -46,6 +97,12 @@ class NWQueue:
             self.putOnWorker(pickledData)
     
     def get(self):
+        """
+        Get next item off the queue. If queue is emtpy sleep until something
+        gets put on it
+        
+        :Return: next item in the queue
+        """
         if runningOnMaster:
             return pickle.loads(self.getOnMaster())
         else:
