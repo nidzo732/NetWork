@@ -1,8 +1,6 @@
 """
-This module implements various networking functions used throughout
-the package
-
-Created on Jan 13, 2013
+This module implements a socket classes used to safely handle
+network messaging, message length and security.
 """
 import socket
 

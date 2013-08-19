@@ -1,3 +1,8 @@
+"""
+This module implements the WorkerProcess class that is used on worker computers
+to represent running tasks it also implements methods to control that task
+and get information about it.
+"""
 from multiprocessing import Process, Manager
 from .task import Task
 

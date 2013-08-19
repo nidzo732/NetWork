@@ -1,6 +1,13 @@
 """
-This file will define a program that will run on the main computer
-For now you may see some random code i used to test the package
+This program runs on worker computers and waits for requests from the master.
+It is responsible for running tasks and passing them data sent from the master.
+
+When it starts, it waits for the first message from the master, which should
+be COMMCODE_CHECKALIVE and it responds with COMCODE_ISALIVE.
+Once the master is registered the mainloop starts receiving messages
+from the master. The messages start with a 3 letter code that determines
+their type, the mainloop reads that code and runs a handler function associated
+with that code. Message codes can be seen in NetWork.commcodes.
 """
 from NetWork.networking import NWSocket, COMCODE_CHECKALIVE, COMCODE_ISALIVE
 from NetWork.task import Task

@@ -1,8 +1,6 @@
 """
 This file implements a worker class that is used to represent
-one worker computer
-
-Created on Jan 12, 2013
+one worker computer and send messages to that computer.
 """
 class WorkerUnavailableError(Exception):pass
 class DeadWorkerError(Exception): pass
