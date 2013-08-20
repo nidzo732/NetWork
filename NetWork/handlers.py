@@ -1,8 +1,7 @@
-'''
-Created on Feb 1, 2013
-
-@author: nidzo
-'''
+"""
+Functions that handle messages on the master computer.
+Each function is associated with a 3 letter code from commcodes.py
+"""
 from NetWork import event
 from NetWork import queue
 from pickle import dumps

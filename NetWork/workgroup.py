@@ -1,8 +1,6 @@
 """
-This file implements a WorkGroup class. It will define a group of worker
-computers, distribute their work and provide communication between them.
-
-Created on Jan 11, 2013
+The Workgroup class is defined in this file, along with accompanying classes
+and functions.
 """
 
 from multiprocessing import Process, Queue, Manager, Event
@@ -25,6 +23,8 @@ import pickle
 class NoWorkersError(Exception):pass
 
 class Command:
+    #A class used to send commands to the Workgroup.dispatcher thread
+    #Used internaly by workgroup, not by user
     def __init__(self, contents, requester, socket=None):
         self.contents=contents
         self.requester=requester
@@ -54,6 +54,37 @@ def receiveSocketData(socket, commqueue, controlls):
 
 
 class Workgroup:
+    """
+    Defines the group of computers that will execute the tasks, handles requests
+    from the user and from the worker computers, controlls execution, messaging
+    and concurrency. Handles Locks, Queues, :py:mod:`Managers <NetWork.manager>`, :py:mod:`Events <NetWork.event>` and other tools.
+    
+    In order for the Workgroup to be functional, the ``dispatcher`` and ``listener`` 
+    threads must be started and they must be terminated properly on exit. The
+    recomended way to do this is to use the ``with`` statement, it will ensure
+    proper termination even in case of an exception.
+    
+    ::
+    
+        with Workgroup (....) as w:
+            w.doSomething()
+        
+    
+    If you don't want to use ``with``, you can use :py:meth:`startServing` and :py:meth:`stopServing`
+    methods when starting and exiting.
+
+    Constructor:
+    
+    :Parameters:
+      workerAddresses : iterable
+        An iterable of addresses of workers in the workgroup
+        
+      skipBadWorkers : bool
+        Whether to raise an error when adding the worker fails or to 
+        continue to the next worker
+        
+      handleDeadWorkers : Currently not working, leave as it is
+    """
 
     def __init__(self, workerAddresses, skipBadWorkers=False, 
                  handleDeadWorkers=False):
@@ -105,6 +136,12 @@ class Workgroup:
         self.stopServing()
     
     def startServing(self):
+        """
+        Start the dipatcher and listener threads, the workgroup is ready
+        for work after this.
+        Instead of running this method manually it is recomened to use
+        the ``with`` statement
+        """
         self.listenerSocket.listen()
         self.networkListener=Process(target=self.listenerProcess, 
                                      args=(self.listenerSocket, self.commqueue,
@@ -116,6 +153,18 @@ class Workgroup:
         self.running=True
          
     def submit(self, target, args=(), kwargs={}):
+        """
+        Submit a task to be executed by the workgroup
+        
+        :Parameters:
+         target : function to be executed
+         
+         args : optional tuple of positional arguments
+         
+         kwargs : optional dictionary of keyword arguments
+         
+        :Return: an instance of :py:class:`TaskHandler <NetWork.task.TaskHandler>`
+        """
         self.currentWorker+=1
         self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
         self.controlls[CNT_TASK_COUNT]+=1
@@ -139,7 +188,6 @@ class Workgroup:
         
     
     def cancelTask(self, id, worker):
-        #return self.controlls[CNT_WORKERS][worker].terminateTask(id)
         self.commqueue.put(Command(CMD_TERMINATE_TASK+
                            str(id).encode(encoding='ASCII'), -1))
     
@@ -175,6 +223,11 @@ class Workgroup:
         self.commqueue.put(Command(CMD_SET_EVENT+str(id).encode(encoding='ASCII'), -1))
     
     def registerEvent(self):
+        """
+        Create a new event to be used by the tasks
+        
+        :Return: instance of :py:class:`NWEvent <NetWork.event.NWEvent>`
+        """
         self.controlls[CNT_EVENT_COUNT]+=1
         id=self.controlls[CNT_EVENT_COUNT]
         self.commqueue.put(Command(CMD_REGISTER_EVENT+
@@ -182,6 +235,11 @@ class Workgroup:
         return event.NWEvent(id, self)
     
     def registerQueue(self):
+        """
+        Create a new queue to be used by the tasks
+        
+        :Return: instance of :py:class:`NWQueue <NetWork.queue.NWQueue>`
+        """
         self.controlls[CNT_QUEUE_COUNT]+=1
         id=self.controlls[CNT_QUEUE_COUNT]
         self.commqueue.put(Command(CMD_REGISTER_QUEUE+str(id).encode(encoding='ASCII'), -1))
@@ -197,12 +255,22 @@ class Workgroup:
         return data
     
     def registerLock(self):
+        """
+        Create a new lock to be used by the tasks
+        
+        :Return: instance of :py:class:`NWLock <NetWork.lock.NWLock>`
+        """
         self.controlls[CNT_LOCK_COUNT]+=1
         id=self.controlls[CNT_LOCK_COUNT]
         self.commqueue.put(Command(CMD_REGISTER_LOCK+str(id).encode(encoding='ASCII'), -1))
         return NWLock(id, self)
     
     def registerManager(self):
+        """
+        Create a new manager to be used by the tasks
+        
+        :Return: instance of :py:class:`NWManager <NetWork.manager.NWManager>`
+        """
         self.controlls[CNT_MANAGER_COUNT]+=1
         return NWManager(self.controlls[CNT_MANAGER_COUNT], self)
     
@@ -225,6 +293,10 @@ class Workgroup:
         salvageDeadWorker(self, id, worker)
     
     def stopServing(self):
+        """
+        Stop the dispatcher and listener threads
+        also invoked when exiting whe ``with`` block
+        """
         Workgroup.onExit(self)
     
         
@@ -232,6 +304,7 @@ class Workgroup:
     
     @staticmethod
     def listenerProcess(listenerSocket, commqueue, controlls):
+        #A process that receives network requests
         while True:
             receivedRequest=listenerSocket.accept()
             handlerThread=Thread(target=receiveSocketData, 
@@ -241,6 +314,7 @@ class Workgroup:
     
     @staticmethod
     def dispatcherProcess(commqueue, controlls):
+        #A process that handles requests
         request=commqueue.get()
         while not request==CMD_HALT:
             #print("REQUEST", request.contents, "FROM", request.requester)
@@ -250,7 +324,7 @@ class Workgroup:
     
     @staticmethod
     def onExit(target):
-        #CLEAN UP WORKERS#####################################
+        #Ran on exit to clean up the workgroup
         if (target.running):
             #Need to fix this for a nice exit, preferably with join#########
             target.networkListener.terminate()

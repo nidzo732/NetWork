@@ -1,3 +1,8 @@
+"""
+This module implements the WorkerProcess class that is used on worker computers
+to represent running tasks it also implements methods to control that task
+and get information about it.
+"""
 from multiprocessing import Process, Manager
 from .task import Task
 
@@ -7,6 +12,7 @@ CNT_EXCEPTION_RAISED=3
 CNT_EXCEPTION=4
 CNT_RUNNING=5
 class WorkerProcess:
+    #Class to hold and control running task
     def __init__(self, marshaledTask, globalVariables=None):
         self.manager=Manager().list(range(20))
         self.manager[CNT_DONE]=False
@@ -47,6 +53,7 @@ class WorkerProcess:
     
     @staticmethod
     def runner(marshaledTask, manager, globalVariables):
+        #A function that actualy runs the task
         task=Task(marshaled=marshaledTask, globalVariables=globalVariables)
         returnValue=None
         try:

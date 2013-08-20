@@ -1,6 +1,13 @@
 """
-This file will define a program that will run on the main computer
-For now you may see some random code i used to test the package
+This program runs on worker computers and waits for requests from the master.
+It is responsible for running tasks and passing them data sent from the master.
+
+When it starts, it waits for the first message from the master, which should
+be COMMCODE_CHECKALIVE and it responds with COMCODE_ISALIVE.
+Once the master is registered the mainloop starts receiving messages
+from the master. The messages start with a 3 letter code that determines
+their type, the mainloop reads that code and runs a handler function associated
+with that code. Message codes can be seen in NetWork.commcodes.
 """
 from NetWork.networking import NWSocket, COMCODE_CHECKALIVE, COMCODE_ISALIVE
 from NetWork.task import Task
@@ -80,6 +87,7 @@ handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock}
 
 def requestHandler(requestSocket):
+    #Give requests to handle functions
     request=requestSocket.recv()
     #print(request)
     handlers[request[:3]](request[3:], requestSocket)
@@ -96,6 +104,7 @@ if __name__=="__main__":
         requestSocket=listenerSocket.accept()
         request=requestSocket.recv()
         if request==COMCODE_CHECKALIVE:
+            #Register the master
             requestSocket.send(COMCODE_ISALIVE)
             masterAddress=requestSocket.address
             event.masterAddress=masterAddress
@@ -121,6 +130,7 @@ if __name__=="__main__":
     lock.locks={-1:None}
     lock.runningOnMaster=False
     manager.runningOnMaster=False
+    #Start receiving requests
     while True:
         requestSocket=listenerSocket.accept()
         requestHandler(requestSocket)

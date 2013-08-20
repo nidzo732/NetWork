@@ -1,3 +1,6 @@
+"""
+Indexes used for various stuff in Workgroup.controlls
+"""
 CNT_WORKERS=0
 CNT_SHOULD_STOP=2
 CNT_LISTEN_SOCKET=3
