@@ -51,7 +51,7 @@
   <h1>Source code for NetWork.task</h1><div class="highlight"><pre>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="sd">When a task is submited to the workgroup, you get a :py:class`TaskHandler` object</span>
+<span class="sd">When a task is submited to the workgroup, you get a :py:class:`TaskHandler` object</span>
 <span class="sd">that can be used to control the running task and receive information about</span>
 <span class="sd">its state.</span>
 
@@ -174,7 +174,7 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Check if the task is still running.</span>
 <span class="sd">        </span>
-<span class="sd">        :Return: `True` or `False` depending on whether the task is running.</span>
+<span class="sd">        :Return: ``True`` or ``False`` depending on whether the task is running.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">taskRunning</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">worker</span><span class="p">)</span>
@@ -204,7 +204,7 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Check if the task has raised an exception.</span>
 <span class="sd">        </span>
-<span class="sd">        :Return: `True` or `False` depending on whether the task has raised an</span>
+<span class="sd">        :Return: ``True`` or ``False`` depending on whether the task has raised an</span>
 <span class="sd">          exception.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         

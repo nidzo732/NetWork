@@ -214,7 +214,7 @@
 <span class="sd">         </span>
 <span class="sd">         kwargs : optional dictionary of keyword arguments</span>
 <span class="sd">         </span>
-<span class="sd">        :Return: an instance of NetWork.task.TaskHandler</span>
+<span class="sd">        :Return: an instance of :py:class:`TaskHandler &lt;NetWork.task.TaskHandler&gt;`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">currentWorker</span><span class="o">+=</span><span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">currentWorker</span><span class="o">%=</span><span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKER_COUNT</span><span class="p">]</span>
@@ -277,7 +277,8 @@
 <div class="viewcode-block" id="Workgroup.registerEvent"><a class="viewcode-back" href="../../NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerEvent">[docs]</a>    <span class="k">def</span> <span class="nf">registerEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a new event to be used by the tasks</span>
-<span class="sd">        Returns an instance of :py:class:`NetWork.event.NWEvent`</span>
+<span class="sd">        </span>
+<span class="sd">        :Return: instance of :py:class:`NWEvent &lt;NetWork.event.NWEvent&gt;`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_EVENT_COUNT</span><span class="p">]</span><span class="o">+=</span><span class="mi">1</span>
         <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_EVENT_COUNT</span><span class="p">]</span>
@@ -288,7 +289,8 @@
 <div class="viewcode-block" id="Workgroup.registerQueue"><a class="viewcode-back" href="../../NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerQueue">[docs]</a>    <span class="k">def</span> <span class="nf">registerQueue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a new queue to be used by the tasks</span>
-<span class="sd">        Returns an instance of :py:class:`NetWork.queue.NWQueue`</span>
+<span class="sd">        </span>
+<span class="sd">        :Return: instance of :py:class:`NWQueue &lt;NetWork.queue.NWQueue&gt;`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_QUEUE_COUNT</span><span class="p">]</span><span class="o">+=</span><span class="mi">1</span>
         <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_QUEUE_COUNT</span><span class="p">]</span>
@@ -307,7 +309,8 @@
 <div class="viewcode-block" id="Workgroup.registerLock"><a class="viewcode-back" href="../../NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerLock">[docs]</a>    <span class="k">def</span> <span class="nf">registerLock</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a new lock to be used by the tasks</span>
-<span class="sd">        Returns an instance of :py:class:`NetWork.lock.NWLock`</span>
+<span class="sd">        </span>
+<span class="sd">        :Return: instance of :py:class:`NWLock &lt;NetWork.lock.NWLock&gt;`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_LOCK_COUNT</span><span class="p">]</span><span class="o">+=</span><span class="mi">1</span>
         <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_LOCK_COUNT</span><span class="p">]</span>
@@ -317,7 +320,8 @@
 <div class="viewcode-block" id="Workgroup.registerManager"><a class="viewcode-back" href="../../NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerManager">[docs]</a>    <span class="k">def</span> <span class="nf">registerManager</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a new manager to be used by the tasks</span>
-<span class="sd">        Returns an instance of :py:class:`NetWork.manager.NWManager`</span>
+<span class="sd">        </span>
+<span class="sd">        :Return: instance of :py:class:`NWManager &lt;NetWork.manager.NWManager&gt;`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_MANAGER_COUNT</span><span class="p">]</span><span class="o">+=</span><span class="mi">1</span>
         <span class="k">return</span> <span class="n">NWManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_MANAGER_COUNT</span><span class="p">],</span> <span class="bp">self</span><span class="p">)</span>
