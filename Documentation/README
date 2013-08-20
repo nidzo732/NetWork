@@ -1,0 +1,7 @@
+All documentation is in source format created by Sphinx documentation tool.
+To compile it to the format you like to use, run make.
+For example
+
+  make html
+
+will create a html documentation in the build directory.
