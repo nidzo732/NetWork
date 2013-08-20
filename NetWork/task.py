@@ -11,6 +11,7 @@ from types import FunctionType
 #import .handlers
 
 class Task:
+    #A class used to hold a task given to the workgroup
     
     def __init__(self, target=None, args=(), kwargs={}, id=None, marshaled=None, 
                  globalVariables=None):
@@ -26,6 +27,7 @@ class Task:
 
 
     def marshal(self):
+        #Prepare the task to be sent over the network
         marshaledTask=b""
         
         marshaledTarget=marshal.dumps(self.target.__code__)
@@ -53,6 +55,7 @@ class Task:
 
     
     def unmarshal(self, marshaledTask, globalVariables=None):
+        #Crete a task from a string received from the network
         targetLength=int(marshaledTask[:marshaledTask.find(b"TRG")])
         marshaledTask=marshaledTask[marshaledTask.find(b"TRG")+3:]
         marshaledTarget=marshaledTask[:targetLength]

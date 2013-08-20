@@ -107,6 +107,27 @@ These requests have to be identified and handled by a proper handler function. T
 
 When a request is received (in dispatcher or on the worker server) a dictionary (:py:data:`NetWork.handlers.handlerList` for dispatcher, :py:data:`server.handlers` on worker) is searched for the appropriate handler function.
 
+Worker server relations
+#######################
+Each worker runs server.py program. When it starts it creates a server socket and listens for incomming connection, when the master connects and the checks are done it initializes all other module, just like Workgroup.__init__ on the master.
+
+After init it starts receiving requests from the master, just like the dispatcher on the master it also has a dictionary of handler functions linked to their 3-letter codes, when it receives a request it searches that dictionary and passes the request to an apropriate function.
+
+Task handling
+-------------
+
+Running
+=======
+When :py:meth:`Workgroup.submit` is called the target function and its arguments are packed in an instance of NetWork.task.Task class. :py:class:`Task` is then pickled and sent over the network to the worker. Each task has its own ID, :py:meth:`submit` returns a :py:class:`NetWork.task.TaskHandler` instance that contains that ID and the ID of the worker who's running the task.
+
+When a worker receives a request to run a task it creates a new instance of :py:class:`NetWork.workerprocess.WorkerProcess` and passes the task to the constructor. :py:class:`WorkerProcess` has an internal manager used to save information about running function and it also has methods to control the running task. The :py:class:`Task` is then pased to a separate process that unpickles it and runs it, the process also has additional code to detect exceptions and retreive the return value and then put it to the internal manager of the :py:class:`WorkerProcess`.
+
+Controling and getting information
+==================================
+:py:class:`TaskHandler` has multiple methods related to the running task, they all use :py:class:`Workgroup` methods to pass requests to the :py:attr:`commqueue` and then to the worker, the worker receives the request and runs the apropriate method in the :py:class:`WorkerProcess`. If the user asks for information, the worker sends it back through the socket and handler passes it through a queue that is automaticaly created by :py:class:`TaskHandler methods`.
+
+
+
 Multiprocessing tools
 #####################
 Despite serving difrent purposes all multiprocessing tools have some common properties. 
@@ -146,7 +167,7 @@ Acquiring
 =========
 When :py:meth:`NWLock.acquire` is called it sends a message to the dispacher (through the network if on worker or through the :py:data:`commqueue` if on master) that it wants to acquire the lock, after that it runs the acquire method on the apropriate lock in :py:data:`NetWork.lock.locks`.
 
-When dispatcher receives the message it check apropriate :py:class:`MasterLockHandler` in :py:data:`NetWork.lock.lockHandlers`, :py:class:`MasterLockHandler` has a boolean value telling whether its locked. If it is not locked, a release lock message is sent to the worker that tried to acquire the lock, when the message is received the appropriate lock in :py:data:`NetWork.lock`.locks is released and the process that called acquire on it continues its work. 
+When dispatcher receives the message it check apropriate :py:class:`MasterLockHandler` in :py:data:`NetWork.lock.lockHandlers`, :py:class:`MasterLockHandler` has a boolean value telling whether its locked. If it is not locked, a release lock message is sent to the worker that tried to acquire the lock, when the message is received the appropriate lock in :py:data:`NetWork.lock.locks` is released and the process that called acquire on it continues its work. 
 
 If the master called acquire and the lock is unlocked then a lock in :py:data:`NetWork.lock.locks` on the master is released. 
 
@@ -154,7 +175,7 @@ If :py:class:`MasterLockHandler` is locked the requester ID is added to the wait
 
 Releasing
 =========
-A message is sent to the dispatcher (network or :py:data:`commqueue`) to release the lock. When releasing it checks the waiter list in :py:class:`MasterLockHandler`, if there are waiters it gets the ID of the first one, if the ID is -1 (master ID) the local lock on :py:data:`NetWork.lock.locks` is released for other IDs a message is sent to the worker to release the lock, when the worker receives the message it releases the required lock.
+A message is sent to the dispatcher (network or :py:data:`commqueue`) to release the lock. When releasing it checks the waiter list in :py:class:`MasterLockHandler`, if there are waiters it gets the ID of the first one, if the ID is -1 (master ID) the local lock on :py:data:`NetWork.lock.locks` is released, for other IDs a message is sent to the worker to release the lock, when the worker receives the message it releases the required lock.
 
 Managers
 --------
@@ -178,11 +199,11 @@ Queues are created with :py:meth:`Workgroup.registerQueue`, a message is sent th
 
 :py:class:`MasterQueueHandler`
 ==============================
-A class that is used on the master to hold information about queues, each queue has one. It contains two lists, :py:attr:`items` and :py:attr:`waiters`. When an item is put on the queue it's added to the items list, when get is called the requester is added to the waiters list. :py:class:`MasterQueueHandler` has a distribute method that check these lists and if both items and waiters are available it sends the first available item to the first waiter.
+A class that is used on the master to hold information about queues, each queue has one. It contains two lists, :py:attr:`items` and :py:attr:`waiters`. When an item is put on the queue it's added to the items list, when :py:meth:`get` is called the requester is added to the waiters list. :py:class:`MasterQueueHandler` has a distribute method that check these lists and if both items and waiters are available it sends the first available item to the first waiter.
 
 Getting items
 =============
-The worker (or master) sends a get request allong with the queue ID and calls get on the local queue. The dispatcher receives request, adds the worker to the waiter list and calls :py:meth:`distribute`.
+The worker (or master) sends a get request allong with the queue ID and calls :py:meth:`get` on the local queue. The dispatcher receives request, adds the worker to the waiter list and calls :py:meth:`distribute`.
 
 Putting items
 =============
@@ -190,4 +211,4 @@ A put item request is sent to dispatcher (network or :py:data:`commqueue`), it a
 
 Distribution
 ============
-If the waiters and items list of py:class:`MasterQueueHandler` are not empty it sends the first item from the items list to the first worker on the waiters list, the worker receives the item and puts it to an aprropriate queue in :py:data:`NetWork.queue.queues`, it the waiter is master dispatcher just puts the item on a local queue in :py:data:`NetWork.queue.queues`.
+If the waiters and items list of :py:class:`MasterQueueHandler` are not empty it sends the first item from the items list to the first worker on the waiters list, the worker receives the item and puts it to an aprropriate queue in :py:data:`NetWork.queue.queues`, it the waiter is master dispatcher just puts the item on a local queue in :py:data:`NetWork.queue.queues`.

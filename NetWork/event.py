@@ -85,6 +85,7 @@ class NWEvent:
         return {"id":self.id, "workgroup":None}
 
 def setEvent(request, controlls, commqueue):
+    #A handler used by Workgroup.dispatcher
     id=int(request.getContents())
     for worker in controlls[CNT_WORKERS]:
         if worker.alive:
@@ -92,6 +93,7 @@ def setEvent(request, controlls, commqueue):
     events[id].set()
     
 def registerEvent(request, controlls, commqueue):
+    #A handler used by Workgroup.dispatcher
     id=int(request.getContents())
     for worker in controlls[CNT_WORKERS]:
         if worker.alive:

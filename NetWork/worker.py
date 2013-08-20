@@ -10,6 +10,7 @@ from .commcodes import *
 COMCODE_TASK_STARTED=b"TASKSTART"
 
 class Worker:   
+    #A class used to handle one worker
     def __init__(self, address, id):
         workerAvailable=NWSocket.checkAvailability(address)
         if not workerAvailable:
@@ -22,6 +23,7 @@ class Worker:
             self.alive=True
     
     def sendMessage(self, message):
+        #Send message to ther worker
         if not self.alive:
             raise DeadWorkerError
         try:
@@ -34,6 +36,7 @@ class Worker:
             raise DeadWorkerError()
     
     def sendMessageWithResponse(self, message):
+        #Send message to the worker and get the response
         if not self.alive:
             raise DeadWorkerError
         try:
@@ -48,7 +51,6 @@ class Worker:
             raise DeadWorkerError()
        
     def executeTask(self, task):
-        #self.myTasks[task.id]=task
         self.sendMessage(b"TSK"+task)
         
         

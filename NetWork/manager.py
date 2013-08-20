@@ -188,10 +188,12 @@ class ManagerNamespace(NWManager):
             self.setItem(key, value)
 
 def setManagerItem(request, controlls, commqueue):
+    #A handler used by Workgroup.dispatcher
     contents=pickle.loads(request.getContents())
     managers[contents["ID"]][contents["ITEM"]]=contents["VALUE"]
 
 def getManagerItem(request, controlls, commqueue):
+    #A handler used by Workgroup.dispatcher
     contents=pickle.loads(request.getContents())
     try:
         value=pickle.dumps(managers[contents["ID"]][contents["ITEM"]])

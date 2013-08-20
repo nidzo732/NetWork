@@ -87,6 +87,7 @@ handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock}
 
 def requestHandler(requestSocket):
+    #Give requests to handle functions
     request=requestSocket.recv()
     #print(request)
     handlers[request[:3]](request[3:], requestSocket)
@@ -103,6 +104,7 @@ if __name__=="__main__":
         requestSocket=listenerSocket.accept()
         request=requestSocket.recv()
         if request==COMCODE_CHECKALIVE:
+            #Register the master
             requestSocket.send(COMCODE_ISALIVE)
             masterAddress=requestSocket.address
             event.masterAddress=masterAddress
@@ -128,6 +130,7 @@ if __name__=="__main__":
     lock.locks={-1:None}
     lock.runningOnMaster=False
     manager.runningOnMaster=False
+    #Start receiving requests
     while True:
         requestSocket=listenerSocket.accept()
         requestHandler(requestSocket)

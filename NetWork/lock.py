@@ -118,7 +118,10 @@ class NWLock:
         return {"id":self.id, "workgroup":None}
 
 class MasterLockHandler:
-    
+    #A class used to hold information about locks on the master
+    #It has a waiters list that holds a list of workers waiting to acquire
+    #the lock, when the lock is released a message is send to the first waiter
+    #in the list
     def __init__(self, id):
         lockLocks[id].acquire()
         self.id=id
@@ -127,6 +130,7 @@ class MasterLockHandler:
         lockLocks[id].release()
     
     def acquire(self, requester, controlls):
+        #Acquire lock or wait for release
         lockLocks[self.id].acquire()
         if self.locked:
             self.waiters.append(requester)
@@ -139,6 +143,7 @@ class MasterLockHandler:
         lockLocks[self.id].release()
     
     def release(self, controlls):
+        #Release lock and wake up the first from the waiting list
         lockLocks[self.id].acquire()
         if self.waiters:
             id=self.waiters.pop(0)
@@ -151,14 +156,17 @@ class MasterLockHandler:
         lockLocks[self.id].release()
 
 def registerLock(request, controlls, commqueue):
+    #A handler used by Workgroup.dispatcher
     id=int(request.getContents())
     for worker in controlls[CNT_WORKERS]:
         worker.registerLock(id)
 
 def acquireLock(request, controlls, commqueue):
+    #A handler used by Workgroup.dispatcher
     lockHandlers[int(request.getContents())].acquire(request.requester, controlls)
 
 def releaseLock(request, controlls, commqueue):
+    #A handler used by Workgroup.dispatcher
     lockHandlers[int(request.getContents())].release(controlls)
         
     

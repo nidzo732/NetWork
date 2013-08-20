@@ -188,7 +188,6 @@ class Workgroup:
         
     
     def cancelTask(self, id, worker):
-        #return self.controlls[CNT_WORKERS][worker].terminateTask(id)
         self.commqueue.put(Command(CMD_TERMINATE_TASK+
                            str(id).encode(encoding='ASCII'), -1))
     
@@ -305,6 +304,7 @@ class Workgroup:
     
     @staticmethod
     def listenerProcess(listenerSocket, commqueue, controlls):
+        #A process that receives network requests
         while True:
             receivedRequest=listenerSocket.accept()
             handlerThread=Thread(target=receiveSocketData, 
@@ -314,6 +314,7 @@ class Workgroup:
     
     @staticmethod
     def dispatcherProcess(commqueue, controlls):
+        #A process that handles requests
         request=commqueue.get()
         while not request==CMD_HALT:
             #print("REQUEST", request.contents, "FROM", request.requester)
@@ -323,7 +324,7 @@ class Workgroup:
     
     @staticmethod
     def onExit(target):
-        #CLEAN UP WORKERS#####################################
+        #Ran on exit to clean up the workgroup
         if (target.running):
             #Need to fix this for a nice exit, preferably with join#########
             target.networkListener.terminate()

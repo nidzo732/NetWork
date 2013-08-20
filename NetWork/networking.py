@@ -18,7 +18,8 @@ class InvalidMessageFormatError(OSError):pass
 
     
 class NWSocketTCP:
-
+    #Currently the default socket class that implemets a
+    #classic TCP communication
     def __init__(self, socketToUse=None, address=None):
         if socketToUse:
             self.internalSocket=socketToUse
@@ -32,11 +33,13 @@ class NWSocketTCP:
         self.address=address
         
     def listen(self):
+        #listen for incomming connections
         self.internalSocket.settimeout(None)
         self.internalSocket.bind((DEFAULT_LISTENING_ADDRESS, DEFAULT_TCP_PORT))
         self.internalSocket.listen(LISTEN_QUEUE_LENGTH)
     
     def recv(self):
+        #safely receive all sent data
         receivedData=b""
         while receivedData.find(MESSAGE_LENGTH_DELIMITER)==-1:
             if not NWSocketTCP.checkMessageFormat(receivedData):
@@ -54,23 +57,28 @@ class NWSocketTCP:
         return receivedData
     
     def send(self, data):
+        #send given data
         dataLength=str(len(data)).encode(encoding="ASCII")
         message=dataLength+MESSAGE_LENGTH_DELIMITER+data
         self.internalSocket.sendall(message)
     
     def connect(self, address):
+        #connect to the address
         self.internalSocket.connect((address, DEFAULT_TCP_PORT))
     
     def accept(self):
+        #accept a connection request and return a communication socket
         requestData=self.internalSocket.accept()
         return NWSocket(requestData[0], requestData[1][0])
     
     
     def close(self):
+        #close the socket
         self.internalSocket.close()
     
     @staticmethod
-    def checkAvailability(address):     
+    def checkAvailability(address):
+        #check if there's a worker on the address     
         testSocket=NWSocket()
         try:  
             testSocket.connect(address) 
@@ -83,6 +91,7 @@ class NWSocketTCP:
     
     @staticmethod
     def checkMessageFormat(message):
+        #check if a message fits the format
         if not message:
             return True
         elif not (message[0] in range(48, 59)):
@@ -107,4 +116,4 @@ class NWSocketTCP:
     def __del__(self):
         self.close()
     
-NWSocket=NWSocketTCP
+NWSocket=NWSocketTCP    #set default socket used in the framework

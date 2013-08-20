@@ -3,6 +3,12 @@ Tutorial
 
 This tutorial will introduce you to the basic features of NetWork - creating a workgroup, giving it tasks to run, getting results and states of running tasks.
 
+Notes:
+
+  * In this tutorial and in the documentation, the term 'user' is often mentioned, it does not stand for the human user of your program, it stands for the program that uses the NetWork framework and its tools (the program that you write)
+  
+  * English is not my native language, I've tried to make this tutorial gramatically correct but errors can hapen.
+
 Prepration
 ==========
 
