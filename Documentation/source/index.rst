@@ -17,11 +17,14 @@ If you have 10 dual core computers, your program gets all the power of those 20 
 To learn how to use NetWork see the links below, if you are new start with the Tutorial, if you want to learn more about using the tools NetWork gives
 you see IPC and concurrency control tools.
 
+If you are curious or want to help with the development see the page about internal workings of NetWork.
+
 .. toctree::
    :maxdepth: 1
    
    Tutorial
    IPC and concurrency control tools <IPCTools>
+   Internal workings <InnerWorkings>
 
 
 
