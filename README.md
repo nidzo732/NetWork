@@ -45,7 +45,7 @@ Basic usage instructions:
 ```
 * You get a handler and it's methods can be use to get the return value, get exceptions or terminate
   the process
-* For more information and how to use multiprocessing tools visit the (not yet completed) documentation
+* For more information and how to use multiprocessing tools visit the documentation
   on [the project documentation page](http://nidzo732.github.io/NetWork)
 
 ###Advantages
