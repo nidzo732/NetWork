@@ -127,6 +127,7 @@ class Workgroup:
         self.networkListener=Thread(target=self.listenerProcess, 
                                      args=(self.listenerSocket, self.commqueue,
                                            self.controlls))
+        self.networkListener.daemon=True
         self.dispatcher=Thread(target=self.dispatcherProcess, 
                                 args=(self.commqueue, self.controlls))
         self.dispatcher.start()
@@ -299,6 +300,7 @@ class Workgroup:
         request=commqueue.get()
         while not request==CMD_HALT:
             #print("REQUEST", request.contents, "FROM", request.requester)
+            print(request)
             handlerList[request.type()](request, controlls, commqueue)
             request.close()
             request=commqueue.get()
@@ -308,7 +310,6 @@ class Workgroup:
         #Ran on exit to clean up the workgroup
         if (target.running):
             #Need to fix this for a nice exit, preferably with join#########
-            target.networkListener.terminate()
             target.commqueue.put(CMD_HALT)
             target.dispatcher.join()
             target.listenerSocket.close()
