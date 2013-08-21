@@ -21,12 +21,13 @@ from multiprocessing import Manager, Event, Queue, Lock
 from NetWork.commcodes import *
 import atexit
 import pickle
+from NetWork.command import Command
 class BadRequestError(Exception): pass
 
 def executeTask(request, requestSocket):
     newTask=Task(marshaled=request)
     newProcess=WorkerProcess(request)
-    tasks[newTask.id]=b=newProcess
+    tasks[newTask.id]=newProcess
     tasks[newTask.id].start()
     requestSocket.send(COMCODE_ISALIVE)
 
@@ -86,19 +87,32 @@ handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           b"QUP":putOnQueue, b"QUR":registerQueue,
           CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock}
 
-def requestHandler(requestSocket):
-    #Give requests to handle functions
-    request=requestSocket.recv()
-    #print(request)
-    handlers[request[:3]](request[3:], requestSocket)
-    requestSocket.close()
+def requestHandler(commqueue):
+    #Give requests to handler functions
+    request=commqueue.get()
+    while request!=CMD_HALT:
+        #print(request)
+        handlers[request.type()](request.getContents(), request.socket)
+        request.close()
+        request=commqueue.get()
+    for task in tasks:
+        task.terminate()
+    
 
-def onExit(listenerSocket):
-    listenerSocket.close()  
+def requestReceiver(requestSocket, commqueue):
+    receivedData=requestSocket.recv()
+    commqueue.put(Command(receivedData, -1, requestSocket))
+
+def onExit(listenerSocket, commqueue, handlerThread):
+    listenerSocket.close()
+    commqueue.put(CMD_HALT)
+    handlerThread.join()
+    
 
 if __name__=="__main__":
     listenerSocket=NWSocket()
-    atexit.register(onExit, listenerSocket)
+    commqueue=Queue()
+    atexit.register(onExit, listenerSocket, commqueue, handlerThread)
     try:
         listenerSocket.listen()
         requestSocket=listenerSocket.accept()
@@ -130,8 +144,11 @@ if __name__=="__main__":
     lock.locks={-1:None}
     lock.runningOnMaster=False
     manager.runningOnMaster=False
+    handlerThread=Thread(target=requestHandler, args=(commqueue,))
+    handlerThread.start()
     #Start receiving requests
     while True:
         requestSocket=listenerSocket.accept()
-        requestHandler(requestSocket)
+        receiverThread=Thread(target=requestReceiver, args=(requestSocket, commqueue))
+        receiverThread.start()
     
