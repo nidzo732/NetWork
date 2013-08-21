@@ -15,6 +15,7 @@ LISTEN_QUEUE_LENGTH=5
 DEFAULT_SOCKET_TIMEOUT=5.0
 
 class InvalidMessageFormatError(OSError):pass
+class MessageNotCompleteError(OSError):pass
 
     
 class NWSocketTCP:
@@ -45,7 +46,11 @@ class NWSocketTCP:
             if not NWSocketTCP.checkMessageFormat(receivedData):
                 raise InvalidMessageFormatError("Received string not\
                                                 formatted properly")
-            receivedData+=self.internalSocket.recv(BUFFER_READ_LENGTH)
+            newData=self.internalSocket.recv(BUFFER_READ_LENGTH)
+            if len(newData)==0:
+                raise MessageNotCompleteError("Socket got closed before receiving\
+                                                the entire message")
+            receivedData+=newData
         if not NWSocket.checkMessageFormat(receivedData):
             raise InvalidMessageFormatError("Received string not\
                                             formatted properly")
@@ -53,7 +58,11 @@ class NWSocketTCP:
         messageLength=int(receivedData[0:sizelen])
         receivedData=receivedData[sizelen+len(MESSAGE_LENGTH_DELIMITER):]
         while len(receivedData)<messageLength:
-            receivedData+=self.internalSocket.recv(messageLength)
+            newData=self.internalSocket.recv(BUFFER_READ_LENGTH)
+            if len(newData)==0:
+                raise MessageNotCompleteError("Socket got closed before receiving\
+                                                the entire message")
+            receivedData+=newData
         return receivedData
     
     def send(self, data):
