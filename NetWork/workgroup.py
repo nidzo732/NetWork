@@ -16,32 +16,13 @@ from .lock import NWLock
 from .manager import NWManager
 from NetWork import event, queue, lock, manager
 import pickle
+from .command import Command
 
 
 
 
 class NoWorkersError(Exception):pass
 
-class Command:
-    #A class used to send commands to the Workgroup.dispatcher thread
-    #Used internaly by workgroup, not by user
-    def __init__(self, contents, requester, socket=None):
-        self.contents=contents
-        self.requester=requester
-        self.socket=socket
-    
-    def getContents(self):
-        return self.contents[3:]
-    
-    def type(self):
-        return self.contents[:3]
-    
-    def close(self):
-        if self.socket:
-            self.socket.close()
-    
-    def respond(self, response):
-        self.socket.send(response)
 
 def receiveSocketData(socket, commqueue, controlls):
     workerId=-1
@@ -143,9 +124,10 @@ class Workgroup:
         the ``with`` statement
         """
         self.listenerSocket.listen()
-        self.networkListener=Process(target=self.listenerProcess, 
+        self.networkListener=Thread(target=self.listenerProcess, 
                                      args=(self.listenerSocket, self.commqueue,
                                            self.controlls))
+        self.networkListener.daemon=True
         self.dispatcher=Thread(target=self.dispatcherProcess, 
                                 args=(self.commqueue, self.controlls))
         self.dispatcher.start()
@@ -318,6 +300,7 @@ class Workgroup:
         request=commqueue.get()
         while not request==CMD_HALT:
             #print("REQUEST", request.contents, "FROM", request.requester)
+            print(request)
             handlerList[request.type()](request, controlls, commqueue)
             request.close()
             request=commqueue.get()
@@ -327,7 +310,6 @@ class Workgroup:
         #Ran on exit to clean up the workgroup
         if (target.running):
             #Need to fix this for a nice exit, preferably with join#########
-            target.networkListener.terminate()
             target.commqueue.put(CMD_HALT)
             target.dispatcher.join()
             target.listenerSocket.close()

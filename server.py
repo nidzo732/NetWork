@@ -21,64 +21,68 @@ from multiprocessing import Manager, Event, Queue, Lock
 from NetWork.commcodes import *
 import atexit
 import pickle
+from NetWork.command import Command
 class BadRequestError(Exception): pass
 
-def executeTask(request, requestSocket):
-    newTask=Task(marshaled=request)
-    newProcess=WorkerProcess(request)
-    tasks[newTask.id]=b=newProcess
+running=False
+tasks={-1:None}
+
+def executeTask(request):
+    newTask=Task(marshaled=request.getContents())
+    newProcess=WorkerProcess(request.getContents())
+    tasks[newTask.id]=newProcess
     tasks[newTask.id].start()
-    requestSocket.send(COMCODE_ISALIVE)
+    request.respond(COMCODE_ISALIVE)
 
-def getResult(request, requestSocket):
-    id=int(request)
+def getResult(request):
+    id=int(request.getContents())
     result=tasks[id].getResult()
-    requestSocket.send(pickle.dumps(result))
+    request.respond(pickle.dumps(result))
 
-def exceptionRaised(request, requestSocket):
-    id=int(request)
+def exceptionRaised(request):
+    id=int(request.getContents())
     exceptionTest=tasks[id].exceptionRaised()
-    requestSocket.send(pickle.dumps(exceptionTest))
+    request.respond(pickle.dumps(exceptionTest))
 
-def terminateTask(request, requestSocket):
-    id=int(request)
+def terminateTask(request):
+    id=int(request.getContents())
     tasks[id].terminate()
 
-def taskRunning(request, requestSocket):
-    id=int(request)
+def taskRunning(request):
+    id=int(request.getContents())
     status=tasks[id].running()
-    requestSocket.send(pickle.dumps(status))
+    request.respond(pickle.dumps(status))
 
-def getException(request, requestSocket):
-    id=int(request)
+def getException(request):
+    id=int(request.getContents())
     exception=tasks[id].getException()
-    requestSocket.send(pickle.dumps(exception))
+    request.respond(pickle.dumps(exception))
 
-def setEvent(request, requestSocket):
-    event.events[int(request)].set()
+def setEvent(request):
+    event.events[int(request.getContents())].set()
 
-def registerEvent(request, requestSocket):
-    id=int(request)
+def registerEvent(request):
+    id=int(request.getContents())
     event.events[id]=Event()
 
-def checkAlive(request, requestSocket):
+def checkAlive(request):
     if requestSocket.address==masterAddress:
-        requestSocket.send(COMCODE_ISALIVE)
+        request.respond(COMCODE_ISALIVE)
 
-def putOnQueue(request, requestSocket):
-    idLength=request.find(b"ID")
-    id=int(request[:idLength])
-    queue.queues[id].put(request[idLength+2:])
+def putOnQueue(request):
+    idLength=request.getContents().find(b"ID")
+    id=int(request.getContents()[:idLength])
+    queue.queues[id].put(request.getContents()[idLength+2:])
 
-def registerQueue(request, requestSocket):
-    queue.queues[int(request)]=Queue()
+def registerQueue(request):
+    queue.queues[int(request.getContents())]=Queue()
 
-def registerLock(request, requestSocket):
-    lock.locks[int(request)]=Lock()
-    lock.locks[int(request)].acquire()
+def registerLock(request):
+    lock.locks[int(request.getContents())]=Lock()
+    lock.locks[int(request.getContents())].acquire()
 
-def releaseLock(request, requestSocket):
-    lock.locks[int(request)].release()
+def releaseLock(request):
+    lock.locks[int(request.getContents())].release()
     
 handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           b"TRM":terminateTask, b"TRN":taskRunning, b"EXC":getException,
@@ -86,19 +90,32 @@ handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           b"QUP":putOnQueue, b"QUR":registerQueue,
           CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock}
 
-def requestHandler(requestSocket):
-    #Give requests to handle functions
-    request=requestSocket.recv()
-    #print(request)
-    handlers[request[:3]](request[3:], requestSocket)
-    requestSocket.close()
+def requestHandler(commqueue):
+    #Give requests to handler functions
+    request=commqueue.get()
+    while request!=CMD_HALT:
+        #print(request)
+        handlers[request.type()](request)
+        request.close()
+        request=commqueue.get()
+    for taskID in tasks:
+        if taskID!=-1:
+            tasks[taskID].terminate()
+    
 
-def onExit(listenerSocket):
-    listenerSocket.close()  
+def requestReceiver(requestSocket, commqueue):
+    receivedData=requestSocket.recv()
+    commqueue.put(Command(receivedData, -1, requestSocket))
+
+def onExit(listenerSocket, commqueue, handlerThread):
+    if running:
+        listenerSocket.close()
+        commqueue.put(CMD_HALT)
+        handlerThread.join()
+    
 
 if __name__=="__main__":
     listenerSocket=NWSocket()
-    atexit.register(onExit, listenerSocket)
     try:
         listenerSocket.listen()
         requestSocket=listenerSocket.accept()
@@ -121,7 +138,8 @@ if __name__=="__main__":
     except BadRequestError:
         print("Master did not send a proper request")
         exit()
-    tasks={-1:None}
+    except KeyboardInterrupt:
+        exit()
     workerManager=Manager().list(range(20))
     event.events={-1:None}
     event.runningOnMaster=False
@@ -130,8 +148,17 @@ if __name__=="__main__":
     lock.locks={-1:None}
     lock.runningOnMaster=False
     manager.runningOnMaster=False
+    commqueue=Queue()
+    handlerThread=Thread(target=requestHandler, args=(commqueue,))
+    handlerThread.start()
     #Start receiving requests
-    while True:
-        requestSocket=listenerSocket.accept()
-        requestHandler(requestSocket)
+    running=True
+    atexit.register(onExit, listenerSocket, commqueue, handlerThread)
+    try:
+        while True:
+            requestSocket=listenerSocket.accept()
+            receiverThread=Thread(target=requestReceiver, args=(requestSocket, commqueue))
+            receiverThread.start()
+    except KeyboardInterrupt:
+        exit()
     
