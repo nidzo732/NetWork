@@ -78,7 +78,9 @@ class NWManager:
             return pickle.loads(value)
     
     def setItemOnMaster(self, item, value):
-        self.workgroup.setManagerItem(self.id, item, value)
+        self.workgroup.sendRequest(CMD_SET_MANAGER_ITEM+pickle.dumps({"ID":self.id,
+                                                                      "ITEM":item,
+                                                                      "VALUE":value}))
     
     def setItemOnWorker(self, item, value):
         masterSocket=NWSocket()

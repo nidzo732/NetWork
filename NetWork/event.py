@@ -54,10 +54,10 @@ class NWEvent:
         masterSocket.close()
     
     def waitOnMaster(self):
-        return self.workgroup.waitForEvent(self.id)
+        return events[self.id].wait()
     
     def setOnMaster(self):
-        self.workgroup.setEvent(self.id)
+        self.sendRequest(CMD_SET_EVENT+str(self.id).encode(encoding='ASCII'))
     
     def set(self):
         """

@@ -71,10 +71,11 @@ class NWLock:
         locks[id].acquire()
     
     def acquireOnMaster(self):
-        self.workgroup.acquireLock(self.id)
+        self.workgroup.sendRequest(CMD_ACQUIRE_LOCK+str(self.id).encode(encoding='ASCII'))
+        locks[self.id].acquire()
     
     def releaseOnMaster(self):
-        self.workgroup.releaseLock(self.id)
+        self.workgroup.sendRequest(CMD_RELEASE_LOCK+str(self.id).encode(encoding='ASCII'))
     
     def acquireOnWorker(self):
         masterSocket=NWSocket()
