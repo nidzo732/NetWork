@@ -19,7 +19,7 @@ class MessageNotCompleteError(OSError):pass
 
     
 class NWSocketTCP:
-    #Currently the default socket class that implemets a
+    #Currently the default socket class that implements a
     #classic TCP communication
     def __init__(self, socketToUse=None, address=None):
         if socketToUse:
@@ -44,24 +44,20 @@ class NWSocketTCP:
         receivedData=b""
         while receivedData.find(MESSAGE_LENGTH_DELIMITER)==-1:
             if not NWSocketTCP.checkMessageFormat(receivedData):
-                raise InvalidMessageFormatError("Received string not\
-                                                formatted properly")
+                raise InvalidMessageFormatError("Received string not formatted properly")
             newData=self.internalSocket.recv(BUFFER_READ_LENGTH)
             if len(newData)==0:
-                raise MessageNotCompleteError("Socket got closed before receiving\
-                                                the entire message")
+                raise MessageNotCompleteError("Socket got closed before receiving the entire message")
             receivedData+=newData
         if not NWSocket.checkMessageFormat(receivedData):
-            raise InvalidMessageFormatError("Received string not\
-                                            formatted properly")
+            raise InvalidMessageFormatError("Received string not formatted properly")
         sizelen=receivedData.find(MESSAGE_LENGTH_DELIMITER)
         messageLength=int(receivedData[0:sizelen])
         receivedData=receivedData[sizelen+len(MESSAGE_LENGTH_DELIMITER):]
         while len(receivedData)<messageLength:
             newData=self.internalSocket.recv(BUFFER_READ_LENGTH)
             if len(newData)==0:
-                raise MessageNotCompleteError("Socket got closed before receiving\
-                                                the entire message")
+                raise MessageNotCompleteError("Socket got closed before receiving the entire message")
             receivedData+=newData
         return receivedData
     

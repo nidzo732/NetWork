@@ -17,4 +17,7 @@ class Command:
             self.socket.close()
     
     def respond(self, response):
-        self.socket.send(response)
+        try:
+            self.socket.send(response)
+        except OSError as error:
+            print("Failed to send response to", self.socket.address, error)

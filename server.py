@@ -118,28 +118,35 @@ if __name__=="__main__":
     listenerSocket=NWSocket()
     try:
         listenerSocket.listen()
-        requestSocket=listenerSocket.accept()
-        request=requestSocket.recv()
-        if request==COMCODE_CHECKALIVE:
-            #Register the master
-            requestSocket.send(COMCODE_ISALIVE)
-            masterAddress=requestSocket.address
-            event.masterAddress=masterAddress
-            queue.masterAddress=masterAddress
-            lock.masterAddress=masterAddress
-            manager.masterAddress=masterAddress
-            requestSocket.close()
-            print("MASTER REGISTERED with address", masterAddress)
-        else:
-            raise BadRequestError
     except OSError:
-        print ("Network communication failed")
+        print("Failed to start listening on the network")
+        listenerSocket.close()
         exit()
-    except BadRequestError:
-        print("Master did not send a proper request")
-        exit()
-    except KeyboardInterrupt:
-        exit()
+    masterRegistered=False
+    while not masterRegistered:
+        try:
+            requestSocket=listenerSocket.accept()
+            request=requestSocket.recv()
+            if request==COMCODE_CHECKALIVE:
+                #Register the master
+                requestSocket.send(COMCODE_ISALIVE)
+                masterAddress=requestSocket.address
+                event.masterAddress=masterAddress
+                queue.masterAddress=masterAddress
+                lock.masterAddress=masterAddress
+                manager.masterAddress=masterAddress
+                requestSocket.close()
+                print("MASTER REGISTERED with address", masterAddress)
+                masterRegistered=True
+            else:
+                raise BadRequestError
+        except OSError as error:
+            print ("There was a connection atempt but a network error happened", 
+                   error)
+        except BadRequestError:
+            print("A request was received but it was not valid:", request)
+        except KeyboardInterrupt:
+            exit()
     workerManager=Manager().list(range(20))
     event.events={-1:None}
     event.runningOnMaster=False
@@ -157,7 +164,8 @@ if __name__=="__main__":
     try:
         while True:
             requestSocket=listenerSocket.accept()
-            receiverThread=Thread(target=requestReceiver, args=(requestSocket, commqueue))
+            receiverThread=Thread(target=requestReceiver, 
+                                  args=(requestSocket, commqueue))
             receiverThread.start()
     except KeyboardInterrupt:
         exit()

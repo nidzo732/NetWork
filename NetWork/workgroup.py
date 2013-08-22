@@ -31,7 +31,10 @@ def receiveSocketData(socket, commqueue, controlls):
             workerId=worker.id
     if workerId==-1:
         return
-    commqueue.put(Command(socket.recv(), workerId, socket))
+    try:
+        commqueue.put(Command(socket.recv(), workerId, socket))
+    except OSError as error:
+        print("Network communication failed from address", socket.address, error)
 
 
 class Workgroup:
@@ -123,7 +126,10 @@ class Workgroup:
         Instead of running this method manually it is recomened to use
         the ``with`` statement
         """
-        self.listenerSocket.listen()
+        try:
+            self.listenerSocket.listen()
+        except OSError as error:
+            print("Failed to start listening on the network", error)
         self.networkListener=Thread(target=self.listenerProcess, 
                                      args=(self.listenerSocket, self.commqueue,
                                            self.controlls))
