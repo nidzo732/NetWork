@@ -57,7 +57,7 @@ class NWEvent:
         return events[self.id].wait()
     
     def setOnMaster(self):
-        self.sendRequest(CMD_SET_EVENT+str(self.id).encode(encoding='ASCII'))
+        self.workgroup.sendRequest(CMD_SET_EVENT+str(self.id).encode(encoding='ASCII'))
     
     def set(self):
         """
