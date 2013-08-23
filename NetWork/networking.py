@@ -3,6 +3,7 @@ This module implements a socket classes used to safely handle
 network messaging, message length and security.
 """
 import socket
+import pickle
 
 COMCODE_CHECKALIVE=b"ALV"
 COMCODE_ISALIVE=b"IMALIVE"
@@ -16,6 +17,8 @@ DEFAULT_SOCKET_TIMEOUT=5.0
 
 class InvalidMessageFormatError(OSError):pass
 class MessageNotCompleteError(OSError):pass
+
+masterAddress=None
 
     
 class NWSocketTCP:
@@ -122,3 +125,19 @@ class NWSocketTCP:
         self.close()
     
 NWSocket=NWSocketTCP    #set default socket used in the framework
+
+def sendRequest(request):
+    masterSocket=NWSocket()
+    masterSocket.connect(masterAddress)
+    masterSocket.send(request.getType()+pickle.dumps(request.getContents()))
+    masterSocket.close()
+
+def sendRequestWithResponse(request):
+    masterSocket=NWSocket()
+    masterSocket.connect(masterAddress)
+    masterSocket.send(request.getType()+pickle.dumps(request.getContents()))
+    receivedData=masterSocket.recv()
+    masterSocket.close()
+    return receivedData
+    
+    

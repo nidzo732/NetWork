@@ -16,7 +16,7 @@ from .lock import NWLock
 from .manager import NWManager
 from NetWork import event, queue, lock, manager
 import pickle
-from .command import Command
+from .command import Request
 
 
 
@@ -32,7 +32,7 @@ def receiveSocketData(socket, commqueue, controlls):
     if workerId==-1:
         return
     try:
-        commqueue.put(Command(socket.recv(), workerId, socket))
+        commqueue.put(Request(socket.recv(), workerId, socket))
     except OSError as error:
         print("Network communication failed from address", socket.address, error)
 
@@ -158,7 +158,7 @@ class Workgroup:
         self.controlls[CNT_TASK_COUNT]+=1
         newTask=Task(target=target, args=args, kwargs=kwargs, 
                      id=self.controlls[CNT_TASK_COUNT])
-        self.commqueue.put(Command(CMD_SUBMIT_TASK+
+        self.commqueue.put(Request(CMD_SUBMIT_TASK+
                            str(self.currentWorker).encode(encoding='ASCII')+
                            b"WID"+newTask.marshal(), -1))
         executors=self.controlls[CNT_TASK_EXECUTORS]
@@ -168,7 +168,7 @@ class Workgroup:
     
     def getResult(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Command(CMD_GET_RESULT+str(id).encode(encoding="ASCII")+
+        self.commqueue.put(Request(CMD_GET_RESULT+str(id).encode(encoding="ASCII")+
                            b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
         result=resultQueue.get()
         del resultQueue
@@ -176,13 +176,13 @@ class Workgroup:
         
     
     def cancelTask(self, id, worker):
-        self.commqueue.put(Command(CMD_TERMINATE_TASK+
+        self.commqueue.put(Request(CMD_TERMINATE_TASK+
                            str(id).encode(encoding='ASCII'), -1))
     
     
     def taskRunning(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Command(CMD_TASK_RUNNING+str(id).encode(encoding="ASCII")+
+        self.commqueue.put(Request(CMD_TASK_RUNNING+str(id).encode(encoding="ASCII")+
                            b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
         result=resultQueue.get()
         del resultQueue
@@ -190,7 +190,7 @@ class Workgroup:
     
     def getException(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Command(CMD_GET_EXCEPTION+str(id).encode(encoding="ASCII")+
+        self.commqueue.put(Request(CMD_GET_EXCEPTION+str(id).encode(encoding="ASCII")+
                            b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
         result=resultQueue.get()
         del resultQueue
@@ -198,14 +198,14 @@ class Workgroup:
     
     def exceptionRaised(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Command(CMD_CHECK_EXCEPTION+str(id).encode(encoding="ASCII")+
+        self.commqueue.put(Request(CMD_CHECK_EXCEPTION+str(id).encode(encoding="ASCII")+
                            b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
         result=resultQueue.get()
         del resultQueue
         return result
     
     def sendRequest(self, request):
-        self.commqueue.put(Command(request, -1))
+        self.commqueue.put(Request(request, -1))
             
     def registerEvent(self):
         """
@@ -215,7 +215,7 @@ class Workgroup:
         """
         self.controlls[CNT_EVENT_COUNT]+=1
         id=self.controlls[CNT_EVENT_COUNT]
-        self.commqueue.put(Command(CMD_REGISTER_EVENT+
+        self.commqueue.put(Request(CMD_REGISTER_EVENT+
                            str(id).encode(encoding='ASCII'), -1))
         return event.NWEvent(id, self)
     
@@ -227,7 +227,7 @@ class Workgroup:
         """
         self.controlls[CNT_QUEUE_COUNT]+=1
         id=self.controlls[CNT_QUEUE_COUNT]
-        self.commqueue.put(Command(CMD_REGISTER_QUEUE+str(id).encode(encoding='ASCII'), -1))
+        self.commqueue.put(Request(CMD_REGISTER_QUEUE+str(id).encode(encoding='ASCII'), -1))
         return queue.NWQueue(id, self)
     
     def registerLock(self):
@@ -238,7 +238,7 @@ class Workgroup:
         """
         self.controlls[CNT_LOCK_COUNT]+=1
         id=self.controlls[CNT_LOCK_COUNT]
-        self.commqueue.put(Command(CMD_REGISTER_LOCK+str(id).encode(encoding='ASCII'), -1))
+        self.commqueue.put(Request(CMD_REGISTER_LOCK+str(id).encode(encoding='ASCII'), -1))
         return NWLock(id, self)
     
     def registerManager(self):
@@ -280,7 +280,7 @@ class Workgroup:
         while not request==CMD_HALT:
             #print("REQUEST", request.contents, "FROM", request.requester)
             print(request)
-            handlerList[request.type()](request, controlls, commqueue)
+            handlerList[request.getType()](request, controlls, commqueue)
             request.close()
             request=commqueue.get()
     
