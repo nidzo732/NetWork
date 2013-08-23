@@ -70,7 +70,8 @@ class NWQueue:
         masterSocket.close()
     
     def putOnMaster(self, data):
-        self.workgroup.putOnQueue(self.id, data)
+        self.workgroup.sendRequest(CMD_PUT_ON_QUEUE+str(self.id).encode(encoding='ASCII')+
+                           b"ID"+data,)
     
     def getOnWorker(self):
         masterSocket=NWSocket()
@@ -80,7 +81,9 @@ class NWQueue:
         return queues[self.id].get()
     
     def getOnMaster(self):
-        return self.workgroup.getFromQueue(self.id)
+        self.workgroup.sendRequest(CMD_GET_FROM_QUEUE+str(self.id).encode(encoding='ASCII'))
+        return queues[self.id].get()
+        
     
     def put(self, data):
         """

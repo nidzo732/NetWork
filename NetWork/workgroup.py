@@ -31,7 +31,10 @@ def receiveSocketData(socket, commqueue, controlls):
             workerId=worker.id
     if workerId==-1:
         return
-    commqueue.put(Command(socket.recv(), workerId, socket))
+    try:
+        commqueue.put(Command(socket.recv(), workerId, socket))
+    except OSError as error:
+        print("Network communication failed from address", socket.address, error)
 
 
 class Workgroup:
@@ -123,7 +126,10 @@ class Workgroup:
         Instead of running this method manually it is recomened to use
         the ``with`` statement
         """
-        self.listenerSocket.listen()
+        try:
+            self.listenerSocket.listen()
+        except OSError as error:
+            print("Failed to start listening on the network", error)
         self.networkListener=Thread(target=self.listenerProcess, 
                                      args=(self.listenerSocket, self.commqueue,
                                            self.controlls))
@@ -198,12 +204,9 @@ class Workgroup:
         del resultQueue
         return result
     
-    def waitForEvent(self, id):
-        event.events[id].wait()
-    
-    def setEvent(self, id):
-        self.commqueue.put(Command(CMD_SET_EVENT+str(id).encode(encoding='ASCII'), -1))
-    
+    def sendRequest(self, request):
+        self.commqueue.put(Command(request, -1))
+            
     def registerEvent(self):
         """
         Create a new event to be used by the tasks
@@ -227,15 +230,6 @@ class Workgroup:
         self.commqueue.put(Command(CMD_REGISTER_QUEUE+str(id).encode(encoding='ASCII'), -1))
         return queue.NWQueue(id, self)
     
-    def putOnQueue(self, id, data):
-        self.commqueue.put(Command(CMD_PUT_ON_QUEUE+str(id).encode(encoding='ASCII')+
-                           b"ID"+data, -1))
-    
-    def getFromQueue(self, id):
-        self.commqueue.put(Command(CMD_GET_FROM_QUEUE+str(id).encode(encoding='ASCII'), -1))
-        data=queue.queues[id].get()
-        return data
-    
     def registerLock(self):
         """
         Create a new lock to be used by the tasks
@@ -254,23 +248,8 @@ class Workgroup:
         :Return: instance of :py:class:`NWManager <NetWork.manager.NWManager>`
         """
         self.controlls[CNT_MANAGER_COUNT]+=1
-        return NWManager(self.controlls[CNT_MANAGER_COUNT], self)
-    
-    def setManagerItem(self, id, item, value):
-        self.commqueue.put(Command(CMD_SET_MANAGER_ITEM+pickle.dumps({"ID":id,
-                                                                      "ITEM":item,
-                                                                      "VALUE":value}), -1))
-    
-    
+        return NWManager(self.controlls[CNT_MANAGER_COUNT], self)        
         
-    
-    def acquireLock(self, id):
-        self.commqueue.put(Command(CMD_ACQUIRE_LOCK+str(id).encode(encoding='ASCII'), -1))
-        lock.locks[id].acquire()
-    
-    def releaseLock(self, id):
-        self.commqueue.put(Command(CMD_RELEASE_LOCK+str(id).encode(encoding='ASCII'), -1))
-    
     def fixDeadWorker(self, id=None, worker=None):
         salvageDeadWorker(self, id, worker)
     
