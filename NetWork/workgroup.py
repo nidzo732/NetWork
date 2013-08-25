@@ -32,9 +32,11 @@ def receiveSocketData(socket, commqueue, controlls):
     if workerId==-1:
         return
     try:
-        commqueue.put(Request(socket.recv(), workerId, socket))
+        receivedData=socket.recv()
     except OSError as error:
         print("Network communication failed from address", socket.address, error)
+    commqueue.put(Request(receivedData[:3], 
+                          pickle.loads(receivedData[3:]), workerId, socket))
 
 
 class Workgroup:
@@ -158,9 +160,11 @@ class Workgroup:
         self.controlls[CNT_TASK_COUNT]+=1
         newTask=Task(target=target, args=args, kwargs=kwargs, 
                      id=self.controlls[CNT_TASK_COUNT])
-        self.commqueue.put(Request(CMD_SUBMIT_TASK+
-                           str(self.currentWorker).encode(encoding='ASCII')+
-                           b"WID"+newTask.marshal(), -1))
+        self.commqueue.put(Request(CMD_SUBMIT_TASK,
+                                   {
+                                    "WORKER":self.currentWorker,
+                                    "TASK":newTask
+                                    }))
         executors=self.controlls[CNT_TASK_EXECUTORS]
         executors[newTask.id]=self.currentWorker
         self.controlls[CNT_TASK_EXECUTORS]=executors
@@ -168,44 +172,54 @@ class Workgroup:
     
     def getResult(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Request(CMD_GET_RESULT+str(id).encode(encoding="ASCII")+
-                           b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
+        self.commqueue.put(Request(CMD_GET_RESULT,
+                                   {
+                                    "ID":id,
+                                    "QUEUE":resultQueue.id
+                                    }))
         result=resultQueue.get()
-        del resultQueue
         return result
         
     
     def cancelTask(self, id, worker):
-        self.commqueue.put(Request(CMD_TERMINATE_TASK+
-                           str(id).encode(encoding='ASCII'), -1))
+        self.commqueue.put(Request(CMD_TERMINATE_TASK,
+                                   {
+                                    "ID":id
+                                    }))
     
     
     def taskRunning(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Request(CMD_TASK_RUNNING+str(id).encode(encoding="ASCII")+
-                           b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
+        self.commqueue.put(Request(CMD_TASK_RUNNING,
+                                   {
+                                    "ID":id,
+                                    "QUEUE":resultQueue.id
+                                    }))
         result=resultQueue.get()
-        del resultQueue
         return result
     
     def getException(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Request(CMD_GET_EXCEPTION+str(id).encode(encoding="ASCII")+
-                           b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
+        self.commqueue.put(Request(CMD_GET_EXCEPTION,
+                                   {
+                                    "ID":id,
+                                    "QUEUE":resultQueue.id
+                                    }))
         result=resultQueue.get()
-        del resultQueue
         return result
     
     def exceptionRaised(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Request(CMD_CHECK_EXCEPTION+str(id).encode(encoding="ASCII")+
-                           b"TID"+str(resultQueue.id).encode(encoding="ASCII"), -1))
+        self.commqueue.put(Request(CMD_CHECK_EXCEPTION,
+                                   {
+                                    "ID":id,
+                                    "QUEUE":resultQueue.id
+                                    }))
         result=resultQueue.get()
-        del resultQueue
         return result
     
     def sendRequest(self, request):
-        self.commqueue.put(Request(request, -1))
+        self.commqueue.put(request)
             
     def registerEvent(self):
         """
@@ -279,7 +293,7 @@ class Workgroup:
         request=commqueue.get()
         while not request==CMD_HALT:
             #print("REQUEST", request.contents, "FROM", request.requester)
-            print(request)
+            #print(request)
             handlerList[request.getType()](request, controlls, commqueue)
             request.close()
             request=commqueue.get()

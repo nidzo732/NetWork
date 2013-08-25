@@ -1,7 +1,7 @@
 class Request:
     #A class used to send commands to the Workgroup.dispatcher thread
     #Used internaly by workgroup, not by user
-    def __init__(self, type, contents, requester, socket=None):
+    def __init__(self, type, contents, requester=-1, socket=None):
         self.contents=contents
         self.requester=requester
         self.socket=socket

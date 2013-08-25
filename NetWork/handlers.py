@@ -17,42 +17,36 @@ def receiveSocketData(socket, commqueue):
     socket.close()
 
 def submitTask(request, controlls, commqueue):
-    contents=request.getContents()
-    workerId=int(contents[:contents.find(b"WID")])
-    task=contents[contents.find(b"WID")+3:]
+    workerId=request["WORKER"]
+    task=request["TASK"]
     controlls[CNT_WORKERS][workerId].executeTask(task)
 
 def taskRunning(request, controlls, commqueue):
-    contents=request.getContents()
-    taskId=int(contents[:contents.find(b"TID")])
-    queueId=int(contents[contents.find(b"TID")+3:])
+    taskId=request["ID"]
+    queueId=request["QUEUE"]
     workerId=controlls[CNT_TASK_EXECUTORS][taskId]
     queue.queues[queueId].put(dumps(controlls[CNT_WORKERS][workerId].taskRunning(taskId)))
 
 def terminateTask(request, controlls, commqueue):
-    contents=request.getContents()
-    taskId=int(contents)
+    taskId=request["ID"]
     workerId=controlls[CNT_TASK_EXECUTORS][taskId]
     controlls[CNT_WORKERS][workerId].terminateTask(taskId)
     
 def getException(request, controlls, commqueue):
-    contents=request.getContents()
-    taskId=int(contents[:contents.find(b"TID")])
-    queueId=int(contents[contents.find(b"TID")+3:])
+    taskId=request["ID"]
+    queueId=request["QUEUE"]
     workerId=controlls[CNT_TASK_EXECUTORS][taskId]
     queue.queues[queueId].put(dumps(controlls[CNT_WORKERS][workerId].getException(taskId)))
 
 def checkException(request, controlls, commqueue):
-    contents=request.getContents()
-    taskId=int(contents[:contents.find(b"TID")])
-    queueId=int(contents[contents.find(b"TID")+3:])
+    taskId=request["ID"]
+    queueId=request["QUEUE"]
     workerId=controlls[CNT_TASK_EXECUTORS][taskId]
     queue.queues[queueId].put(dumps(controlls[CNT_WORKERS][workerId].exceptionRaised(taskId)))
 
 def getResult(request, controlls, commqueue):
-    contents=request.getContents()
-    taskId=int(contents[:contents.find(b"TID")])
-    queueId=int(contents[contents.find(b"TID")+3:])
+    taskId=request["ID"]
+    queueId=request["QUEUE"]
     workerId=controlls[CNT_TASK_EXECUTORS][taskId]
     queue.queues[queueId].put(dumps(controlls[CNT_WORKERS][workerId].getResult(taskId)))
 
