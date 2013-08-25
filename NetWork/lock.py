@@ -47,6 +47,7 @@ from multiprocessing import Lock
 from .networking import NWSocket
 from .commcodes import CMD_ACQUIRE_LOCK, CMD_RELEASE_LOCK
 from .cntcodes import CNT_WORKERS
+from .command import Request
 runningOnMaster=None
 locks=None
 lockHandlers=None
@@ -71,24 +72,30 @@ class NWLock:
         locks[id].acquire()
     
     def acquireOnMaster(self):
-        self.workgroup.sendRequest(CMD_ACQUIRE_LOCK+str(self.id).encode(encoding='ASCII'))
+        self.workgroup.sendRequest(Request(CMD_ACQUIRE_LOCK,
+                                           {
+                                            "ID":self.id
+                                            }))
         locks[self.id].acquire()
     
     def releaseOnMaster(self):
-        self.workgroup.sendRequest(CMD_RELEASE_LOCK+str(self.id).encode(encoding='ASCII'))
+        self.workgroup.sendRequest(Request(CMD_RELEASE_LOCK,
+                                           {
+                                            "ID":self.id
+                                            }))
     
     def acquireOnWorker(self):
-        masterSocket=NWSocket()
-        masterSocket.connect(masterAddress)
-        masterSocket.send(CMD_ACQUIRE_LOCK+str(self.id).encode(encoding='ASCII'))
-        masterSocket.close()
+        sendRequest(Request(CMD_ACQUIRE_LOCK,
+                            {
+                             "ID":self.id
+                             }))
         locks[self.id].acquire()
     
     def releaseOnWorker(self):
-        masterSocket=NWSocket()
-        masterSocket.connect(masterAddress)
-        masterSocket.send(CMD_RELEASE_LOCK+str(self.id).encode(encoding='ASCII'))
-        masterSocket.close()
+        sendRequest(Request(CMD_RELEASE_LOCK,
+                            {
+                             "ID":self.id
+                             }))
     
     def acquire(self):
         """
@@ -158,17 +165,17 @@ class MasterLockHandler:
 
 def registerLock(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    id=int(request.getContents())
+    id=request["ID"]
     for worker in controlls[CNT_WORKERS]:
         worker.registerLock(id)
 
 def acquireLock(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    lockHandlers[int(request.getContents())].acquire(request.requester, controlls)
+    lockHandlers[request["ID"]].acquire(request.requester, controlls)
 
 def releaseLock(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    lockHandlers[int(request.getContents())].release(controlls)
+    lockHandlers[request["ID"]].release(controlls)
         
     
     
