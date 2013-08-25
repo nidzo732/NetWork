@@ -21,7 +21,8 @@ from multiprocessing import Manager, Event, Queue, Lock
 from NetWork.commcodes import *
 import atexit
 import pickle
-from NetWork.command import Command
+from NetWork.command import Request
+from NetWork import networking
 class BadRequestError(Exception): pass
 
 running=False
@@ -105,7 +106,7 @@ def requestHandler(commqueue):
 
 def requestReceiver(requestSocket, commqueue):
     receivedData=requestSocket.recv()
-    commqueue.put(Command(receivedData, -1, requestSocket))
+    commqueue.put(Request(receivedData[:3], pickle.loads(receivedData[3:]), -1, requestSocket))
 
 def onExit(listenerSocket, commqueue, handlerThread):
     if running:
@@ -131,10 +132,7 @@ if __name__=="__main__":
                 #Register the master
                 requestSocket.send(COMCODE_ISALIVE)
                 masterAddress=requestSocket.address
-                event.masterAddress=masterAddress
-                queue.masterAddress=masterAddress
-                lock.masterAddress=masterAddress
-                manager.masterAddress=masterAddress
+                networking.masterAddress=masterAddress
                 requestSocket.close()
                 print("MASTER REGISTERED with address", masterAddress)
                 masterRegistered=True

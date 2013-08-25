@@ -45,6 +45,7 @@ Here are the examples of all types
 import pickle
 from .networking import sendRequest, sendRequestWithResponse
 from .commcodes import CMD_GET_MANAGER_ITEM, CMD_SET_MANAGER_ITEM, MANAGER_KEYERROR
+from .request import Request
 from multiprocessing import Manager
 runningOnMaster=None
 masterAddress=None
@@ -67,11 +68,11 @@ class NWManager:
         return managers[self.id][item]
     
     def getItemOnWorker(self, item):
-        value=sendRequestWithResponse(Request(CMD_GET_MANAGER_ITEM,
-                                              {
-                                               "ID":self.id,
-                                               "ITEM":self.item
-                                               }))
+        value=sendRequestWithResponse(CMD_GET_MANAGER_ITEM,
+                                      {
+                                       "ID":self.id,
+                                       "ITEM":self.item
+                                       })
 
         if value==MANAGER_KEYERROR:
             raise KeyError(item)
@@ -79,20 +80,20 @@ class NWManager:
             return pickle.loads(value)
     
     def setItemOnMaster(self, item, value):
-        self.workgroup.sendRequest(Request(CMD_SET_MANAGER_ITEM,
-                                           {
-                                            "ID":self.id,
-                                            "ITEM":item,
-                                            "VALUE":value
-                                            }))
+        self.workgroup.sendRequest(CMD_SET_MANAGER_ITEM,
+                                   {
+                                    "ID":self.id,
+                                    "ITEM":item,
+                                    "VALUE":value
+                                    })
     
     def setItemOnWorker(self, item, value):
-        sendRequest(Request(CMD_SET_MANAGER_ITEM,
-                            {
-                             "ID":self.id,
-                             "ITEM":item,
-                             "VALUE":value
-                             }))
+        sendRequest(CMD_SET_MANAGER_ITEM,
+                    {
+                     "ID":self.id,
+                     "ITEM":item,
+                     "VALUE":value
+                     })
     
     def getItem(self, item):
         """

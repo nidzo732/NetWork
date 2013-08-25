@@ -160,11 +160,11 @@ class Workgroup:
         self.controlls[CNT_TASK_COUNT]+=1
         newTask=Task(target=target, args=args, kwargs=kwargs, 
                      id=self.controlls[CNT_TASK_COUNT])
-        self.commqueue.put(Request(CMD_SUBMIT_TASK,
-                                   {
-                                    "WORKER":self.currentWorker,
-                                    "TASK":newTask
-                                    }))
+        self.sendRequest(CMD_SUBMIT_TASK, 
+                         {
+                          "WORKER":self.currentWorker,
+                          "TASK":newTask
+                          })
         executors=self.controlls[CNT_TASK_EXECUTORS]
         executors[newTask.id]=self.currentWorker
         self.controlls[CNT_TASK_EXECUTORS]=executors
@@ -172,54 +172,55 @@ class Workgroup:
     
     def getResult(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Request(CMD_GET_RESULT,
-                                   {
-                                    "ID":id,
-                                    "QUEUE":resultQueue.id
-                                    }))
+        self.sendRequest(CMD_GET_RESULT,
+                         {
+                          "ID":id,
+                          "QUEUE":resultQueue.id
+                          })
+        
         result=resultQueue.get()
         return result
         
     
     def cancelTask(self, id, worker):
-        self.commqueue.put(Request(CMD_TERMINATE_TASK,
-                                   {
-                                    "ID":id
-                                    }))
+        self.sendRequest(CMD_TERMINATE_TASK,
+                         {
+                          "ID":id
+                          })
     
     
     def taskRunning(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Request(CMD_TASK_RUNNING,
-                                   {
-                                    "ID":id,
-                                    "QUEUE":resultQueue.id
-                                    }))
+        self.sendRequest(CMD_TASK_RUNNING,
+                         {
+                          "ID":id,
+                          "QUEUE":resultQueue.id
+                          })
         result=resultQueue.get()
         return result
     
     def getException(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Request(CMD_GET_EXCEPTION,
-                                   {
-                                    "ID":id,
-                                    "QUEUE":resultQueue.id
-                                    }))
+        self.sendRequest(CMD_GET_EXCEPTION,
+                         {
+                          "ID":id,
+                          "QUEUE":resultQueue.id
+                          })
         result=resultQueue.get()
         return result
     
     def exceptionRaised(self, id, worker):
         resultQueue=self.registerQueue()
-        self.commqueue.put(Request(CMD_CHECK_EXCEPTION,
-                                   {
-                                    "ID":id,
-                                    "QUEUE":resultQueue.id
-                                    }))
+        self.sendRequest(CMD_CHECK_EXCEPTION,
+                         {
+                          "ID":id,
+                          "QUEUE":resultQueue.id
+                          })
         result=resultQueue.get()
         return result
     
-    def sendRequest(self, request):
-        self.commqueue.put(request)
+    def sendRequest(self, type, contents):
+        self.sendRequest(type, contents))
             
     def registerEvent(self):
         """
@@ -229,8 +230,10 @@ class Workgroup:
         """
         self.controlls[CNT_EVENT_COUNT]+=1
         id=self.controlls[CNT_EVENT_COUNT]
-        self.commqueue.put(Request(CMD_REGISTER_EVENT+
-                           str(id).encode(encoding='ASCII'), -1))
+        self.sendRequest(CMD_REGISTER_EVENT,
+                         {
+                          "ID":id
+                          }))
         return event.NWEvent(id, self)
     
     def registerQueue(self):
@@ -241,7 +244,10 @@ class Workgroup:
         """
         self.controlls[CNT_QUEUE_COUNT]+=1
         id=self.controlls[CNT_QUEUE_COUNT]
-        self.commqueue.put(Request(CMD_REGISTER_QUEUE+str(id).encode(encoding='ASCII'), -1))
+        self.sendRequest(CMD_REGISTER_QUEUE,
+                         {
+                          "ID":id
+                          }))
         return queue.NWQueue(id, self)
     
     def registerLock(self):
@@ -252,7 +258,10 @@ class Workgroup:
         """
         self.controlls[CNT_LOCK_COUNT]+=1
         id=self.controlls[CNT_LOCK_COUNT]
-        self.commqueue.put(Request(CMD_REGISTER_LOCK+str(id).encode(encoding='ASCII'), -1))
+        self.sendRequest(CMD_REGISTER_LOCK,
+                         {
+                          "ID":id
+                          })
         return NWLock(id, self)
     
     def registerManager(self):
@@ -262,6 +271,11 @@ class Workgroup:
         :Return: instance of :py:class:`NWManager <NetWork.manager.NWManager>`
         """
         self.controlls[CNT_MANAGER_COUNT]+=1
+        id=self.controlls[CNT_MANAGER_COUNT]
+        self.sendRequest(CMD_REGISTER_MANAGER,
+                         {
+                          "ID":id
+                          })
         return NWManager(self.controlls[CNT_MANAGER_COUNT], self)        
         
     def fixDeadWorker(self, id=None, worker=None):

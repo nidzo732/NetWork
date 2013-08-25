@@ -47,7 +47,7 @@ from multiprocessing import Lock
 from .networking import NWSocket
 from .commcodes import CMD_ACQUIRE_LOCK, CMD_RELEASE_LOCK
 from .cntcodes import CNT_WORKERS
-from .command import Request
+from .request import Request
 runningOnMaster=None
 locks=None
 lockHandlers=None
@@ -72,30 +72,30 @@ class NWLock:
         locks[id].acquire()
     
     def acquireOnMaster(self):
-        self.workgroup.sendRequest(Request(CMD_ACQUIRE_LOCK,
-                                           {
-                                            "ID":self.id
-                                            }))
+        self.workgroup.sendRequest(CMD_ACQUIRE_LOCK,
+                                   {
+                                    "ID":self.id
+                                    })
         locks[self.id].acquire()
     
     def releaseOnMaster(self):
-        self.workgroup.sendRequest(Request(CMD_RELEASE_LOCK,
-                                           {
-                                            "ID":self.id
-                                            }))
+        self.workgroup.sendRequest(CMD_RELEASE_LOCK,
+                                   {
+                                    "ID":self.id
+                                    })
     
     def acquireOnWorker(self):
-        sendRequest(Request(CMD_ACQUIRE_LOCK,
-                            {
-                             "ID":self.id
-                             }))
+        sendRequest(CMD_ACQUIRE_LOCK,
+                    {
+                     "ID":self.id
+                     })
         locks[self.id].acquire()
     
     def releaseOnWorker(self):
-        sendRequest(Request(CMD_RELEASE_LOCK,
-                            {
-                             "ID":self.id
-                             }))
+        sendRequest(CMD_RELEASE_LOCK,
+                    {
+                     "ID":self.id
+                     })
     
     def acquire(self):
         """

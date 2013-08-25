@@ -29,7 +29,7 @@ from .networking import NWSocket
 from multiprocessing import Event
 from .commcodes import CMD_SET_EVENT
 from .cntcodes import CNT_WORKERS
-from .command import Request
+from .request import Request
 class WrongComputerError(Exception):pass
 runningOnMaster=None
 masterAddress=None
@@ -49,19 +49,19 @@ class NWEvent:
         events[self.id].wait()
     
     def setOnWorker(self):
-        sendRequest(Request(CMD_SET_EVENT,
-                            {
-                             "ID":self.id
-                             }))
+        sendRequest(CMD_SET_EVENT,
+                    {
+                     "ID":self.id
+                     })
     
     def waitOnMaster(self):
         return events[self.id].wait()
     
     def setOnMaster(self):
-        self.workgroup.sendRequest(Request(CMD_SET_EVENT,
-                                           {
-                                            "ID":self.id
-                                            }))
+        self.workgroup.sendRequest(CMD_SET_EVENT,
+                                   {
+                                    "ID":self.id
+                                    })
     
     def set(self):
         """

@@ -4,6 +4,7 @@ network messaging, message length and security.
 """
 import socket
 import pickle
+from .request import Request
 
 COMCODE_CHECKALIVE=b"ALV"
 COMCODE_ISALIVE=b"IMALIVE"
@@ -126,7 +127,8 @@ class NWSocketTCP:
     
 NWSocket=NWSocketTCP    #set default socket used in the framework
 
-def sendRequest(request):
+def sendRequest(type, contents):
+    request=Request(type, contents)
     masterSocket=NWSocket()
     masterSocket.connect(masterAddress)
     masterSocket.send(request.getType()+pickle.dumps(request.getContents()))

@@ -65,31 +65,31 @@ class NWQueue:
         queues[id]=Queue()
     
     def putOnWorker(self, data):
-        sendRequest(Request(CMD_PUT_ON_QUEUE,
-                            {
-                             "ID":self.id,
-                             "DATA":data
-                             }))
+        sendRequest(CMD_PUT_ON_QUEUE,
+                    {
+                     "ID":self.id,
+                     "DATA":data
+                     })
     
     def putOnMaster(self, data):
-        self.workgroup.sendRequest(Request(CMD_PUT_ON_QUEUE,
-                                           {
-                                            "ID":self.id,
-                                            "DATA":data
-                                            }))
+        self.workgroup.sendRequest(CMD_PUT_ON_QUEUE,
+                                   {
+                                    "ID":self.id,
+                                    "DATA":data
+                                    })
     
     def getOnWorker(self):
-        sendRequest(Request(CMD_GET_FROM_QUEUE,
+        sendRequest(CMD_GET_FROM_QUEUE,
                     {
                      "ID":self.id
-                     }))
+                     })
         return queues[self.id].get()
     
     def getOnMaster(self):
-        self.workgroup.sendRequest(Request(CMD_GET_FROM_QUEUE,
-                                           {
-                                            "ID":self.id
-                                            }))
+        self.workgroup.sendRequest(CMD_GET_FROM_QUEUE,
+                                   {
+                                    "ID":self.id
+                                    })
         return queues[self.id].get()
         
     

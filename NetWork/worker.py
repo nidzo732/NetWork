@@ -22,14 +22,14 @@ class Worker:
             self.myTasks={"-1":None}
             self.alive=True
     
-    def sendMessage(self, message):
+    def sendRequest(self, request):
         #Send message to ther worker
         if not self.alive:
             raise DeadWorkerError
         try:
             workerSocket=NWSocket()
             workerSocket.connect(self.address)
-            workerSocket.send(message)
+            workerSocket.send(request.getType()+pickle.dumps(request.getContents()))
             workerSocket.close()
         except OSError:
             self.alive=False
@@ -42,7 +42,7 @@ class Worker:
         try:
             workerSocket=NWSocket()
             workerSocket.connect(self.address)
-            workerSocket.send(message)
+            workerSocket.send(request.getType()+pickle.dumps(request.getContents()))
             response=workerSocket.recv()
             workerSocket.close()
             return response
