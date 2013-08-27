@@ -25,9 +25,9 @@ of the same event the first task is waken up and continues it's work
 
 For more info about events see `Python documentation page <http://docs.python.org/3.3/library/threading.html#event-objects>`_ 
 """
-from .networking import NWSocket
+from .networking import sendRequest
 from multiprocessing import Event
-from .commcodes import CMD_SET_EVENT
+from .commcodes import CMD_SET_EVENT, CMD_REGISTER_EVENT
 from .cntcodes import CNT_WORKERS
 from .request import Request
 class WrongComputerError(Exception):pass
@@ -93,7 +93,7 @@ def setEvent(request, controlls, commqueue):
     id=request["ID"]
     for worker in controlls[CNT_WORKERS]:
         if worker.alive:
-            worker.setEvent(id)
+            worker.sendRequest(CMD_SET_EVENT, {"ID":id})
     events[id].set()
     
 def registerEvent(request, controlls, commqueue):
@@ -101,5 +101,5 @@ def registerEvent(request, controlls, commqueue):
     id=request["ID"]
     for worker in controlls[CNT_WORKERS]:
         if worker.alive:
-            worker.registerEvent(id)
+            worker.sendRequest(CMD_REGISTER_EVENT,{"ID":id})
     

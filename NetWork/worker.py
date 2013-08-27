@@ -51,7 +51,7 @@ class Worker:
             raise DeadWorkerError()
        
     def executeTask(self, task):
-        self.sendRequest(b"TSK"+task)
+        self.sendRequest(CMD_SUBMIT_TASK, {"TASK":task})
         
         
     def getResult(self, id):
@@ -83,21 +83,3 @@ class Worker:
                                                          {
                                                           "ID":id
                                                           }))
-    
-    def setEvent(self, id):
-        self.sendRequest(b"EVS"+str(id).encode(encoding="ASCII"))
-    
-    def registerEvent(self, id):
-        self.sendRequest(b"EVR"+str(id).encode(encoding="ASCII"))
-    
-    def registerQueue(self, id):
-        self.sendRequest(b"QUR"+str(id).encode(encoding="ASCII"))
-    
-    def putOnQueue(self, id, data):
-        self.sendRequest(b"QUP"+str(id).encode(encoding="ASCII")+b"ID"+data)
-    
-    def registerLock(self, id):
-        self.sendRequest(CMD_REGISTER_LOCK+str(id).encode(encoding="ASCII"))
-    
-    def releaseLock(self, id):
-        self.sendRequest(CMD_RELEASE_LOCK+str(id).encode(encoding="ASCII"))

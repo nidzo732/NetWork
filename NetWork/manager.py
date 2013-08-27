@@ -71,7 +71,7 @@ class NWManager:
         value=sendRequestWithResponse(CMD_GET_MANAGER_ITEM,
                                       {
                                        "ID":self.id,
-                                       "ITEM":self.item
+                                       "ITEM":item
                                        })
 
         if value==MANAGER_KEYERROR:

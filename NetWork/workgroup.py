@@ -16,7 +16,7 @@ from .lock import NWLock
 from .manager import NWManager
 from NetWork import event, queue, lock, manager
 import pickle
-from .command import Request
+from .request import Request
 
 
 
@@ -220,7 +220,7 @@ class Workgroup:
         return result
     
     def sendRequest(self, type, contents):
-        self.sendRequest(type, contents))
+        self.commqueue.put(Request(type, contents))
             
     def registerEvent(self):
         """
@@ -233,7 +233,7 @@ class Workgroup:
         self.sendRequest(CMD_REGISTER_EVENT,
                          {
                           "ID":id
-                          }))
+                          })
         return event.NWEvent(id, self)
     
     def registerQueue(self):
@@ -247,7 +247,7 @@ class Workgroup:
         self.sendRequest(CMD_REGISTER_QUEUE,
                          {
                           "ID":id
-                          }))
+                          })
         return queue.NWQueue(id, self)
     
     def registerLock(self):
@@ -272,10 +272,6 @@ class Workgroup:
         """
         self.controlls[CNT_MANAGER_COUNT]+=1
         id=self.controlls[CNT_MANAGER_COUNT]
-        self.sendRequest(CMD_REGISTER_MANAGER,
-                         {
-                          "ID":id
-                          })
         return NWManager(self.controlls[CNT_MANAGER_COUNT], self)        
         
     def fixDeadWorker(self, id=None, worker=None):
@@ -306,7 +302,6 @@ class Workgroup:
         #A process that handles requests
         request=commqueue.get()
         while not request==CMD_HALT:
-            #print("REQUEST", request.contents, "FROM", request.requester)
             #print(request)
             handlerList[request.getType()](request, controlls, commqueue)
             request.close()

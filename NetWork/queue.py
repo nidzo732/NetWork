@@ -38,9 +38,9 @@ For more info about queues see `Python documentation page <http://docs.python.or
 """
 import pickle
 from .networking import sendRequest
-from .commcodes import CMD_PUT_ON_QUEUE, CMD_GET_FROM_QUEUE
+from .commcodes import CMD_PUT_ON_QUEUE, CMD_GET_FROM_QUEUE, CMD_REGISTER_QUEUE
 from .cntcodes  import CNT_WORKERS
-from .command import Request
+from .request import Request
 from multiprocessing import Lock, Queue
 
 queues=None
@@ -167,14 +167,18 @@ class MasterQueueHandler:
             if waiter==-1:
                 queues[self.id].put(item)
             else:
-                controlls[CNT_WORKERS][waiter].putOnQueue(self.id, item)
+                controlls[CNT_WORKERS][waiter].sendRequest(CMD_PUT_ON_QUEUE,
+                                                           {
+                                                            "ID":self.id,
+                                                            "DATA":item
+                                                            })
 
 def registerQueue(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     id=request["ID"]
     for worker in controlls[CNT_WORKERS]:
         if worker.alive:
-            worker.registerQueue(id)
+            worker.sendRequest(CMD_REGISTER_QUEUE, {"ID":id})
 
 def getFromQueue(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher

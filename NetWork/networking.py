@@ -134,7 +134,8 @@ def sendRequest(type, contents):
     masterSocket.send(request.getType()+pickle.dumps(request.getContents()))
     masterSocket.close()
 
-def sendRequestWithResponse(request):
+def sendRequestWithResponse(type, contents):
+    request=Request(type, contents)
     masterSocket=NWSocket()
     masterSocket.connect(masterAddress)
     masterSocket.send(request.getType()+pickle.dumps(request.getContents()))

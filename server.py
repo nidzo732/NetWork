@@ -21,7 +21,7 @@ from multiprocessing import Manager, Event, Queue, Lock
 from NetWork.commcodes import *
 import atexit
 import pickle
-from NetWork.command import Request
+from NetWork.request import Request
 from NetWork import networking
 class BadRequestError(Exception): pass
 
@@ -29,41 +29,41 @@ running=False
 tasks={-1:None}
 
 def executeTask(request):
-    newTask=Task(marshaled=request.getContents())
-    newProcess=WorkerProcess(request.getContents())
+    newTask=request["TASK"]
+    newProcess=WorkerProcess(newTask)
     tasks[newTask.id]=newProcess
     tasks[newTask.id].start()
     request.respond(COMCODE_ISALIVE)
 
 def getResult(request):
-    id=int(request.getContents())
+    id=request["ID"]
     result=tasks[id].getResult()
     request.respond(pickle.dumps(result))
 
 def exceptionRaised(request):
-    id=int(request.getContents())
+    id=request["ID"]
     exceptionTest=tasks[id].exceptionRaised()
     request.respond(pickle.dumps(exceptionTest))
 
 def terminateTask(request):
-    id=int(request.getContents())
+    id=request["ID"]
     tasks[id].terminate()
 
 def taskRunning(request):
-    id=int(request.getContents())
+    id=request["ID"]
     status=tasks[id].running()
     request.respond(pickle.dumps(status))
 
 def getException(request):
-    id=int(request.getContents())
+    id=request["ID"]
     exception=tasks[id].getException()
     request.respond(pickle.dumps(exception))
 
 def setEvent(request):
-    event.events[int(request.getContents())].set()
+    event.events[request["ID"]].set()
 
 def registerEvent(request):
-    id=int(request.getContents())
+    id=request["ID"]
     event.events[id]=Event()
 
 def checkAlive(request):
@@ -71,19 +71,18 @@ def checkAlive(request):
         request.respond(COMCODE_ISALIVE)
 
 def putOnQueue(request):
-    idLength=request.getContents().find(b"ID")
-    id=int(request.getContents()[:idLength])
-    queue.queues[id].put(request.getContents()[idLength+2:])
+    id=request["ID"]
+    queue.queues[id].put(request["DATA"])
 
 def registerQueue(request):
-    queue.queues[int(request.getContents())]=Queue()
+    queue.queues[request["ID"]]=Queue()
 
 def registerLock(request):
-    lock.locks[int(request.getContents())]=Lock()
-    lock.locks[int(request.getContents())].acquire()
+    lock.locks[request["ID"]]=Lock()
+    lock.locks[request["ID"]].acquire()
 
 def releaseLock(request):
-    lock.locks[int(request.getContents())].release()
+    lock.locks[request["ID"]].release()
     
 handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           b"TRM":terminateTask, b"TRN":taskRunning, b"EXC":getException,
@@ -96,7 +95,7 @@ def requestHandler(commqueue):
     request=commqueue.get()
     while request!=CMD_HALT:
         #print(request)
-        handlers[request.type()](request)
+        handlers[request.getType()](request)
         request.close()
         request=commqueue.get()
     for taskID in tasks:
@@ -106,7 +105,10 @@ def requestHandler(commqueue):
 
 def requestReceiver(requestSocket, commqueue):
     receivedData=requestSocket.recv()
-    commqueue.put(Request(receivedData[:3], pickle.loads(receivedData[3:]), -1, requestSocket))
+    if receivedData==b"ALV" and requestSocket.address==masterAddress:
+        requestSocket.send(COMCODE_ISALIVE)
+    else:        
+        commqueue.put(Request(receivedData[:3], pickle.loads(receivedData[3:]), -1, requestSocket))
 
 def onExit(listenerSocket, commqueue, handlerThread):
     if running:
@@ -119,8 +121,8 @@ if __name__=="__main__":
     listenerSocket=NWSocket()
     try:
         listenerSocket.listen()
-    except OSError:
-        print("Failed to start listening on the network")
+    except OSError as error:
+        print("Failed to start listening on the network", error)
         listenerSocket.close()
         exit()
     masterRegistered=False

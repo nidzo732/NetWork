@@ -25,14 +25,16 @@ class Task:
             self.id=id
     
     def __getstate__(self):
-        state={"ARGS":self.args, "KWARGS":self.kwargs}
-        state["TARGET"]=marshal.dumps(self.target.__code__)
+        state={"args":self.args, "kwargs":self.kwargs, "id":self.id}
+        state["target"]=marshal.dumps(self.target.__code__)
+        return state
     
     def __setstate__(self, state):
-        self.args=state["ARGS"]
-        self.kwargs=state["KWARGS"]
-        self.target=FunctionType(code=marshal.loads(state["TARGET"]), 
+        self.args=state["args"]
+        self.kwargs=state["kwargs"]
+        self.target=FunctionType(code=marshal.loads(state["target"]), 
                                  globals=globals())
+        self.id=state["id"]
 
 
 class TaskHandler:

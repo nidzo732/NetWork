@@ -19,6 +19,20 @@ class Request:
     def __getitem__(self, key):
         return self.contents[key]
     
+    def __str__(self):
+        #used to print request contents for debuging
+        s="NetWork.request.Request object\n"
+        s+="Type "+self.type.decode(encoding="ASCII")
+        s+=" from"
+        if self.requester==-1:
+            s+=" -1 (master)\n"
+        else:
+            s+=" worker #"+str(self.requester)+" ("+str(self.socket.address)+")\n"
+        s+="Request contents:\n"
+        for item in self.contents:
+            s+=str(item)+" : "+str(self.contents[item])+"\n"
+        return s[:-1]   #Strip last newline character
+    
     def close(self):
         if self.socket:
             self.socket.close()
