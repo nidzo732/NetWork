@@ -43,8 +43,9 @@ Here are the examples of all types
 """
 
 import pickle
-from .networking import NWSocket
+from .networking import sendRequest, sendRequestWithResponse
 from .commcodes import CMD_GET_MANAGER_ITEM, CMD_SET_MANAGER_ITEM, MANAGER_KEYERROR
+from .request import Request
 from multiprocessing import Manager
 runningOnMaster=None
 masterAddress=None
@@ -67,28 +68,32 @@ class NWManager:
         return managers[self.id][item]
     
     def getItemOnWorker(self, item):
-        masterSocket=NWSocket()
-        masterSocket.connect(masterAddress)
-        masterSocket.send(CMD_GET_MANAGER_ITEM+pickle.dumps({"ID":self.id,                                                     "ITEM":item}))
-        value=masterSocket.recv()
-        masterSocket.close()
+        value=sendRequestWithResponse(CMD_GET_MANAGER_ITEM,
+                                      {
+                                       "ID":self.id,
+                                       "ITEM":item
+                                       })
+
         if value==MANAGER_KEYERROR:
             raise KeyError(item)
         else:
             return pickle.loads(value)
     
     def setItemOnMaster(self, item, value):
-        self.workgroup.sendRequest(CMD_SET_MANAGER_ITEM+pickle.dumps({"ID":self.id,
-                                                                      "ITEM":item,
-                                                                      "VALUE":value}))
+        self.workgroup.sendRequest(CMD_SET_MANAGER_ITEM,
+                                   {
+                                    "ID":self.id,
+                                    "ITEM":item,
+                                    "VALUE":value
+                                    })
     
     def setItemOnWorker(self, item, value):
-        masterSocket=NWSocket()
-        masterSocket.connect(masterAddress)
-        masterSocket.send(CMD_SET_MANAGER_ITEM+pickle.dumps({"ID":self.id,
-                                                             "ITEM":item,
-                                                             "VALUE":value}))
-        masterSocket.close()
+        sendRequest(CMD_SET_MANAGER_ITEM,
+                    {
+                     "ID":self.id,
+                     "ITEM":item,
+                     "VALUE":value
+                     })
     
     def getItem(self, item):
         """
@@ -191,14 +196,12 @@ class ManagerNamespace(NWManager):
 
 def setManagerItem(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    contents=pickle.loads(request.getContents())
-    managers[contents["ID"]][contents["ITEM"]]=contents["VALUE"]
+    managers[request["ID"]][request["ITEM"]]=request["VALUE"]
 
 def getManagerItem(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    contents=pickle.loads(request.getContents())
     try:
-        value=pickle.dumps(managers[contents["ID"]][contents["ITEM"]])
+        value=pickle.dumps(managers[request["ID"]][request["ITEM"]])
     except KeyError:
         value=MANAGER_KEYERROR
     request.respond(value)

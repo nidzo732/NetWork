@@ -22,27 +22,27 @@ class Worker:
             self.myTasks={"-1":None}
             self.alive=True
     
-    def sendMessage(self, message):
+    def sendRequest(self, type, contents):
         #Send message to ther worker
         if not self.alive:
             raise DeadWorkerError
         try:
             workerSocket=NWSocket()
             workerSocket.connect(self.address)
-            workerSocket.send(message)
+            workerSocket.send(type+pickle.dumps(contents))
             workerSocket.close()
         except OSError:
             self.alive=False
             raise DeadWorkerError()
     
-    def sendMessageWithResponse(self, message):
+    def sendRequestWithResponse(self, type, contents):
         #Send message to the worker and get the response
         if not self.alive:
             raise DeadWorkerError
         try:
             workerSocket=NWSocket()
             workerSocket.connect(self.address)
-            workerSocket.send(message)
+            workerSocket.send(type+pickle.dumps(contents))
             response=workerSocket.recv()
             workerSocket.close()
             return response
@@ -51,38 +51,35 @@ class Worker:
             raise DeadWorkerError()
        
     def executeTask(self, task):
-        self.sendMessage(b"TSK"+task)
+        self.sendRequest(CMD_SUBMIT_TASK, {"TASK":task})
         
         
     def getResult(self, id):
-        return pickle.loads(self.sendMessageWithResponse(b"RSL"+str(id).encode(encoding="ASCII")))
+        return pickle.loads(self.sendRequestWithResponse(CMD_GET_RESULT,
+                                                         {
+                                                          "ID":id
+                                                          }))
     
     def terminateTask(self, id):
-        self.sendMessage(b"TRM"+str(id).encode(encoding="ASCII"))
+        self.sendRequest(CMD_TERMINATE_TASK,
+                         {
+                          "ID":id
+                          })
     
     def taskRunning(self, id):
-        return self.sendMessageWithResponse(b"TRN"+str(id).encode(encoding="ASCII"))
+        return pickle.loads(self.sendRequestWithResponse(CMD_TASK_RUNNING,
+                                            {
+                                             "ID":id
+                                             }))
     
     def getException(self, id):
-        return pickle.loads(self.sendMessageWithResponse(b"EXC"+str(id).encode(encoding="ASCII")))
+        return pickle.loads(self.sendRequestWithResponse(CMD_GET_EXCEPTION,
+                                                         {
+                                                          "ID":id
+                                                          }))
     
     def exceptionRaised(self, id):
-        return pickle.loads(self.sendMessageWithResponse(b"EXR"+str(id).encode(encoding="ASCII")))
-    
-    def setEvent(self, id):
-        self.sendMessage(b"EVS"+str(id).encode(encoding="ASCII"))
-    
-    def registerEvent(self, id):
-        self.sendMessage(b"EVR"+str(id).encode(encoding="ASCII"))
-    
-    def registerQueue(self, id):
-        self.sendMessage(b"QUR"+str(id).encode(encoding="ASCII"))
-    
-    def putOnQueue(self, id, data):
-        self.sendMessage(b"QUP"+str(id).encode(encoding="ASCII")+b"ID"+data)
-    
-    def registerLock(self, id):
-        self.sendMessage(CMD_REGISTER_LOCK+str(id).encode(encoding="ASCII"))
-    
-    def releaseLock(self, id):
-        self.sendMessage(CMD_RELEASE_LOCK+str(id).encode(encoding="ASCII"))
+        return pickle.loads(self.sendRequestWithResponse(CMD_CHECK_EXCEPTION,
+                                                         {
+                                                          "ID":id
+                                                          }))

@@ -23,64 +23,19 @@ class Task:
             self.args=args
             self.kwargs=kwargs
             self.id=id
-
-
-
-    def marshal(self):
-        #Prepare the task to be sent over the network
-        marshaledTask=b""
-        
-        marshaledTarget=marshal.dumps(self.target.__code__)
-        targetLength=str(len(marshaledTarget)).encode(encoding="ASCII")
-        marshaledTask+=targetLength
-        marshaledTask+=b"TRG"
-        marshaledTask+=marshaledTarget
-        
-        marshaledArgs=pickle.dumps(self.args)
-        argsLength=str(len(marshaledArgs)).encode(encoding="ASCII")
-        marshaledTask+=argsLength
-        marshaledTask+=b"ARG"
-        marshaledTask+=marshaledArgs
-        
-        marshaledKwargs=pickle.dumps(self.kwargs)
-        kwargsLength=str(len(marshaledKwargs)).encode(encoding="ASCII")
-        marshaledTask+=kwargsLength
-        marshaledTask+=b"KWA"
-        marshaledTask+=marshaledKwargs
-        
-        marshaledTask+=str(self.id).encode(encoding="ASCII")
-        
-        return marshaledTask
-
-
     
-    def unmarshal(self, marshaledTask, globalVariables=None):
-        #Crete a task from a string received from the network
-        targetLength=int(marshaledTask[:marshaledTask.find(b"TRG")])
-        marshaledTask=marshaledTask[marshaledTask.find(b"TRG")+3:]
-        marshaledTarget=marshaledTask[:targetLength]
-        
-        marshaledTask=marshaledTask[targetLength:]
-        argsLength=int(marshaledTask[:marshaledTask.find(b"ARG")])
-        marshaledTask=marshaledTask[marshaledTask.find(b"ARG")+3:]
-        marshaledArgs=marshaledTask[:argsLength]
-        marshaledTask=marshaledTask[argsLength:]
-        
-        kwargsLength=int(marshaledTask[:marshaledTask.find(b"KWA")])
-        marshaledTask=marshaledTask[marshaledTask.find(b"KWA")+3:]
-        marshaledKwargs=marshaledTask[:kwargsLength]
-        
-        marshaledTask=marshaledTask[kwargsLength:]
-        
-        self.kwargs=pickle.loads(marshaledKwargs)
-        self.args=pickle.loads(marshaledArgs)
-        if not globalVariables:
-            self.target=FunctionType(code=marshal.loads(marshaledTarget), 
-                                     globals=globals())
-        else:
-            self.target=FunctionType(code=marshal.loads(marshaledTarget), 
-                                     globals=globalVariables)
-        self.id=int(marshaledTask)
+    def __getstate__(self):
+        state={"args":self.args, "kwargs":self.kwargs, "id":self.id}
+        state["target"]=marshal.dumps(self.target.__code__)
+        return state
+    
+    def __setstate__(self, state):
+        self.args=state["args"]
+        self.kwargs=state["kwargs"]
+        self.target=FunctionType(code=marshal.loads(state["target"]), 
+                                 globals=globals())
+        self.id=state["id"]
+
 
 class TaskHandler:
     """

@@ -37,9 +37,10 @@ For more info about queues see `Python documentation page <http://docs.python.or
 
 """
 import pickle
-from .networking import NWSocket
-from .commcodes import CMD_PUT_ON_QUEUE, CMD_GET_FROM_QUEUE
+from .networking import sendRequest
+from .commcodes import CMD_PUT_ON_QUEUE, CMD_GET_FROM_QUEUE, CMD_REGISTER_QUEUE
 from .cntcodes  import CNT_WORKERS
+from .request import Request
 from multiprocessing import Lock, Queue
 
 queues=None
@@ -64,24 +65,31 @@ class NWQueue:
         queues[id]=Queue()
     
     def putOnWorker(self, data):
-        masterSocket=NWSocket()
-        masterSocket.connect(masterAddress)
-        masterSocket.send(CMD_PUT_ON_QUEUE+str(self.id).encode(encoding='ASCII')+b"ID"+data)
-        masterSocket.close()
+        sendRequest(CMD_PUT_ON_QUEUE,
+                    {
+                     "ID":self.id,
+                     "DATA":data
+                     })
     
     def putOnMaster(self, data):
-        self.workgroup.sendRequest(CMD_PUT_ON_QUEUE+str(self.id).encode(encoding='ASCII')+
-                           b"ID"+data,)
+        self.workgroup.sendRequest(CMD_PUT_ON_QUEUE,
+                                   {
+                                    "ID":self.id,
+                                    "DATA":data
+                                    })
     
     def getOnWorker(self):
-        masterSocket=NWSocket()
-        masterSocket.connect(masterAddress)
-        masterSocket.send(CMD_GET_FROM_QUEUE+str(self.id).encode(encoding='ASCII'))
-        masterSocket.close()
+        sendRequest(CMD_GET_FROM_QUEUE,
+                    {
+                     "ID":self.id
+                     })
         return queues[self.id].get()
     
     def getOnMaster(self):
-        self.workgroup.sendRequest(CMD_GET_FROM_QUEUE+str(self.id).encode(encoding='ASCII'))
+        self.workgroup.sendRequest(CMD_GET_FROM_QUEUE,
+                                   {
+                                    "ID":self.id
+                                    })
         return queues[self.id].get()
         
     
@@ -93,11 +101,10 @@ class NWQueue:
           data : any pickleable object
             item to be put on the queue
         """
-        pickledData=pickle.dumps(data)
         if runningOnMaster:
-            self.putOnMaster(pickledData)
+            self.putOnMaster(data)
         else:
-            self.putOnWorker(pickledData)
+            self.putOnWorker(data)
     
     def get(self):
         """
@@ -107,9 +114,9 @@ class NWQueue:
         :Return: next item in the queue
         """
         if runningOnMaster:
-            return pickle.loads(self.getOnMaster())
+            return self.getOnMaster()
         else:
-            return pickle.loads(self.getOnWorker())
+            return self.getOnWorker()
         
     def __setstate__(self, state):
         self.id=state["id"]
@@ -160,18 +167,22 @@ class MasterQueueHandler:
             if waiter==-1:
                 queues[self.id].put(item)
             else:
-                controlls[CNT_WORKERS][waiter].putOnQueue(self.id, item)
+                controlls[CNT_WORKERS][waiter].sendRequest(CMD_PUT_ON_QUEUE,
+                                                           {
+                                                            "ID":self.id,
+                                                            "DATA":item
+                                                            })
 
 def registerQueue(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    id=int(request.getContents())
+    id=request["ID"]
     for worker in controlls[CNT_WORKERS]:
         if worker.alive:
-            worker.registerQueue(id)
+            worker.sendRequest(CMD_REGISTER_QUEUE, {"ID":id})
 
 def getFromQueue(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    id=int(request.getContents())
+    id=request["ID"]
     queueLocks[id].acquire()
     workerId=request.requester
     temporaryHandler=queueHandlers[id]
@@ -183,8 +194,8 @@ def getFromQueue(request, controlls, commqueue):
 def putOnQueue(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     contents=request.getContents()
-    id=int(contents[:contents.find(b"ID")])
-    data=contents[contents.find(b"ID")+2:]
+    id=request["ID"]
+    data=request["DATA"]
     queueLocks[id].acquire()
     temporaryHandler=queueHandlers[id]
     temporaryHandler.putItem(data)

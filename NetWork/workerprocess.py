@@ -13,7 +13,7 @@ CNT_EXCEPTION=4
 CNT_RUNNING=5
 class WorkerProcess:
     #Class to hold and control running task
-    def __init__(self, marshaledTask, globalVariables=None):
+    def __init__(self, task):
         self.manager=Manager().list(range(20))
         self.manager[CNT_DONE]=False
         self.manager[CNT_RETURN]=None
@@ -21,7 +21,7 @@ class WorkerProcess:
         self.manager[CNT_EXCEPTION]=None
         self.manager[CNT_RUNNING]=False
         self.process=Process(target=WorkerProcess.runner, 
-                             args=(marshaledTask, self.manager, globalVariables))
+                             args=(task, self.manager))
     
     def start(self):
         self.manager[CNT_RUNNING]=True
@@ -52,9 +52,8 @@ class WorkerProcess:
             self.process.join()
     
     @staticmethod
-    def runner(marshaledTask, manager, globalVariables):
+    def runner(task, manager):
         #A function that actualy runs the task
-        task=Task(marshaled=marshaledTask, globalVariables=globalVariables)
         returnValue=None
         try:
             returnValue=task.target(*task.args, **task.kwargs)

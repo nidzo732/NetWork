@@ -26,10 +26,9 @@ of the same event the first task is waken up and continues it's work
 For more info about events see `Python documentation page <http://docs.python.org/3.3/library/threading.html#event-objects>`_ 
 """
 from .networking import sendRequest
-from multiprocessing import Event
-from .commcodes import CMD_SET_EVENT, CMD_REGISTER_EVENT
+from multiprocessing import NWSocket
+from .commcodes import CMD_SET_EVENT
 from .cntcodes import CNT_WORKERS
-from .request import Request
 class WrongComputerError(Exception):pass
 runningOnMaster=None
 masterAddress=None
@@ -49,19 +48,16 @@ class NWEvent:
         events[self.id].wait()
     
     def setOnWorker(self):
-        sendRequest(CMD_SET_EVENT,
-                    {
-                     "ID":self.id
-                     })
+        masterSocket=NWSocket()
+        masterSocket.connect(masterAddress)
+        masterSocket.send(CMD_SET_EVENT+str(self.id).encode(encoding='ASCII'))
+        masterSocket.close()
     
     def waitOnMaster(self):
         return events[self.id].wait()
     
     def setOnMaster(self):
-        self.workgroup.sendRequest(CMD_SET_EVENT,
-                                   {
-                                    "ID":self.id
-                                    })
+        self.workgroup.sendRequest(CMD_SET_EVENT+str(self.id).encode(encoding='ASCII'))
     
     def set(self):
         """
@@ -90,16 +86,16 @@ class NWEvent:
 
 def setEvent(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    id=request["ID"]
+    id=int(request.getContents())
     for worker in controlls[CNT_WORKERS]:
         if worker.alive:
-            worker.sendRequest(CMD_SET_EVENT, {"ID":id})
+            worker.setEvent(id)
     events[id].set()
     
 def registerEvent(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    id=request["ID"]
+    id=int(request.getContents())
     for worker in controlls[CNT_WORKERS]:
         if worker.alive:
-            worker.sendRequest(CMD_REGISTER_EVENT,{"ID":id})
+            worker.registerEvent(id)
     
