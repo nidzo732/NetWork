@@ -45,9 +45,10 @@ For more info about locks see `Python documentation page <http://docs.python.org
     
 from multiprocessing import Lock
 from .networking import sendRequest
-from .commcodes import CMD_ACQUIRE_LOCK, CMD_RELEASE_LOCK, CMD_REGISTER_LOCK
+from .commcodes import CMD_ACQUIRE_LOCK, CMD_RELEASE_LOCK, CMD_REGISTER_LOCK, CMD_WORKER_DIED
 from .cntcodes import CNT_WORKERS
 from .request import Request
+from .worker import DeadWorkerError
 runningOnMaster=None
 locks=None
 lockHandlers=None
@@ -173,15 +174,27 @@ def registerLock(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     id=request["ID"]
     for worker in controlls[CNT_WORKERS]:
-        worker.sendRequest(CMD_REGISTER_LOCK, {"ID":id})
-
+        try:
+            worker.sendRequest(CMD_REGISTER_LOCK, {"ID":id})
+        except DeadWorkerError:
+            commqueue.put(Request(CMD_WORKER_DIED), 
+                          {"WORKER":worker})
+            
 def acquireLock(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    lockHandlers[request["ID"]].acquire(request.requester, controlls)
+    try:
+        lockHandlers[request["ID"]].acquire(request.requester, controlls)
+    except DeadWorkerError as error:
+        commqueue.put(Request(CMD_WORKER_DIED), 
+                      {"WORKER":controlls[CNT_WORKERS][error.id]})
 
 def releaseLock(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    lockHandlers[request["ID"]].release(controlls)
+    try:
+        lockHandlers[request["ID"]].release(controlls)
+    except DeadWorkerError as error:
+        commqueue.put(Request(CMD_WORKER_DIED), 
+                      {"WORKER":controlls[CNT_WORKERS][error.id]})
         
     
     

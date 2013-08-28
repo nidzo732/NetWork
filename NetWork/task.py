@@ -44,10 +44,9 @@ class TaskHandler:
     method.
     """
     
-    def __init__(self, id, workgroup, worker):
+    def __init__(self, id, workgroup):
         self.workgroup=workgroup
         self.id=id
-        self.worker=worker
     
     def result(self):
         """
@@ -57,25 +56,13 @@ class TaskHandler:
         :Return: return value of the function in the task, ``None`` if the task
           hasn't returned.
         """
-        try:
-            return self.workgroup.getResult(self.id, self.worker)
-        except DeadWorkerError:
-            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
-            self.id=newHandler.id
-            self.worker=newHandler.worker
-            return self.result()
+        return self.workgroup.getResult(self.id)
     
     def terminate(self):
         """
         Stop this task, kill its process.
         """
-        try:
-            return self.workgroup.cancelTask(self.id, self.worker)
-        except DeadWorkerError:
-            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
-            self.id=newHandler.id
-            self.worker=newHandler.worker
-            return self.cancel()
+        return self.workgroup.cancelTask(self.id)
         
     def running(self):
         """
@@ -83,14 +70,7 @@ class TaskHandler:
         
         :Return: ``True`` or ``False`` depending on whether the task is running.
         """
-        try:
-            return self.workgroup.taskRunning(self.id, self.worker)
-        except DeadWorkerError:
-            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
-            self.id=newHandler.id
-            self.worker=newHandler.worker
-            return self.running()
-        
+        return self.workgroup.taskRunning(self.id)        
     
     def exception(self):
         """
@@ -99,13 +79,7 @@ class TaskHandler:
         :Return: exception that the task has raised, ``None`` if there was
           no exception.
         """
-        try:
-            return self.workgroup.getException(self.id, self.worker)
-        except DeadWorkerError:
-            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
-            self.id=newHandler.id
-            self.worker=newHandler.worker
-            return self.exception()
+        return self.workgroup.getException(self.id)
     
     def exceptionRaised(self):
         """
@@ -114,11 +88,4 @@ class TaskHandler:
         :Return: ``True`` or ``False`` depending on whether the task has raised an
           exception.
         """
-        
-        try:
-            return self.workgroup.exceptionRaised(self.id, self.worker)
-        except DeadWorkerError:
-            newHandler=self.workgroup.fixDeadWorker(self.id, self.worker)
-            self.id=newHandler.id
-            self.worker=newHandler.worker
-            return self.exception()
+        return self.workgroup.exceptionRaised(self.id)

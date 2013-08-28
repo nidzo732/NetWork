@@ -27,9 +27,10 @@ For more info about events see `Python documentation page <http://docs.python.or
 """
 from .networking import sendRequest
 from multiprocessing import Event
-from .commcodes import CMD_SET_EVENT, CMD_REGISTER_EVENT
+from .commcodes import CMD_SET_EVENT, CMD_REGISTER_EVENT, CMD_WORKER_DIED
 from .cntcodes import CNT_WORKERS
 from .request import Request
+from .worker import DeadWorkerError
 class WrongComputerError(Exception):pass
 runningOnMaster=None
 masterAddress=None
@@ -92,14 +93,20 @@ def setEvent(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     id=request["ID"]
     for worker in controlls[CNT_WORKERS]:
-        if worker.alive:
+        try:
             worker.sendRequest(CMD_SET_EVENT, {"ID":id})
+        except DeadWorkerError:
+            commqueue.put(Request(CMD_WORKER_DIED), 
+                          {"WORKER":worker})
     events[id].set()
     
 def registerEvent(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     id=request["ID"]
     for worker in controlls[CNT_WORKERS]:
-        if worker.alive:
+        try:
             worker.sendRequest(CMD_REGISTER_EVENT,{"ID":id})
+        except DeadWorkerError:
+            commqueue.put(Request(CMD_WORKER_DIED), 
+                          {"WORKER":worker})
     

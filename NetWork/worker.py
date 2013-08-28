@@ -3,7 +3,11 @@ This file implements a worker class that is used to represent
 one worker computer and send messages to that computer.
 """
 class WorkerUnavailableError(Exception):pass
-class DeadWorkerError(Exception): pass
+class DeadWorkerError(Exception):
+    def __init__(self, id, message=None):
+        self.id=id
+        Exception.__init__(self, message)
+
 from .networking import NWSocket
 import pickle
 from .commcodes import *
@@ -15,7 +19,7 @@ class Worker:
         workerAvailable=NWSocket.checkAvailability(address)
         if not workerAvailable:
             #Need a better message, I know 
-            raise WorkerUnavailableError("Worker refused to cooperate")
+            raise WorkerUnavailableError("Worker "+str(address)+" refused to cooperate")
         else:
             self.address=address
             self.id=id
@@ -25,7 +29,7 @@ class Worker:
     def sendRequest(self, type, contents):
         #Send message to ther worker
         if not self.alive:
-            raise DeadWorkerError
+            raise DeadWorkerError(self.id)
         try:
             workerSocket=NWSocket()
             workerSocket.connect(self.address)
@@ -33,12 +37,12 @@ class Worker:
             workerSocket.close()
         except OSError:
             self.alive=False
-            raise DeadWorkerError()
+            raise DeadWorkerError(self.id)
     
     def sendRequestWithResponse(self, type, contents):
         #Send message to the worker and get the response
         if not self.alive:
-            raise DeadWorkerError
+            raise DeadWorkerError(self.id)
         try:
             workerSocket=NWSocket()
             workerSocket.connect(self.address)
@@ -48,9 +52,10 @@ class Worker:
             return response
         except OSError:
             self.alive=False
-            raise DeadWorkerError()
+            raise DeadWorkerError(self.id)
        
     def executeTask(self, task):
+        self.myTasks[task.id]=task
         self.sendRequest(CMD_SUBMIT_TASK, {"TASK":task})
         
         

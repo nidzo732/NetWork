@@ -82,6 +82,7 @@ class Workgroup:
         self.controlls[CNT_LOCK_COUNT]=0
         self.controlls[CNT_TASK_EXECUTORS]={-1:None}
         self.controlls[CNT_MANAGER_COUNT]=0
+        self.controlls[CNT_DEAD_WORKERS]={-1}
         self.currentWorker=-1
         self.listenerSocket=NWSocket()
         self.workerList=[]
@@ -121,6 +122,9 @@ class Workgroup:
     def __exit__(self, exceptionType, exceptionValue, traceBack):
         self.stopServing()
     
+    def deadWorkers(self):
+        return self.controlls[CNT_DEAD_WORKERS]
+    
     def startServing(self):
         """
         Start the dipatcher and listener threads, the workgroup is ready
@@ -141,6 +145,15 @@ class Workgroup:
         self.dispatcher.start()
         self.networkListener.start()
         self.running=True
+    
+    def selectNextWorker(self):
+        if self.controlls[CNT_WORKER_COUNT]==0:
+            raise NoWorkersError("All workers have died")
+        self.currentWorker+=1
+        self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
+        while not self.controlls[CNT_WORKERS][self.currentWorker].alive:
+            self.currentWorker+=1
+            self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
          
     def submit(self, target, args=(), kwargs={}):
         """
@@ -155,8 +168,7 @@ class Workgroup:
          
         :Return: an instance of :py:class:`TaskHandler <NetWork.task.TaskHandler>`
         """
-        self.currentWorker+=1
-        self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
+        self.selectNextWorker()
         self.controlls[CNT_TASK_COUNT]+=1
         newTask=Task(target=target, args=args, kwargs=kwargs, 
                      id=self.controlls[CNT_TASK_COUNT])
@@ -170,7 +182,7 @@ class Workgroup:
         self.controlls[CNT_TASK_EXECUTORS]=executors
         return TaskHandler(newTask.id, self, self.currentWorker)
     
-    def getResult(self, id, worker):
+    def getResult(self, id):
         resultQueue=self.registerQueue()
         self.sendRequest(CMD_GET_RESULT,
                          {
@@ -182,14 +194,14 @@ class Workgroup:
         return result
         
     
-    def cancelTask(self, id, worker):
+    def cancelTask(self, id):
         self.sendRequest(CMD_TERMINATE_TASK,
                          {
                           "ID":id
                           })
     
     
-    def taskRunning(self, id, worker):
+    def taskRunning(self, id):
         resultQueue=self.registerQueue()
         self.sendRequest(CMD_TASK_RUNNING,
                          {
@@ -199,7 +211,7 @@ class Workgroup:
         result=resultQueue.get()
         return result
     
-    def getException(self, id, worker):
+    def getException(self, id):
         resultQueue=self.registerQueue()
         self.sendRequest(CMD_GET_EXCEPTION,
                          {
@@ -209,7 +221,7 @@ class Workgroup:
         result=resultQueue.get()
         return result
     
-    def exceptionRaised(self, id, worker):
+    def exceptionRaised(self, id):
         resultQueue=self.registerQueue()
         self.sendRequest(CMD_CHECK_EXCEPTION,
                          {
