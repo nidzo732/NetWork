@@ -96,8 +96,8 @@ def setEvent(request, controlls, commqueue):
         try:
             worker.sendRequest(CMD_SET_EVENT, {"ID":id})
         except DeadWorkerError:
-            commqueue.put(Request(CMD_WORKER_DIED), 
-                          {"WORKER":worker})
+            commqueue.put(Request(CMD_WORKER_DIED, 
+                          {"WORKER":worker}))
     events[id].set()
     
 def registerEvent(request, controlls, commqueue):
@@ -107,6 +107,6 @@ def registerEvent(request, controlls, commqueue):
         try:
             worker.sendRequest(CMD_REGISTER_EVENT,{"ID":id})
         except DeadWorkerError:
-            commqueue.put(Request(CMD_WORKER_DIED), 
-                          {"WORKER":worker})
+            commqueue.put(Request(CMD_WORKER_DIED, 
+                          {"WORKER":worker}))
     

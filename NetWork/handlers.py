@@ -101,5 +101,6 @@ handlerList={CMD_SET_EVENT:setEvent, CMD_REGISTER_EVENT:registerEvent,
              CMD_GET_RESULT:getResult, CMD_ACQUIRE_LOCK:acquireLock,
              CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock,
              CMD_SET_MANAGER_ITEM:setManagerItem, 
-             CMD_GET_MANAGER_ITEM:getManagerItem
+             CMD_GET_MANAGER_ITEM:getManagerItem,
+             CMD_WORKER_DIED:deathHandler,
              }

@@ -181,8 +181,8 @@ def registerQueue(request, controlls, commqueue):
         try:
             worker.sendRequest(CMD_REGISTER_QUEUE, {"ID":id})
         except DeadWorkerError:
-            commqueue.put(Request(CMD_WORKER_DIED), 
-                          {"WORKER":worker})
+            commqueue.put(Request(CMD_WORKER_DIED, 
+                          {"WORKER":worker}))
 
 def getFromQueue(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
@@ -194,8 +194,8 @@ def getFromQueue(request, controlls, commqueue):
     try:
         temporaryHandler.distributeContents(controlls)
     except DeadWorkerError as error:
-        commqueue.put(Request(CMD_WORKER_DIED), 
-                      {"WORKER":controlls[CNT_WORKERS][error.id]})
+        commqueue.put(Request(CMD_WORKER_DIED, 
+                      {"WORKER":controlls[CNT_WORKERS][error.id]}))
     queueHandlers[id]=temporaryHandler
     queueLocks[id].release()
 
@@ -210,8 +210,8 @@ def putOnQueue(request, controlls, commqueue):
     try:
         temporaryHandler.distributeContents(controlls)
     except DeadWorkerError as error:
-        commqueue.put(Request(CMD_WORKER_DIED), 
-                      {"WORKER":controlls[CNT_WORKERS][error.id]})
+        commqueue.put(Request(CMD_WORKER_DIED, 
+                      {"WORKER":controlls[CNT_WORKERS][error.id]}))
     queueHandlers[id]=temporaryHandler
     queueLocks[id].release()
         

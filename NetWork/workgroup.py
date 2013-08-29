@@ -82,7 +82,7 @@ class Workgroup:
         self.controlls[CNT_LOCK_COUNT]=0
         self.controlls[CNT_TASK_EXECUTORS]={-1:None}
         self.controlls[CNT_MANAGER_COUNT]=0
-        self.controlls[CNT_DEAD_WORKERS]={-1}
+        self.controlls[CNT_DEAD_WORKERS]=set()
         self.currentWorker=-1
         self.listenerSocket=NWSocket()
         self.workerList=[]
@@ -180,7 +180,7 @@ class Workgroup:
         executors=self.controlls[CNT_TASK_EXECUTORS]
         executors[newTask.id]=self.currentWorker
         self.controlls[CNT_TASK_EXECUTORS]=executors
-        return TaskHandler(newTask.id, self, self.currentWorker)
+        return TaskHandler(newTask.id, self)
     
     def getResult(self, id):
         resultQueue=self.registerQueue()
