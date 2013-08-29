@@ -4,6 +4,8 @@ network messaging, message length and security.
 """
 import socket
 import pickle
+import hmac
+import hashlib
 from .request import Request
 
 COMCODE_CHECKALIVE=b"ALV"
@@ -12,12 +14,14 @@ ISALIVE_TIMEOUT=10
 DEFAULT_TCP_PORT=32151
 BUFFER_READ_LENGTH=4096
 MESSAGE_LENGTH_DELIMITER=b"MLEN"
+HASH_LENGTH_DELIMITER=b"HLEN"
 DEFAULT_LISTENING_ADDRESS="0.0.0.0"
 LISTEN_QUEUE_LENGTH=5
 DEFAULT_SOCKET_TIMEOUT=5.0
 
 class InvalidMessageFormatError(OSError):pass
 class MessageNotCompleteError(OSError):pass
+class UnauthenticatedMessage(OSError):pass
 
 masterAddress=None
 
@@ -122,8 +126,46 @@ class NWSocketTCP:
                     
         return True
     
-    def __del__(self):
-        self.close()
+class NWSocketHMAC(NWSocketTCP):
+    listenerKey=b"DEFAULTKEY"
+    
+    def __init__(self, socketToUse=None, parameters=None):
+        if socketToUse:
+            NWSocket.__init__(self, socketToUse, parameters[0])
+            self.key=parameters[1]
+        else:
+            NWSocket.__init__(self)
+    
+    def connect(self, parameters):
+        NWSocket.connect(self, parameters[0])
+        self.key=parameters[1]
+    
+    def recv(self):
+        receivedData=NWSocket.recv(self)
+        try:
+            hashLength=int(receivedData[:receivedData.find(HASH_LENGTH_DELIMITER)])
+            receivedData=receivedData[receivedData.find(HASH_LENGTH_DELIMITER)+len(HASH_LENGTH_DELIMITER):]
+        except ValueError:
+            raise InvalidMessageFormatError("Received string not formatted properly")
+        
+        message=receivedData[:-hashLength]
+        receivedHash=receivedData[-hashLength:]
+        messageHash=hmac.new(key=self.key, msg=message, digestmod=hashlib.sha256)
+        if hmac.compare_digest(messageHash.digest(), receivedHash):
+            return message
+        else:
+            raise UnauthenticatedMessage("Received message came from an unathhenticated source")
+    
+    def send(self, data):
+        messageHash=hmac.new(key=self.key, msg=data, digestmod=hashlib.sha256)
+        hash=messageHash.digest()
+        message=str(len(hash)).encode(encoding="ASCII")+HASH_LENGTH_DELIMITER
+        message+=data+hash
+        NWSocket.send(self, message)
+    
+    def accept(self):
+        requestData=self.internalSocket.accept()
+        return NWSocketHMAC(requestData[0], (requestData[1][0], NWSocketHMAC.listenerKey))
     
 NWSocket=NWSocketTCP    #set default socket used in the framework
 
