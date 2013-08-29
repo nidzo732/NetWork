@@ -38,10 +38,11 @@ For more info about queues see `Python documentation page <http://docs.python.or
 """
 import pickle
 from .networking import sendRequest
-from .commcodes import CMD_PUT_ON_QUEUE, CMD_GET_FROM_QUEUE, CMD_REGISTER_QUEUE
+from .commcodes import CMD_PUT_ON_QUEUE, CMD_GET_FROM_QUEUE, CMD_REGISTER_QUEUE, CMD_WORKER_DIED
 from .cntcodes  import CNT_WORKERS
 from .request import Request
 from multiprocessing import Lock, Queue
+from .worker import DeadWorkerError
 
 queues=None
 queueHandlers=None
@@ -177,8 +178,11 @@ def registerQueue(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     id=request["ID"]
     for worker in controlls[CNT_WORKERS]:
-        if worker.alive:
+        try:
             worker.sendRequest(CMD_REGISTER_QUEUE, {"ID":id})
+        except DeadWorkerError:
+            commqueue.put(Request(CMD_WORKER_DIED, 
+                          {"WORKER":worker}))
 
 def getFromQueue(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
@@ -187,7 +191,11 @@ def getFromQueue(request, controlls, commqueue):
     workerId=request.requester
     temporaryHandler=queueHandlers[id]
     temporaryHandler.putWaiter(workerId)
-    temporaryHandler.distributeContents(controlls)
+    try:
+        temporaryHandler.distributeContents(controlls)
+    except DeadWorkerError as error:
+        commqueue.put(Request(CMD_WORKER_DIED, 
+                      {"WORKER":controlls[CNT_WORKERS][error.id]}))
     queueHandlers[id]=temporaryHandler
     queueLocks[id].release()
 
@@ -199,7 +207,11 @@ def putOnQueue(request, controlls, commqueue):
     queueLocks[id].acquire()
     temporaryHandler=queueHandlers[id]
     temporaryHandler.putItem(data)
-    temporaryHandler.distributeContents(controlls)
+    try:
+        temporaryHandler.distributeContents(controlls)
+    except DeadWorkerError as error:
+        commqueue.put(Request(CMD_WORKER_DIED, 
+                      {"WORKER":controlls[CNT_WORKERS][error.id]}))
     queueHandlers[id]=temporaryHandler
     queueLocks[id].release()
         
