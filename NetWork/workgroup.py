@@ -9,7 +9,6 @@ from .handlers import receiveSocketData, handlerList
 from threading import Thread
 from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
-from .deadworkerhandler import salvageDeadWorker
 from .commcodes import *
 from .cntcodes import *
 from .lock import NWLock
@@ -285,9 +284,6 @@ class Workgroup:
         self.controlls[CNT_MANAGER_COUNT]+=1
         id=self.controlls[CNT_MANAGER_COUNT]
         return NWManager(self.controlls[CNT_MANAGER_COUNT], self)        
-        
-    def fixDeadWorker(self, id=None, worker=None):
-        salvageDeadWorker(self, id, worker)
     
     def stopServing(self):
         """
