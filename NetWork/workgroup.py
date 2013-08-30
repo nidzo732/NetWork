@@ -4,7 +4,7 @@ and functions.
 """
 
 from multiprocessing import Process, Queue, Manager, Event
-from .networking import NWSocket
+import NetWork.networking
 from .handlers import receiveSocketData, handlerList
 from threading import Thread
 from .worker import Worker, WorkerUnavailableError, DeadWorkerError
@@ -26,7 +26,7 @@ class NoWorkersError(Exception):pass
 def receiveSocketData(socket, commqueue, controlls):
     workerId=-1
     for worker in controlls[CNT_WORKERS]:
-        if socket.address==worker.address:
+        if socket.address==worker.realAddress:
             workerId=worker.id
     if workerId==-1:
         return
@@ -83,7 +83,7 @@ class Workgroup:
         self.controlls[CNT_MANAGER_COUNT]=0
         self.controlls[CNT_DEAD_WORKERS]=set()
         self.currentWorker=-1
-        self.listenerSocket=NWSocket()
+        self.listenerSocket=NetWork.networking.NWSocket()
         self.workerList=[]
         for workerAddress in workerAddresses:
             try:
@@ -131,10 +131,7 @@ class Workgroup:
         Instead of running this method manually it is recomened to use
         the ``with`` statement
         """
-        try:
-            self.listenerSocket.listen()
-        except OSError as error:
-            print("Failed to start listening on the network", error)
+        self.listenerSocket.listen()
         self.networkListener=Thread(target=self.listenerProcess, 
                                      args=(self.listenerSocket, self.commqueue,
                                            self.controlls))

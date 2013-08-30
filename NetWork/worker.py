@@ -8,7 +8,7 @@ class DeadWorkerError(Exception):
         self.id=id
         Exception.__init__(self, message)
 
-from .networking import NWSocket
+import NetWork.networking
 import pickle
 from .commcodes import *
 COMCODE_TASK_STARTED=b"TASKSTART"
@@ -16,12 +16,13 @@ COMCODE_TASK_STARTED=b"TASKSTART"
 class Worker:   
     #A class used to handle one worker
     def __init__(self, address, id):
-        workerAvailable=NWSocket.checkAvailability(address)
-        if not workerAvailable:
+        workerAvailable=NetWork.networking.NWSocket.checkAvailability(address)
+        if not workerAvailable[0]:
             #Need a better message, I know 
             raise WorkerUnavailableError("Worker "+str(address)+" refused to cooperate")
         else:
             self.address=address
+            self.realAddress=workerAvailable[1]
             self.id=id
             self.myTasks={"-1":None}
             self.alive=True
@@ -31,7 +32,7 @@ class Worker:
         if not self.alive:
             raise DeadWorkerError(self.id)
         try:
-            workerSocket=NWSocket()
+            workerSocket=NetWork.networking.NWSocket()
             workerSocket.connect(self.address)
             workerSocket.send(type+pickle.dumps(contents))
             workerSocket.close()
@@ -44,7 +45,7 @@ class Worker:
         if not self.alive:
             raise DeadWorkerError(self.id)
         try:
-            workerSocket=NWSocket()
+            workerSocket=NetWork.networking.NWSocket()
             workerSocket.connect(self.address)
             workerSocket.send(type+pickle.dumps(contents))
             response=workerSocket.recv()

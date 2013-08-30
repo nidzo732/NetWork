@@ -22,6 +22,7 @@ DEFAULT_SOCKET_TIMEOUT=5.0
 class InvalidMessageFormatError(OSError):pass
 class MessageNotCompleteError(OSError):pass
 class UnauthenticatedMessage(OSError):pass
+class KeyNotSet(OSError):pass
 
 masterAddress=None
 
@@ -77,6 +78,7 @@ class NWSocketTCP:
     
     def connect(self, address):
         #connect to the address
+        self.address=address
         self.internalSocket.connect((address, DEFAULT_TCP_PORT))
     
     def accept(self):
@@ -98,9 +100,9 @@ class NWSocketTCP:
             testSocket.send(COMCODE_CHECKALIVE)
             response=testSocket.recv()
         except OSError:
-            return False
+            return (False, None)
             
-        return response==COMCODE_ISALIVE
+        return (response==COMCODE_ISALIVE, testSocket.address)
     
     @staticmethod
     def checkMessageFormat(message):
@@ -127,21 +129,27 @@ class NWSocketTCP:
         return True
     
 class NWSocketHMAC(NWSocketTCP):
-    listenerKey=b"DEFAULTKEY"
+    listenerKey=None
     
     def __init__(self, socketToUse=None, parameters=None):
         if socketToUse:
-            NWSocket.__init__(self, socketToUse, parameters[0])
+            NWSocketTCP.__init__(self, socketToUse, parameters[0])
             self.key=parameters[1]
         else:
-            NWSocket.__init__(self)
+            NWSocketTCP.__init__(self)
     
+    def listen(self):
+        if not self.listenerKey:
+            raise KeyNotSet("The HMAC key for listener sockets was not set")
+        NWSocketTCP.listen(self)
+
     def connect(self, parameters):
-        NWSocket.connect(self, parameters[0])
+        NWSocketTCP.connect(self, parameters[0])
+        self.address=parameters[0]
         self.key=parameters[1]
     
     def recv(self):
-        receivedData=NWSocket.recv(self)
+        receivedData=NWSocketTCP.recv(self)
         try:
             hashLength=int(receivedData[:receivedData.find(HASH_LENGTH_DELIMITER)])
             receivedData=receivedData[receivedData.find(HASH_LENGTH_DELIMITER)+len(HASH_LENGTH_DELIMITER):]
@@ -161,12 +169,16 @@ class NWSocketHMAC(NWSocketTCP):
         hash=messageHash.digest()
         message=str(len(hash)).encode(encoding="ASCII")+HASH_LENGTH_DELIMITER
         message+=data+hash
-        NWSocket.send(self, message)
+        NWSocketTCP.send(self, message)
     
     def accept(self):
         requestData=self.internalSocket.accept()
-        return NWSocketHMAC(requestData[0], (requestData[1][0], NWSocketHMAC.listenerKey))
+        return NWSocketHMAC(requestData[0], (requestData[1][0], self.listenerKey))
     
+    @staticmethod
+    def setListenerKey(key):
+        NWSocketHMAC.listenerKey=key
+        
 NWSocket=NWSocketTCP    #set default socket used in the framework
 
 def sendRequest(type, contents):

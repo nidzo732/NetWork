@@ -9,7 +9,7 @@ from the master. The messages start with a 3 letter code that determines
 their type, the mainloop reads that code and runs a handler function associated
 with that code. Message codes can be seen in NetWork.commcodes.
 """
-from NetWork.networking import NWSocket, COMCODE_CHECKALIVE, COMCODE_ISALIVE
+from NetWork.networking import COMCODE_CHECKALIVE, COMCODE_ISALIVE
 from NetWork.task import Task
 from NetWork.workerprocess import WorkerProcess
 import NetWork.queue as queue
@@ -23,6 +23,7 @@ import atexit
 import pickle
 from NetWork.request import Request
 from NetWork import networking
+from argparse import ArgumentParser
 class BadRequestError(Exception): pass
 
 running=False
@@ -115,10 +116,43 @@ def onExit(listenerSocket, commqueue, handlerThread):
         listenerSocket.close()
         commqueue.put(CMD_HALT)
         handlerThread.join()
+
+def networkSetup(args):
+    def none(args):
+        networking.NWSocket=networking.NWSocketTCP
+    
+    def HMAC(args):
+        networking.NWSocket=networking.NWSocketHMAC
+        if not args.incomming_key:
+            print("You've enabled HMAC authentication but you haven't set the key for incomming messages")
+            exit()
+        else:
+            networking.NWSocket.setListenerKey(args.incomming_key.encode(encoding="ASCII"))
+        if not args.master_key:
+            print("You've enabled HMAC authentication but you haven't set the key for requests to master")
+            exit()
+        else:
+            networking.masterKey=args.master_key.encode(encoding="ASCII")
+        
+    setups={"HMAC":HMAC, "None":none}
+    setups[args.security](args)
     
 
 if __name__=="__main__":
-    listenerSocket=NWSocket()
+    argumentParser=ArgumentParser(description="Server program that runs on worker computers in the NetWork framework")
+    networkArgs=argumentParser.add_argument_group("Network settings")
+    
+    networkArgs.add_argument("-s", "--security", 
+                                help="Type of security algorithms used to protect network communication",
+                                default="None", choices=["None", "AES", "HMAC", "AES+HMAC"])
+    networkArgs.add_argument("--incomming_key",
+                             help="Key used to authenticate incomming messages with HMAC")
+    networkArgs.add_argument("--master_key",
+                             help="Key used to authenticate messages sent to master with HMAC")
+    
+    args=argumentParser.parse_args()
+    networkSetup(args)
+    listenerSocket=networking.NWSocket()
     try:
         listenerSocket.listen()
     except OSError as error:
@@ -134,7 +168,10 @@ if __name__=="__main__":
                 #Register the master
                 requestSocket.send(COMCODE_ISALIVE)
                 masterAddress=requestSocket.address
-                networking.masterAddress=masterAddress
+                if args.security=="HMAC":
+                    networking.masterAddress=(masterAddress, networking.masterKey)
+                else:
+                    networking.masterAddress=masterAddress
                 requestSocket.close()
                 print("MASTER REGISTERED with address", masterAddress)
                 masterRegistered=True
