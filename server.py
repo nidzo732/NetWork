@@ -23,7 +23,7 @@ import atexit
 import pickle
 from NetWork.request import Request
 from NetWork import networking
-from argparse import ArgumentParser
+from NetWork.args import getArgs
 class BadRequestError(Exception): pass
 
 running=False
@@ -95,8 +95,10 @@ def requestHandler(commqueue):
     #Give requests to handler functions
     request=commqueue.get()
     while request!=CMD_HALT:
-        #print(request)
-        handlers[request.getType()](request)
+        try:
+            handlers[request.getType()](request)
+        except KeyError:
+            print("Got request with a bad identifier key", request.getType())
         request.close()
         request=commqueue.get()
     for taskID in tasks:
@@ -108,7 +110,7 @@ def requestReceiver(requestSocket, commqueue):
     receivedData=requestSocket.recv()
     if receivedData==b"ALV" and requestSocket.address==masterAddress:
         requestSocket.send(COMCODE_ISALIVE)
-    else:        
+    else: 
         commqueue.put(Request(receivedData[:3], pickle.loads(receivedData[3:]), -1, requestSocket))
 
 def onExit(listenerSocket, commqueue, handlerThread):
@@ -117,33 +119,12 @@ def onExit(listenerSocket, commqueue, handlerThread):
         commqueue.put(CMD_HALT)
         handlerThread.join()
 
-def getArgs():
-    argumentParser=ArgumentParser(description="Server program that runs on worker computers in the NetWork framework")
-    networkArgs=argumentParser.add_argument_group("Network settings")
-    
-    networkArgs.add_argument("-s", "--socket_type", 
-                                help="Type of security applied to TCP communication with master, 'TCP' means no security",
-                                default="TCP", choices=["TCP", "AES", "HMAC", "AES+HMAC"])
-    networkArgs.add_argument("--incomming_hmac_key",
-                             help="Key used to authenticate incomming messages with HMAC")
-    networkArgs.add_argument("--master_hmac_key",
-                             help="Key used to authenticate messages sent to master with HMAC")
-    networkArgs.add_argument("--incomming_aes_key", 
-                             help="Key used to decrypt incomming messages")
-    networkArgs.add_argument("--master_aes_key", 
-                             help="Key used to encrypt messages sent to master")
-    args=argumentParser.parse_args()
-    if args.incomming_hmac_key:
-        args.incomming_hmac_key=args.incomming_hmac_key.encode(encoding="ASCII")
-    if args.master_hmac_key:
-        args.master_hmac_key=args.master_hmac_key.encode(encoding="ASCII")
-    return args
     
     
 
 if __name__=="__main__":
     args=getArgs()
-    networking.setUp(args.socket_type, {"ListenerHMAC":args.incomming_hmac_key,})
+    networking.setUp(args.socket_type, args.netArgs)
     listenerSocket=networking.NWSocket()
     try:
         listenerSocket.listen()
@@ -162,6 +143,8 @@ if __name__=="__main__":
                 masterAddress=requestSocket.address
                 if args.socket_type=="HMAC":
                     networking.masterAddress=(masterAddress, args.master_hmac_key)
+                elif args.socket_type=="AES":
+                    networking.masterAddress=(masterAddress, args.master_aes_key)
                 else:
                     networking.masterAddress=masterAddress
                 requestSocket.close()
@@ -193,9 +176,7 @@ if __name__=="__main__":
     try:
         while True:
             requestSocket=listenerSocket.accept()
-            receiverThread=Thread(target=requestReceiver, 
-                                  args=(requestSocket, commqueue))
-            receiverThread.start()
+            requestReceiver(requestSocket, commqueue)
     except KeyboardInterrupt:
         exit()
     
