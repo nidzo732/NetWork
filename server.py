@@ -117,41 +117,33 @@ def onExit(listenerSocket, commqueue, handlerThread):
         commqueue.put(CMD_HALT)
         handlerThread.join()
 
-def networkSetup(args):
-    def none(args):
-        networking.NWSocket=networking.NWSocketTCP
-    
-    def HMAC(args):
-        networking.NWSocket=networking.NWSocketHMAC
-        if not args.incomming_key:
-            print("You've enabled HMAC authentication but you haven't set the key for incomming messages")
-            exit()
-        else:
-            networking.NWSocket.setListenerKey(args.incomming_key.encode(encoding="ASCII"))
-        if not args.master_key:
-            print("You've enabled HMAC authentication but you haven't set the key for requests to master")
-            exit()
-        else:
-            networking.masterKey=args.master_key.encode(encoding="ASCII")
-        
-    setups={"HMAC":HMAC, "None":none}
-    setups[args.security](args)
-    
-
-if __name__=="__main__":
+def getArgs():
     argumentParser=ArgumentParser(description="Server program that runs on worker computers in the NetWork framework")
     networkArgs=argumentParser.add_argument_group("Network settings")
     
-    networkArgs.add_argument("-s", "--security", 
-                                help="Type of security algorithms used to protect network communication",
-                                default="None", choices=["None", "AES", "HMAC", "AES+HMAC"])
-    networkArgs.add_argument("--incomming_key",
+    networkArgs.add_argument("-s", "--socket_type", 
+                                help="Type of security applied to TCP communication with master, 'TCP' means no security",
+                                default="TCP", choices=["TCP", "AES", "HMAC", "AES+HMAC"])
+    networkArgs.add_argument("--incomming_hmac_key",
                              help="Key used to authenticate incomming messages with HMAC")
-    networkArgs.add_argument("--master_key",
+    networkArgs.add_argument("--master_hmac_key",
                              help="Key used to authenticate messages sent to master with HMAC")
-    
+    networkArgs.add_argument("--incomming_aes_key", 
+                             help="Key used to decrypt incomming messages")
+    networkArgs.add_argument("--master_aes_key", 
+                             help="Key used to encrypt messages sent to master")
     args=argumentParser.parse_args()
-    networkSetup(args)
+    if args.incomming_hmac_key:
+        args.incomming_hmac_key=args.incomming_hmac_key.encode(encoding="ASCII")
+    if args.master_hmac_key:
+        args.master_hmac_key=args.master_hmac_key.encode(encoding="ASCII")
+    return args
+    
+    
+
+if __name__=="__main__":
+    args=getArgs()
+    networking.setUp(args.socket_type, {"ListenerHMAC":args.incomming_hmac_key,})
     listenerSocket=networking.NWSocket()
     try:
         listenerSocket.listen()
@@ -168,8 +160,8 @@ if __name__=="__main__":
                 #Register the master
                 requestSocket.send(COMCODE_ISALIVE)
                 masterAddress=requestSocket.address
-                if args.security=="HMAC":
-                    networking.masterAddress=(masterAddress, networking.masterKey)
+                if args.socket_type=="HMAC":
+                    networking.masterAddress=(masterAddress, args.master_hmac_key)
                 else:
                     networking.masterAddress=masterAddress
                 requestSocket.close()

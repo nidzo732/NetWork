@@ -26,7 +26,6 @@ class KeyNotSet(OSError):pass
 
 masterAddress=None
 
-    
 class NWSocketTCP:
     #Currently the default socket class that implements a
     #classic TCP communication
@@ -128,6 +127,9 @@ class NWSocketTCP:
                     
         return True
     
+    @staticmethod
+    def setUp(keys):pass
+    
 class NWSocketHMAC(NWSocketTCP):
     listenerKey=None
     
@@ -178,8 +180,22 @@ class NWSocketHMAC(NWSocketTCP):
     @staticmethod
     def setListenerKey(key):
         NWSocketHMAC.listenerKey=key
+    
+    @staticmethod
+    def setUp(keys):
+        NWSocketHMAC.listenerKey=keys["ListenerHMAC"]
         
-NWSocket=NWSocketTCP    #set default socket used in the framework
+NWSocket=None    #set default socket used in the framework
+
+sockets={"TCP":NWSocketTCP, "HMAC":NWSocketHMAC, "AES":None,
+        "AES+HMAC":None}
+
+def setUp(type, keys):
+    if type:
+        sockets[type].setUp(keys)
+        global NWSocket
+        NWSocket=sockets[type]
+        
 
 def sendRequest(type, contents):
     request=Request(type, contents)

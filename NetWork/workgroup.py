@@ -72,7 +72,7 @@ class Workgroup:
     """
 
     def __init__(self, workerAddresses, skipBadWorkers=False, 
-                 handleDeadWorkers=False):
+                 handleDeadWorkers=False, socketType="TCP", keys=None):
         self.controlls=Manager().list(range(20)) 
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
@@ -83,6 +83,7 @@ class Workgroup:
         self.controlls[CNT_MANAGER_COUNT]=0
         self.controlls[CNT_DEAD_WORKERS]=set()
         self.currentWorker=-1
+        NetWork.networking.setUp(socketType, keys)
         self.listenerSocket=NetWork.networking.NWSocket()
         self.workerList=[]
         for workerAddress in workerAddresses:
