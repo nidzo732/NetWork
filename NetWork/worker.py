@@ -35,6 +35,7 @@ class Worker:
             workerSocket=NetWork.networking.NWSocket()
             workerSocket.connect(self.address)
             workerSocket.send(type+pickle.dumps(contents))
+            workerSocket.recv()
             workerSocket.close()
         except OSError:
             self.alive=False

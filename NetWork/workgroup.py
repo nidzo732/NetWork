@@ -309,7 +309,10 @@ class Workgroup:
         request=commqueue.get()
         while not request==CMD_HALT:
             #print(request)
-            handlerList[request.getType()](request, controlls, commqueue)
+            try:
+                handlerList[request.getType()](request, controlls, commqueue)
+            except KeyError:
+                print("Got request with a bad identifier key", request.getType())
             request.close()
             request=commqueue.get()
     
