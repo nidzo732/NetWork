@@ -6,6 +6,7 @@ class Request:
         self.requester=requester
         self.socket=socket
         self.type=type
+        self.responseSent=False
     
     def getContents(self):
         return self.contents
@@ -35,9 +36,12 @@ class Request:
     
     def close(self):
         if self.socket:
+            if not self.responseSent:
+                self.respond(b"DEFAULT_RESPONSE")
             self.socket.close()
     
     def respond(self, response):
+        self.responseSent=True
         try:
             self.socket.send(response)
         except OSError as error:

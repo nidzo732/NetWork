@@ -9,7 +9,7 @@ from the master. The messages start with a 3 letter code that determines
 their type, the mainloop reads that code and runs a handler function associated
 with that code. Message codes can be seen in NetWork.commcodes.
 """
-from NetWork.networking import NWSocket, COMCODE_CHECKALIVE, COMCODE_ISALIVE
+from NetWork.networking import COMCODE_CHECKALIVE, COMCODE_ISALIVE
 from NetWork.task import Task
 from NetWork.workerprocess import WorkerProcess
 import NetWork.queue as queue
@@ -23,6 +23,7 @@ import atexit
 import pickle
 from NetWork.request import Request
 from NetWork import networking
+from NetWork.args import getArgs
 class BadRequestError(Exception): pass
 
 running=False
@@ -90,35 +91,31 @@ handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           b"QUP":putOnQueue, b"QUR":registerQueue,
           CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock}
 
-def requestHandler(commqueue):
-    #Give requests to handler functions
-    request=commqueue.get()
-    while request!=CMD_HALT:
-        #print(request)
-        handlers[request.getType()](request)
-        request.close()
-        request=commqueue.get()
-    for taskID in tasks:
-        if taskID!=-1:
-            tasks[taskID].terminate()
+def requestHandler(request):
+    handlers[request.getType()](request)
+    request.close()
     
 
-def requestReceiver(requestSocket, commqueue):
+def requestReceiver(requestSocket):
     receivedData=requestSocket.recv()
     if receivedData==b"ALV" and requestSocket.address==masterAddress:
         requestSocket.send(COMCODE_ISALIVE)
-    else:        
-        commqueue.put(Request(receivedData[:3], pickle.loads(receivedData[3:]), -1, requestSocket))
+    elif not receivedData[:3] in handlers:
+        print("Request came with an invalid identifier code", receivedData[:3])
+    else: 
+        requestHandler(Request(receivedData[:3], pickle.loads(receivedData[3:]), -1, requestSocket))
 
-def onExit(listenerSocket, commqueue, handlerThread):
+def onExit(listenerSocket):
     if running:
         listenerSocket.close()
-        commqueue.put(CMD_HALT)
-        handlerThread.join()
+
+    
     
 
 if __name__=="__main__":
-    listenerSocket=NWSocket()
+    args=getArgs()
+    networking.setUp(args.socket_type, args.netArgs)
+    listenerSocket=networking.NWSocket()
     try:
         listenerSocket.listen()
     except OSError as error:
@@ -134,7 +131,15 @@ if __name__=="__main__":
                 #Register the master
                 requestSocket.send(COMCODE_ISALIVE)
                 masterAddress=requestSocket.address
-                networking.masterAddress=masterAddress
+                if args.socket_type=="AES+HMAC":
+                    networking.masterAddress=(masterAddress, args.master_hmac_key,
+                                              args.master_aes_key)
+                elif args.socket_type=="HMAC":
+                    networking.masterAddress=(masterAddress, args.master_hmac_key)
+                elif args.socket_type=="AES":
+                    networking.masterAddress=(masterAddress, args.master_aes_key)
+                else:
+                    networking.masterAddress=masterAddress
                 requestSocket.close()
                 print("MASTER REGISTERED with address", masterAddress)
                 masterRegistered=True
@@ -155,18 +160,14 @@ if __name__=="__main__":
     lock.locks={-1:None}
     lock.runningOnMaster=False
     manager.runningOnMaster=False
-    commqueue=Queue()
-    handlerThread=Thread(target=requestHandler, args=(commqueue,))
-    handlerThread.start()
     #Start receiving requests
     running=True
-    atexit.register(onExit, listenerSocket, commqueue, handlerThread)
+    atexit.register(onExit, listenerSocket)
     try:
         while True:
             requestSocket=listenerSocket.accept()
-            receiverThread=Thread(target=requestReceiver, 
-                                  args=(requestSocket, commqueue))
-            receiverThread.start()
+            handlerThread=Thread(target=requestReceiver, args=(requestSocket,))
+            handlerThread.start()
     except KeyboardInterrupt:
         exit()
     

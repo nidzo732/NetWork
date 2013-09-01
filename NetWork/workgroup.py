@@ -4,7 +4,7 @@ and functions.
 """
 
 from multiprocessing import Process, Queue, Manager, Event
-from .networking import NWSocket
+import NetWork.networking
 from .handlers import receiveSocketData, handlerList
 from threading import Thread
 from .worker import Worker, WorkerUnavailableError, DeadWorkerError
@@ -26,7 +26,7 @@ class NoWorkersError(Exception):pass
 def receiveSocketData(socket, commqueue, controlls):
     workerId=-1
     for worker in controlls[CNT_WORKERS]:
-        if socket.address==worker.address:
+        if socket.address==worker.realAddress:
             workerId=worker.id
     if workerId==-1:
         return
@@ -34,6 +34,9 @@ def receiveSocketData(socket, commqueue, controlls):
         receivedData=socket.recv()
     except OSError as error:
         print("Network communication failed from address", socket.address, error)
+    if not receivedData[:3] in handlerList:
+        print("Request came with an invalid identifier code", receivedData[:3])
+        return
     commqueue.put(Request(receivedData[:3], 
                           pickle.loads(receivedData[3:]), workerId, socket))
 
@@ -72,7 +75,7 @@ class Workgroup:
     """
 
     def __init__(self, workerAddresses, skipBadWorkers=False, 
-                 handleDeadWorkers=False):
+                 handleDeadWorkers=False, socketType="TCP", keys=None):
         self.controlls=Manager().list(range(20)) 
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
@@ -83,7 +86,8 @@ class Workgroup:
         self.controlls[CNT_MANAGER_COUNT]=0
         self.controlls[CNT_DEAD_WORKERS]=set()
         self.currentWorker=-1
-        self.listenerSocket=NWSocket()
+        NetWork.networking.setUp(socketType, keys)
+        self.listenerSocket=NetWork.networking.NWSocket()
         self.workerList=[]
         for workerAddress in workerAddresses:
             try:
@@ -131,10 +135,7 @@ class Workgroup:
         Instead of running this method manually it is recomened to use
         the ``with`` statement
         """
-        try:
-            self.listenerSocket.listen()
-        except OSError as error:
-            print("Failed to start listening on the network", error)
+        self.listenerSocket.listen()
         self.networkListener=Thread(target=self.listenerProcess, 
                                      args=(self.listenerSocket, self.commqueue,
                                            self.controlls))
@@ -311,7 +312,10 @@ class Workgroup:
         request=commqueue.get()
         while not request==CMD_HALT:
             #print(request)
-            handlerList[request.getType()](request, controlls, commqueue)
+            try:
+                handlerList[request.getType()](request, controlls, commqueue)
+            except KeyError:
+                print("Got request with a bad identifier key", request.getType())
             request.close()
             request=commqueue.get()
     

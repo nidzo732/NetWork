@@ -2,9 +2,19 @@
 This module implements a socket classes used to safely handle
 network messaging, message length and security.
 """
+from time import sleep
 import socket
 import pickle
+import hmac
+import hashlib
 from .request import Request
+try:
+    from Crypto.Cipher import AES
+    from Crypto import Random
+    cryptoAvailable=True
+except ImportError:
+    cryptoAvailable=False
+
 
 COMCODE_CHECKALIVE=b"ALV"
 COMCODE_ISALIVE=b"IMALIVE"
@@ -12,16 +22,21 @@ ISALIVE_TIMEOUT=10
 DEFAULT_TCP_PORT=32151
 BUFFER_READ_LENGTH=4096
 MESSAGE_LENGTH_DELIMITER=b"MLEN"
+HASH_LENGTH_DELIMITER=b"HLEN"
 DEFAULT_LISTENING_ADDRESS="0.0.0.0"
 LISTEN_QUEUE_LENGTH=5
 DEFAULT_SOCKET_TIMEOUT=5.0
+AES_KEY_LENGTH=16
+AES_IV_LENGTH=16
 
 class InvalidMessageFormatError(OSError):pass
 class MessageNotCompleteError(OSError):pass
+class UnauthenticatedMessage(OSError):pass
+class KeyNotSet(OSError):pass
 
 masterAddress=None
 
-    
+
 class NWSocketTCP:
     #Currently the default socket class that implements a
     #classic TCP communication
@@ -51,9 +66,9 @@ class NWSocketTCP:
                 raise InvalidMessageFormatError("Received string not formatted properly")
             newData=self.internalSocket.recv(BUFFER_READ_LENGTH)
             if len(newData)==0:
-                raise MessageNotCompleteError("Socket got closed before receiving the entire message")
+                raise MessageNotCompleteError(b"Socket got closed before receiving the entire message, got only: "+receivedData)
             receivedData+=newData
-        if not NWSocket.checkMessageFormat(receivedData):
+        if not NWSocketTCP.checkMessageFormat(receivedData):
             raise InvalidMessageFormatError("Received string not formatted properly")
         sizelen=receivedData.find(MESSAGE_LENGTH_DELIMITER)
         messageLength=int(receivedData[0:sizelen])
@@ -61,7 +76,7 @@ class NWSocketTCP:
         while len(receivedData)<messageLength:
             newData=self.internalSocket.recv(BUFFER_READ_LENGTH)
             if len(newData)==0:
-                raise MessageNotCompleteError("Socket got closed before receiving the entire message")
+                raise MessageNotCompleteError("socket got closed before receiving the entire message")
             receivedData+=newData
         return receivedData
     
@@ -73,6 +88,7 @@ class NWSocketTCP:
     
     def connect(self, address):
         #connect to the address
+        self.address=address
         self.internalSocket.connect((address, DEFAULT_TCP_PORT))
     
     def accept(self):
@@ -94,9 +110,9 @@ class NWSocketTCP:
             testSocket.send(COMCODE_CHECKALIVE)
             response=testSocket.recv()
         except OSError:
-            return False
+            return (False, None)
             
-        return response==COMCODE_ISALIVE
+        return (response==COMCODE_ISALIVE, testSocket.address)
     
     @staticmethod
     def checkMessageFormat(message):
@@ -122,10 +138,180 @@ class NWSocketTCP:
                     
         return True
     
-    def __del__(self):
-        self.close()
+    @staticmethod
+    def setUp(keys):pass
     
-NWSocket=NWSocketTCP    #set default socket used in the framework
+class NWSocketHMAC(NWSocketTCP):
+    listenerHMAC=None
+    
+    def __init__(self, socketToUse=None, parameters=None):
+        if socketToUse:
+            NWSocketTCP.__init__(self, socketToUse, parameters[0])
+            self.HMACKey=parameters[1]
+        else:
+            NWSocketTCP.__init__(self)
+    
+    def listen(self):
+        if not self.listenerHMAC:
+            raise KeyNotSet("The HMAC key for listener sockets was not set")
+        NWSocketTCP.listen(self)
+
+    def connect(self, parameters):
+        NWSocketTCP.connect(self, parameters[0])
+        self.address=parameters[0]
+        self.HMACKey=parameters[1]
+    
+    def recv(self):
+        receivedData=NWSocketTCP.recv(self)
+        try:
+            hashLength=int(receivedData[:receivedData.find(HASH_LENGTH_DELIMITER)])
+            receivedData=receivedData[receivedData.find(HASH_LENGTH_DELIMITER)+len(HASH_LENGTH_DELIMITER):]
+        except ValueError:
+            raise InvalidMessageFormatError("Received string not formatted properly")
+        
+        message=receivedData[:-hashLength]
+        receivedHash=receivedData[-hashLength:]
+        messageHash=hmac.new(key=self.HMACKey, msg=message, digestmod=hashlib.sha256)
+        
+        try:
+            messageValid=hmac.compare_digest(messageHash.digest(), receivedHash)
+        except AttributeError:  
+            #Python version<3.3 doesn't have compare_digest
+            #so I had to rely on a less secure comparison with ==
+            messageValid=(messageHash.digest()==receivedHash)
+        
+        if messageValid:
+            return message
+        else:
+            raise UnauthenticatedMessage("Received message came from an unathhenticated source")
+    
+    def send(self, data):
+        messageHash=hmac.new(key=self.HMACKey, msg=data, digestmod=hashlib.sha256)
+        hash=messageHash.digest()
+        message=str(len(hash)).encode(encoding="ASCII")+HASH_LENGTH_DELIMITER
+        message+=data+hash
+        NWSocketTCP.send(self, message)
+    
+    def accept(self):
+        requestData=self.internalSocket.accept()
+        return NWSocketHMAC(requestData[0], (requestData[1][0], self.listenerHMAC))
+    
+    @staticmethod
+    def setUp(keys):
+        NWSocketHMAC.listenerHMAC=keys["ListenerHMAC"]
+
+sockets={"TCP":NWSocketTCP, "HMAC":NWSocketHMAC}       
+NWSocket=None    #set default socket used in the framework
+
+if cryptoAvailable:
+    def AESEncrypt(data, key):
+        keygen=hashlib.sha256()
+        keygen.update(key)
+        aesKey=keygen.digest()
+        Random.atfork()
+        initializationVector=Random.new().read(AES_IV_LENGTH)
+        cipher=AES.new(aesKey, AES.MODE_CFB, initializationVector)
+        return initializationVector+cipher.encrypt(data)
+
+    def AESDecrypt(data, key):
+        keygen=hashlib.sha256()
+        keygen.update(key)
+        aesKey=keygen.digest()
+        initializationVector=b"1234567890123456"
+        cipher=AES.new(aesKey, AES.MODE_CFB, initializationVector)
+        return cipher.decrypt(data)[AES_IV_LENGTH:]
+    
+    class NWSocketAES(NWSocketTCP):
+        listenerAES=None
+        
+        def __init__(self, socketToUse=None, parameters=None):
+            if socketToUse:
+                NWSocketTCP.__init__(self, socketToUse, parameters[0])
+                self.AESKey=parameters[1]
+            else:
+                NWSocketTCP.__init__(self)
+        
+        def listen(self):
+            if not self.listenerAES:
+                p
+                raise KeyNotSet("The AES key for listener sockets was not set")
+            NWSocketTCP.listen(self)
+        
+        def connect(self, parameters):
+            NWSocketTCP.connect(self, parameters[0])
+            self.address=parameters[0]
+            self.AESKey=parameters[1]
+        
+        def accept(self):
+            requestData=self.internalSocket.accept()
+            return NWSocketAES(requestData[0], (requestData[1][0], self.listenerAES))
+        
+        def recv(self):
+            receivedData=NWSocketTCP.recv(self)
+            decryptedData=AESDecrypt(receivedData, self.AESKey)
+            return decryptedData
+        
+        def send(self, data):
+            encryptedData=AESEncrypt(data, self.AESKey)
+            NWSocketTCP.send(self, encryptedData)
+            
+        @staticmethod
+        def setUp(keys):
+            NWSocketAES.listenerAES=keys["ListenerAES"]
+    
+    class NWSocketHMACandAES(NWSocketHMAC):
+        listenerAES=None
+        listenerHMAC=None
+        
+        def __init__(self, socketToUse=None, address=None, AESKey=None,
+                     HMACKey=None):
+            if socketToUse:
+                NWSocketHMAC.__init__(self, socketToUse, (address, HMACKey))
+                self.AESKey=AESKey
+            else:
+                NWSocketHMAC.__init__(self)
+        
+        def accept(self):
+            requestData=self.internalSocket.accept()
+            return NWSocketHMACandAES(requestData[0], requestData[1][0],
+                                      self.listenerAES, self.listenerHMAC)
+        
+        def listen(self):
+            if not self.listenerAES:
+                raise KeyNotSet("The AES key for listener sockets was not set")
+            NWSocketHMAC.listen(self)
+        
+        def connect(self, parameters):
+            NWSocketHMAC.connect(self, (parameters[0], parameters[1]))
+            self.address=parameters[0]
+            self.AESKey=parameters[2]
+        
+        def recv(self):
+            receivedData=NWSocketHMAC.recv(self)
+            decryptedData=AESDecrypt(receivedData, self.AESKey)
+            return decryptedData
+        
+        def send(self, data):
+            encryptedData=AESEncrypt(data, self.AESKey)
+            NWSocketHMAC.send(self, encryptedData)
+        
+        @staticmethod
+        def setUp(keys):
+            NWSocketHMACandAES.listenerAES=keys["ListenerAES"]
+            NWSocketHMACandAES.listenerHMAC=keys["ListenerHMAC"]
+                
+        
+    sockets.update({"AES":NWSocketAES, "AES+HMAC":NWSocketHMACandAES})
+
+def setUp(type, keys):
+    if type:
+        try:
+            sockets[type].setUp(keys)
+        except KeyError:
+            raise KeyNotSet("Not all keys were set for the desired security type: "+str(type))
+        global NWSocket
+        NWSocket=sockets[type]
+        
 
 def sendRequest(type, contents):
     request=Request(type, contents)
