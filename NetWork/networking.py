@@ -142,24 +142,24 @@ class NWSocketTCP:
     def setUp(keys):pass
     
 class NWSocketHMAC(NWSocketTCP):
-    listenerKey=None
+    listenerHMAC=None
     
     def __init__(self, socketToUse=None, parameters=None):
         if socketToUse:
             NWSocketTCP.__init__(self, socketToUse, parameters[0])
-            self.key=parameters[1]
+            self.HMACKey=parameters[1]
         else:
             NWSocketTCP.__init__(self)
     
     def listen(self):
-        if not self.listenerKey:
+        if not self.listenerHMAC:
             raise KeyNotSet("The HMAC key for listener sockets was not set")
         NWSocketTCP.listen(self)
 
     def connect(self, parameters):
         NWSocketTCP.connect(self, parameters[0])
         self.address=parameters[0]
-        self.key=parameters[1]
+        self.HMACKey=parameters[1]
     
     def recv(self):
         receivedData=NWSocketTCP.recv(self)
@@ -171,14 +171,22 @@ class NWSocketHMAC(NWSocketTCP):
         
         message=receivedData[:-hashLength]
         receivedHash=receivedData[-hashLength:]
-        messageHash=hmac.new(key=self.key, msg=message, digestmod=hashlib.sha256)
-        if hmac.compare_digest(messageHash.digest(), receivedHash):
+        messageHash=hmac.new(key=self.HMACKey, msg=message, digestmod=hashlib.sha256)
+        
+        try:
+            messageValid=hmac.compare_digest(messageHash.digest(), receivedHash)
+        except AttributeError:  
+            #Python version<3.3 doesn't have compare_digest
+            #so I had to rely on a less secure comparison with ==
+            messageValid=(messageHash.digest()==receivedHash)
+        
+        if messageValid:
             return message
         else:
             raise UnauthenticatedMessage("Received message came from an unathhenticated source")
     
     def send(self, data):
-        messageHash=hmac.new(key=self.key, msg=data, digestmod=hashlib.sha256)
+        messageHash=hmac.new(key=self.HMACKey, msg=data, digestmod=hashlib.sha256)
         hash=messageHash.digest()
         message=str(len(hash)).encode(encoding="ASCII")+HASH_LENGTH_DELIMITER
         message+=data+hash
@@ -186,12 +194,13 @@ class NWSocketHMAC(NWSocketTCP):
     
     def accept(self):
         requestData=self.internalSocket.accept()
-        return NWSocketHMAC(requestData[0], (requestData[1][0], self.listenerKey))
+        return NWSocketHMAC(requestData[0], (requestData[1][0], self.listenerHMAC))
     
     @staticmethod
     def setUp(keys):
-        NWSocketHMAC.listenerKey=keys["ListenerHMAC"]
-        
+        NWSocketHMAC.listenerHMAC=keys["ListenerHMAC"]
+
+sockets={"TCP":NWSocketTCP, "HMAC":NWSocketHMAC}       
 NWSocket=None    #set default socket used in the framework
 
 if cryptoAvailable:
@@ -213,46 +222,86 @@ if cryptoAvailable:
         return cipher.decrypt(data)[AES_IV_LENGTH:]
     
     class NWSocketAES(NWSocketTCP):
-        listenerKey=None
+        listenerAES=None
         
         def __init__(self, socketToUse=None, parameters=None):
             if socketToUse:
                 NWSocketTCP.__init__(self, socketToUse, parameters[0])
-                self.key=parameters[1]
+                self.AESKey=parameters[1]
             else:
                 NWSocketTCP.__init__(self)
         
         def listen(self):
-            if not self.listenerKey:
+            if not self.listenerAES:
+                p
                 raise KeyNotSet("The AES key for listener sockets was not set")
             NWSocketTCP.listen(self)
         
         def connect(self, parameters):
             NWSocketTCP.connect(self, parameters[0])
             self.address=parameters[0]
-            self.key=parameters[1]
+            self.AESKey=parameters[1]
         
         def accept(self):
             requestData=self.internalSocket.accept()
-            return NWSocketAES(requestData[0], (requestData[1][0], self.listenerKey))
+            return NWSocketAES(requestData[0], (requestData[1][0], self.listenerAES))
         
         def recv(self):
             receivedData=NWSocketTCP.recv(self)
-            decryptedData=AESDecrypt(receivedData, self.key)
+            decryptedData=AESDecrypt(receivedData, self.AESKey)
             return decryptedData
         
         def send(self, data):
-            encryptedData=AESEncrypt(data, self.key)
+            encryptedData=AESEncrypt(data, self.AESKey)
             NWSocketTCP.send(self, encryptedData)
             
         @staticmethod
         def setUp(keys):
-            NWSocketAES.listenerKey=keys["ListenerAES"]  
-        
-        
+            NWSocketAES.listenerAES=keys["ListenerAES"]
     
-sockets={"TCP":NWSocketTCP, "HMAC":NWSocketHMAC, "AES":NWSocketAES,
-        "AES+HMAC":None}
+    class NWSocketHMACandAES(NWSocketHMAC):
+        listenerAES=None
+        listenerHMAC=None
+        
+        def __init__(self, socketToUse=None, address=None, AESKey=None,
+                     HMACKey=None):
+            if socketToUse:
+                NWSocketHMAC.__init__(self, socketToUse, (address, HMACKey))
+                self.AESKey=AESKey
+            else:
+                NWSocketHMAC.__init__(self)
+        
+        def accept(self):
+            requestData=self.internalSocket.accept()
+            return NWSocketHMACandAES(requestData[0], requestData[1][0],
+                                      self.listenerAES, self.listenerHMAC)
+        
+        def listen(self):
+            if not self.listenerAES:
+                raise KeyNotSet("The AES key for listener sockets was not set")
+            NWSocketHMAC.listen(self)
+        
+        def connect(self, parameters):
+            NWSocketHMAC.connect(self, (parameters[0], parameters[1]))
+            self.address=parameters[0]
+            self.AESKey=parameters[2]
+        
+        def recv(self):
+            receivedData=NWSocketHMAC.recv(self)
+            decryptedData=AESDecrypt(receivedData, self.AESKey)
+            return decryptedData
+        
+        def send(self, data):
+            encryptedData=AESEncrypt(data, self.AESKey)
+            NWSocketHMAC.send(self, encryptedData)
+        
+        @staticmethod
+        def setUp(keys):
+            NWSocketHMACandAES.listenerAES=keys["ListenerAES"]
+            NWSocketHMACandAES.listenerHMAC=keys["ListenerHMAC"]
+                
+        
+    sockets.update({"AES":NWSocketAES, "AES+HMAC":NWSocketHMACandAES})
 
 def setUp(type, keys):
     if type:

@@ -34,6 +34,9 @@ def receiveSocketData(socket, commqueue, controlls):
         receivedData=socket.recv()
     except OSError as error:
         print("Network communication failed from address", socket.address, error)
+    if not receivedData[:3] in handlerList:
+        print("Request came with an invalid identifier code", receivedData[:3])
+        return
     commqueue.put(Request(receivedData[:3], 
                           pickle.loads(receivedData[3:]), workerId, socket))
 

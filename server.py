@@ -91,33 +91,23 @@ handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
           b"QUP":putOnQueue, b"QUR":registerQueue,
           CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock}
 
-def requestHandler(commqueue):
-    #Give requests to handler functions
-    request=commqueue.get()
-    while request!=CMD_HALT:
-        try:
-            handlers[request.getType()](request)
-        except KeyError:
-            print("Got request with a bad identifier key", request.getType())
-        request.close()
-        request=commqueue.get()
-    for taskID in tasks:
-        if taskID!=-1:
-            tasks[taskID].terminate()
+def requestHandler(request):
+    handlers[request.getType()](request)
+    request.close()
     
 
-def requestReceiver(requestSocket, commqueue):
+def requestReceiver(requestSocket):
     receivedData=requestSocket.recv()
     if receivedData==b"ALV" and requestSocket.address==masterAddress:
         requestSocket.send(COMCODE_ISALIVE)
+    elif not receivedData[:3] in handlers:
+        print("Request came with an invalid identifier code", receivedData[:3])
     else: 
-        commqueue.put(Request(receivedData[:3], pickle.loads(receivedData[3:]), -1, requestSocket))
+        requestHandler(Request(receivedData[:3], pickle.loads(receivedData[3:]), -1, requestSocket))
 
-def onExit(listenerSocket, commqueue, handlerThread):
+def onExit(listenerSocket):
     if running:
         listenerSocket.close()
-        commqueue.put(CMD_HALT)
-        handlerThread.join()
 
     
     
@@ -141,7 +131,10 @@ if __name__=="__main__":
                 #Register the master
                 requestSocket.send(COMCODE_ISALIVE)
                 masterAddress=requestSocket.address
-                if args.socket_type=="HMAC":
+                if args.socket_type=="AES+HMAC":
+                    networking.masterAddress=(masterAddress, args.master_hmac_key,
+                                              args.master_aes_key)
+                elif args.socket_type=="HMAC":
                     networking.masterAddress=(masterAddress, args.master_hmac_key)
                 elif args.socket_type=="AES":
                     networking.masterAddress=(masterAddress, args.master_aes_key)
@@ -167,16 +160,14 @@ if __name__=="__main__":
     lock.locks={-1:None}
     lock.runningOnMaster=False
     manager.runningOnMaster=False
-    commqueue=Queue()
-    handlerThread=Thread(target=requestHandler, args=(commqueue,))
-    handlerThread.start()
     #Start receiving requests
     running=True
-    atexit.register(onExit, listenerSocket, commqueue, handlerThread)
+    atexit.register(onExit, listenerSocket)
     try:
         while True:
             requestSocket=listenerSocket.accept()
-            requestReceiver(requestSocket, commqueue)
+            handlerThread=Thread(target=requestReceiver, args=(requestSocket,))
+            handlerThread.start()
     except KeyboardInterrupt:
         exit()
     
