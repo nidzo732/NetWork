@@ -65,13 +65,42 @@ class Workgroup:
     
     :Parameters:
       workerAddresses : iterable
-        An iterable of addresses of workers in the workgroup
+        An iterable of connection parameters for communicating with
+        workers in the workgroup. If default ``socketType`` is used,
+        these should be IP addresses of the workers, if secure sockets
+        are used, parameters should contain keys for each worker.
         
       skipBadWorkers : bool
         Whether to raise an error when adding the worker fails or to 
         continue to the next worker
         
       handleDeadWorkers : Currently not working, leave as it is
+      
+      socketType : string
+        NetWork has several socket types used internaly to communicate.
+        Default is an ordinary TCP socket with no protection, other
+        available values for this parameter are:
+          
+          * ``"HMAC"`` Use HMAC verification on messages. Worker connection
+            parameters must follow this format ``(IP, HMACKey)``
+          * ``"AES"`` Encrypt messages with AES encryption. Worker connection
+            parameters must follow this format ``(IP, AESKey)``
+          * ``"AES+HMAC"`` Encrypt messages with AES and verify them with HMAC.
+            Worker connection parameters must follow this format 
+            ``(IP, HMACKey, AESKey)``
+      
+      keys : dict
+        If you selected a protected socket type, you need to provide keys
+        for decrypting and/or verifying incomming messages from workers.
+        Items to put in this dictionary:
+        
+          * ``"ListenerAES"`` AES key used to decrypt messages from workers,
+            must be specified if AES is enabled
+          * ``"ListenerHMAC"`` HMAC key used to verify messages from the workers,
+            must be specified if HMAC is enabled
+          
+        
+        
     """
 
     def __init__(self, workerAddresses, skipBadWorkers=False, 

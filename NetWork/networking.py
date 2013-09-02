@@ -142,6 +142,7 @@ class NWSocketTCP:
     def setUp(keys):pass
     
 class NWSocketHMAC(NWSocketTCP):
+    #A socket class that implements HMAC message verification
     listenerHMAC=None
     
     def __init__(self, socketToUse=None, parameters=None):
@@ -222,6 +223,7 @@ if cryptoAvailable:
         return cipher.decrypt(data)[AES_IV_LENGTH:]
     
     class NWSocketAES(NWSocketTCP):
+        #A socket class that implements AES message encryption
         listenerAES=None
         
         def __init__(self, socketToUse=None, parameters=None):
@@ -260,6 +262,8 @@ if cryptoAvailable:
             NWSocketAES.listenerAES=keys["ListenerAES"]
     
     class NWSocketHMACandAES(NWSocketHMAC):
+        #A socket class that implemets HMAC message verification and
+        #AES message encryption
         listenerAES=None
         listenerHMAC=None
         
@@ -301,8 +305,16 @@ if cryptoAvailable:
             NWSocketHMACandAES.listenerHMAC=keys["ListenerHMAC"]
                 
         
-    sockets.update({"AES":NWSocketAES, "AES+HMAC":NWSocketHMACandAES})
+else:
+    class NWSocketAES:
+        @staticmethod
+        def setUp(keys):
+            raise NotImplementedError("AES could not be used because PyCrypto module is not available")
+    
+    class NWSocketHMACandAES(NWSocketAES): pass
+            
 
+sockets.update({"AES":NWSocketAES, "AES+HMAC":NWSocketHMACandAES})
 def setUp(type, keys):
     if type:
         try:
