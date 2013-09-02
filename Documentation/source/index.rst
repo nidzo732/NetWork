@@ -22,6 +22,7 @@ If you are curious or want to help with the development see the page about inter
    
    Tutorial
    IPC and concurrency control tools <IPCTools>
+   Securing network communication <security>
    Internal workings <InnerWorkings>
    Limitaions of NetWork <Limitations>
 
