@@ -67,32 +67,13 @@
 <span class="kn">from</span> <span class="nn">.manager</span> <span class="kn">import</span> <span class="n">NWManager</span>
 <span class="kn">from</span> <span class="nn">NetWork</span> <span class="kn">import</span> <span class="n">event</span><span class="p">,</span> <span class="n">queue</span><span class="p">,</span> <span class="n">lock</span><span class="p">,</span> <span class="n">manager</span>
 <span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">.command</span> <span class="kn">import</span> <span class="n">Command</span>
 
 
 
 
 <span class="k">class</span> <span class="nc">NoWorkersError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span><span class="k">pass</span>
 
-<span class="k">class</span> <span class="nc">Command</span><span class="p">:</span>
-    <span class="c">#A class used to send commands to the Workgroup.dispatcher thread</span>
-    <span class="c">#Used internaly by workgroup, not by user</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">contents</span><span class="p">,</span> <span class="n">requester</span><span class="p">,</span> <span class="n">socket</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">contents</span><span class="o">=</span><span class="n">contents</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">requester</span><span class="o">=</span><span class="n">requester</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">=</span><span class="n">socket</span>
-    
-    <span class="k">def</span> <span class="nf">getContents</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">contents</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span>
-    
-    <span class="k">def</span> <span class="nf">type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">contents</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span>
-    
-    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-    
-    <span class="k">def</span> <span class="nf">respond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">receiveSocketData</span><span class="p">(</span><span class="n">socket</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">,</span> <span class="n">controlls</span><span class="p">):</span>
     <span class="n">workerId</span><span class="o">=-</span><span class="mi">1</span>
@@ -101,7 +82,10 @@
             <span class="n">workerId</span><span class="o">=</span><span class="n">worker</span><span class="o">.</span><span class="n">id</span>
     <span class="k">if</span> <span class="n">workerId</span><span class="o">==-</span><span class="mi">1</span><span class="p">:</span>
         <span class="k">return</span>
-    <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Command</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">recv</span><span class="p">(),</span> <span class="n">workerId</span><span class="p">,</span> <span class="n">socket</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Command</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">recv</span><span class="p">(),</span> <span class="n">workerId</span><span class="p">,</span> <span class="n">socket</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Network communication failed from address&quot;</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">address</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Workgroup"><a class="viewcode-back" href="../../NetWork.workgroup.html#NetWork.workgroup.Workgroup">[docs]</a><span class="k">class</span> <span class="nc">Workgroup</span><span class="p">:</span>
@@ -193,10 +177,14 @@
 <span class="sd">        Instead of running this method manually it is recomened to use</span>
 <span class="sd">        the ``with`` statement</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">listenerSocket</span><span class="o">.</span><span class="n">listen</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">networkListener</span><span class="o">=</span><span class="n">Process</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">listenerProcess</span><span class="p">,</span> 
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">listenerSocket</span><span class="o">.</span><span class="n">listen</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;Failed to start listening on the network&quot;</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">networkListener</span><span class="o">=</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">listenerProcess</span><span class="p">,</span> 
                                      <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">listenerSocket</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">commqueue</span><span class="p">,</span>
                                            <span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">networkListener</span><span class="o">.</span><span class="n">daemon</span><span class="o">=</span><span class="bp">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dispatcher</span><span class="o">=</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dispatcherProcess</span><span class="p">,</span> 
                                 <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">commqueue</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dispatcher</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
@@ -239,7 +227,6 @@
         
     
     <span class="k">def</span> <span class="nf">cancelTask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">worker</span><span class="p">):</span>
-        <span class="c">#return self.controlls[CNT_WORKERS][worker].terminateTask(id)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Command</span><span class="p">(</span><span class="n">CMD_TERMINATE_TASK</span><span class="o">+</span>
                            <span class="nb">str</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
     
@@ -268,12 +255,9 @@
         <span class="k">del</span> <span class="n">resultQueue</span>
         <span class="k">return</span> <span class="n">result</span>
     
-    <span class="k">def</span> <span class="nf">waitForEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
-        <span class="n">event</span><span class="o">.</span><span class="n">events</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
-    
-    <span class="k">def</span> <span class="nf">setEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Command</span><span class="p">(</span><span class="n">CMD_SET_EVENT</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
-    
+    <span class="k">def</span> <span class="nf">sendRequest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Command</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+            
 <div class="viewcode-block" id="Workgroup.registerEvent"><a class="viewcode-back" href="../../NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerEvent">[docs]</a>    <span class="k">def</span> <span class="nf">registerEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a new event to be used by the tasks</span>
@@ -297,15 +281,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Command</span><span class="p">(</span><span class="n">CMD_REGISTER_QUEUE</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">queue</span><span class="o">.</span><span class="n">NWQueue</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
     </div>
-    <span class="k">def</span> <span class="nf">putOnQueue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Command</span><span class="p">(</span><span class="n">CMD_PUT_ON_QUEUE</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">)</span><span class="o">+</span>
-                           <span class="n">b</span><span class="s">&quot;ID&quot;</span><span class="o">+</span><span class="n">data</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
-    
-    <span class="k">def</span> <span class="nf">getFromQueue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Command</span><span class="p">(</span><span class="n">CMD_GET_FROM_QUEUE</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
-        <span class="n">data</span><span class="o">=</span><span class="n">queue</span><span class="o">.</span><span class="n">queues</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">data</span>
-    
 <div class="viewcode-block" id="Workgroup.registerLock"><a class="viewcode-back" href="../../NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerLock">[docs]</a>    <span class="k">def</span> <span class="nf">registerLock</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a new lock to be used by the tasks</span>
@@ -324,23 +299,8 @@
 <span class="sd">        :Return: instance of :py:class:`NWManager &lt;NetWork.manager.NWManager&gt;`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_MANAGER_COUNT</span><span class="p">]</span><span class="o">+=</span><span class="mi">1</span>
-        <span class="k">return</span> <span class="n">NWManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_MANAGER_COUNT</span><span class="p">],</span> <span class="bp">self</span><span class="p">)</span>
-    </div>
-    <span class="k">def</span> <span class="nf">setManagerItem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Command</span><span class="p">(</span><span class="n">CMD_SET_MANAGER_ITEM</span><span class="o">+</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s">&quot;ID&quot;</span><span class="p">:</span><span class="nb">id</span><span class="p">,</span>
-                                                                      <span class="s">&quot;ITEM&quot;</span><span class="p">:</span><span class="n">item</span><span class="p">,</span>
-                                                                      <span class="s">&quot;VALUE&quot;</span><span class="p">:</span><span class="n">value</span><span class="p">}),</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
-    
-    
-        
-    
-    <span class="k">def</span> <span class="nf">acquireLock</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Command</span><span class="p">(</span><span class="n">CMD_ACQUIRE_LOCK</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
-        <span class="n">lock</span><span class="o">.</span><span class="n">locks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
-    
-    <span class="k">def</span> <span class="nf">releaseLock</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Command</span><span class="p">(</span><span class="n">CMD_RELEASE_LOCK</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
-    
+        <span class="k">return</span> <span class="n">NWManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_MANAGER_COUNT</span><span class="p">],</span> <span class="bp">self</span><span class="p">)</span>        
+        </div>
     <span class="k">def</span> <span class="nf">fixDeadWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">worker</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="n">salvageDeadWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">worker</span><span class="p">)</span>
     
@@ -356,6 +316,7 @@
     </div>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">listenerProcess</span><span class="p">(</span><span class="n">listenerSocket</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">,</span> <span class="n">controlls</span><span class="p">):</span>
+        <span class="c">#A process that receives network requests</span>
         <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
             <span class="n">receivedRequest</span><span class="o">=</span><span class="n">listenerSocket</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
             <span class="n">handlerThread</span><span class="o">=</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">receiveSocketData</span><span class="p">,</span> 
@@ -365,19 +326,20 @@
     
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">dispatcherProcess</span><span class="p">(</span><span class="n">commqueue</span><span class="p">,</span> <span class="n">controlls</span><span class="p">):</span>
+        <span class="c">#A process that handles requests</span>
         <span class="n">request</span><span class="o">=</span><span class="n">commqueue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
         <span class="k">while</span> <span class="ow">not</span> <span class="n">request</span><span class="o">==</span><span class="n">CMD_HALT</span><span class="p">:</span>
             <span class="c">#print(&quot;REQUEST&quot;, request.contents, &quot;FROM&quot;, request.requester)</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
             <span class="n">handlerList</span><span class="p">[</span><span class="n">request</span><span class="o">.</span><span class="n">type</span><span class="p">()](</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">)</span>
             <span class="n">request</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="n">request</span><span class="o">=</span><span class="n">commqueue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
     
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">onExit</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
-        <span class="c">#CLEAN UP WORKERS#####################################</span>
+        <span class="c">#Ran on exit to clean up the workgroup</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">running</span><span class="p">):</span>
             <span class="c">#Need to fix this for a nice exit, preferably with join#########</span>
-            <span class="n">target</span><span class="o">.</span><span class="n">networkListener</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
             <span class="n">target</span><span class="o">.</span><span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">CMD_HALT</span><span class="p">)</span>
             <span class="n">target</span><span class="o">.</span><span class="n">dispatcher</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
             <span class="n">target</span><span class="o">.</span><span class="n">listenerSocket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>

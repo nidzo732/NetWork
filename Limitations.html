@@ -60,7 +60,6 @@
 <li>Custom objects limitation. If you plan to send instances of your own classes through the network those classes must be available on all worker computers and must be importable from standard Python path, the same applies for functions - all non standard functions must also be defined on the workers</li>
 <li>No automatic exception handling. If an exception is raised in one of the tasks you won&#8217;t be notified automatically, you need to explicitly call <a class="reference internal" href="NetWork.task.html#NetWork.task.TaskHandler.exceptionRaised" title="NetWork.task.TaskHandler.exceptionRaised"><tt class="xref py py-meth docutils literal"><span class="pre">TaskHandler.exceptionRaised</span></tt></a> and  <a class="reference internal" href="NetWork.task.html#NetWork.task.TaskHandler.exception" title="NetWork.task.TaskHandler.exception"><tt class="xref py py-meth docutils literal"><span class="pre">TaskHandler.exception</span></tt></a> to check and get exceptions.</li>
 <li>No printing. When you call print, the text will be printed on the screen of the worker not on the master where you&#8217;d probably like to see it.</li>
-<li>Network communication between workers and master is currently very insecure, messages are unencrypted and no authentication is done. Use NetWork only in secure environment. Work is in progress to provide encryption and verification.</li>
 </ul>
 </div></blockquote>
 </div>

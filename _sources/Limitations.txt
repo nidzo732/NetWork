@@ -12,5 +12,3 @@ Here are known limitations, bugs and problems in NetWork:
   *  No automatic exception handling. If an exception is raised in one of the tasks you won't be notified automatically, you need to explicitly call :py:meth:`TaskHandler.exceptionRaised <NetWork.task.TaskHandler.exceptionRaised>` and  :py:meth:`TaskHandler.exception <NetWork.task.TaskHandler.exception>` to check and get exceptions.
   
   *  No printing. When you call print, the text will be printed on the screen of the worker not on the master where you'd probably like to see it. 
-  
-  *  Network communication between workers and master is currently very insecure, messages are unencrypted and no authentication is done. Use NetWork only in secure environment. Work is in progress to provide encryption and verification.

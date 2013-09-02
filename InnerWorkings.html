@@ -26,6 +26,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="NetWork 0.1-alpha documentation" href="index.html" />
+    <link rel="next" title="Limitations of NetWork framework" href="Limitations.html" />
     <link rel="prev" title="NetWork.queue" href="NetWork.queue.html" /> 
   </head>
   <body>
@@ -38,6 +39,9 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="Limitations.html" title="Limitations of NetWork framework"
+             accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="NetWork.queue.html" title="NetWork.queue"
              accesskey="P">previous</a> |</li>
@@ -63,7 +67,7 @@ When an instance of Workgroup is created the constructor is given a list of IP a
 <div class="section" id="low-level-networking">
 <h2>Low level networking<a class="headerlink" href="#low-level-networking" title="Permalink to this headline">¶</a></h2>
 <p>NetWork relies heavily on network communication. Classes used for networking are defined in <tt class="xref py py-mod docutils literal"><span class="pre">NetWork.networking</span></tt>.</p>
-<p>When communicating all parts of the framework use the <tt class="xref py py-class docutils literal"><span class="pre">NetWork.networking.NWSocket</span></tt> class, this class is set to the default socket class in NetWork (currently that&#8217;s <tt class="xref py py-class docutils literal"><span class="pre">NetWork.networking.NWSocketTCP</span></tt>).</p>
+<p>When communicating all parts of the framework use the <tt class="xref py py-class docutils literal"><span class="pre">NetWork.networking.NWSocket</span></tt> class, this class is set to the default socket class in NetWork (currently that&#8217;s <tt class="xref py py-class docutils literal"><span class="pre">NetWork.networking.NWSocketTCP</span></tt>). There are also classes for secure communication using AES encryption and HMAC verification.</p>
 <p>The default class can be changed to adapt to various types of networks, but all networking classes must implement certain methods and must be self contained, when adapting to another network, no part of NetWork should be changed but the <tt class="xref py py-mod docutils literal"><span class="pre">NetWork.networking</span> <span class="pre">module</span></tt>.</p>
 <p>All socket classes must have these methods and members:</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -77,8 +81,8 @@ When an instance of Workgroup is created the constructor is given a list of IP a
 <dt>accept <span class="classifier-delimiter">:</span> <span class="classifier">method</span></dt>
 <dd><p class="first last">Accept a new request, return an instance of a socket class that will be used to receive and respond to that request.</p>
 </dd>
-<dt>connect(address) <span class="classifier-delimiter">:</span> <span class="classifier">method</span></dt>
-<dd><p class="first last">Connect to given address, addres can be any object, anything given to the Workgroup constructor is passed directly to the connect method</p>
+<dt>connect(parameters) <span class="classifier-delimiter">:</span> <span class="classifier">method</span></dt>
+<dd><p class="first last">Parameters used to connect to another computer. The paramets usually contain just an address, but if secure networking is used keys are passed in parameters.</p>
 </dd>
 <dt>send(data) <span class="classifier-delimiter">:</span> <span class="classifier">method</span></dt>
 <dd><p class="first last">Send given data to the other side. All data must be handled safely, no buffer overflows, no parital messages. There won&#8217;t be two sends on the same socket. Usually one message is sent, a response is received and the socket is closed.</p>
@@ -103,6 +107,23 @@ When an instance of Workgroup is created the constructor is given a list of IP a
 <p>Any class implementing these methods can be used in NetWork, just change the default class to your own</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">NetWork</span><span class="o">.</span><span class="n">networking</span><span class="o">.</span><span class="n">NWSocket</span><span class="o">=</span><span class="n">MySocketClass</span>
 </pre></div>
+</div>
+<div class="section" id="network-security">
+<h3>Network security<a class="headerlink" href="#network-security" title="Permalink to this headline">¶</a></h3>
+<p>In addition to the default NWSocketTCP class, NetWork also comes with socket classes that implement message encryption and verification.</p>
+<div class="section" id="hmac-authentication">
+<h4>HMAC authentication<a class="headerlink" href="#hmac-authentication" title="Permalink to this headline">¶</a></h4>
+<p>The NWSocketHMAC impements HMAC authentication of messages, when sending a message it appends an SHA256 HMAC hash to the message, the receiving end strips the hash of the received message and calculates its own, if they both have the same keys the message is valid and it gets passed on.</p>
+</div>
+<div class="section" id="aes-encryption-decryption">
+<h4>AES encryption/decryption<a class="headerlink" href="#aes-encryption-decryption" title="Permalink to this headline">¶</a></h4>
+<p>This type of security relies on PyCrypto module and it is enabled only if the import of PyCrypto succeeds. When sending, the message is encrypted with the given key, the actual key is not used but an SHA256 hash of the key is generated to ensure that the key length is a multiple of 16 as per AES requirement, the receiving end tries to decrypt the message with its own key and if the key is valid the message is decrypted successfully.</p>
+</div>
+<div class="section" id="key-management">
+<h4>Key management<a class="headerlink" href="#key-management" title="Permalink to this headline">¶</a></h4>
+<p>For every protection type (AES or HMAC) the master has a listener key and a key for each worker, the listner key is used to decrypt and/or authenticate messages from workers and it is set up using the <tt class="xref py py-data docutils literal"><span class="pre">keys</span></tt> parameter of the <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> constructor. The worker keys are passed allong with addresses in the <tt class="xref py py-data docutils literal"><span class="pre">workerAddresses</span></tt> parameter of the <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> constructor.</p>
+<p>Every worker computer has two keys given via command line arguments, its own listener key used to decrypt/authenticate messages from the master and the master key that is used when sending messages to the master.</p>
+</div>
 </div>
 </div>
 <div class="section" id="network-workgroup-workgroup-internals">
@@ -266,7 +287,15 @@ Each instance of a tool has its own integer ID, every queue, lock, manager or ev
   <ul>
 <li><a class="reference internal" href="#">Inner workings of the NetWork framework</a><ul>
 <li><a class="reference internal" href="#basic-structure-of-the-network">Basic structure of the network</a></li>
-<li><a class="reference internal" href="#low-level-networking">Low level networking</a></li>
+<li><a class="reference internal" href="#low-level-networking">Low level networking</a><ul>
+<li><a class="reference internal" href="#network-security">Network security</a><ul>
+<li><a class="reference internal" href="#hmac-authentication">HMAC authentication</a></li>
+<li><a class="reference internal" href="#aes-encryption-decryption">AES encryption/decryption</a></li>
+<li><a class="reference internal" href="#key-management">Key management</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li><a class="reference internal" href="#network-workgroup-workgroup-internals"><tt class="docutils literal"><span class="pre">NetWork.workgroup.Workgroup</span></tt> internals</a><ul>
 <li><a class="reference internal" href="#init"><tt class="docutils literal"><span class="pre">__init__()</span></tt></a></li>
 <li><a class="reference internal" href="#dispatcher-listener-commqueue-and-commands">Dispatcher, Listener, <tt class="docutils literal"><span class="pre">commqueue</span></tt> and commands</a><ul>
@@ -326,6 +355,9 @@ Each instance of a tool has its own integer ID, every queue, lock, manager or ev
   <h4>Previous topic</h4>
   <p class="topless"><a href="NetWork.queue.html"
                         title="previous chapter">NetWork.queue</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Limitations.html"
+                        title="next chapter">Limitations of NetWork framework</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/InnerWorkings.txt"
@@ -357,6 +389,9 @@ Each instance of a tool has its own integer ID, every queue, lock, manager or ev
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="Limitations.html" title="Limitations of NetWork framework"
+             >next</a> |</li>
         <li class="right" >
           <a href="NetWork.queue.html" title="NetWork.queue"
              >previous</a> |</li>

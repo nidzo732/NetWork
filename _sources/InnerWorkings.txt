@@ -18,7 +18,7 @@ Low level networking
 
 NetWork relies heavily on network communication. Classes used for networking are defined in :py:mod:`NetWork.networking`.
 
-When communicating all parts of the framework use the :py:class:`NetWork.networking.NWSocket` class, this class is set to the default socket class in NetWork (currently that's :py:class:`NetWork.networking.NWSocketTCP`). 
+When communicating all parts of the framework use the :py:class:`NetWork.networking.NWSocket` class, this class is set to the default socket class in NetWork (currently that's :py:class:`NetWork.networking.NWSocketTCP`). There are also classes for secure communication using AES encryption and HMAC verification.
 
 The default class can be changed to adapt to various types of networks, but all networking classes must implement certain methods and must be self contained, when adapting to another network, no part of NetWork should be changed but the :py:mod:`NetWork.networking module`.
 
@@ -32,8 +32,8 @@ All socket classes must have these methods and members:
   accept : method
     Accept a new request, return an instance of a socket class that will be used to receive and respond to that request.
 
-  connect(address) : method
-  	Connect to given address, addres can be any object, anything given to the Workgroup constructor is passed directly to the connect method
+  connect(parameters) : method
+  	Parameters used to connect to another computer. The paramets usually contain just an address, but if secure networking is used keys are passed in parameters.
 
   send(data) : method
     Send given data to the other side. All data must be handled safely, no buffer overflows, no parital messages. There won't be two sends on the same socket. Usually one message is sent, a response is received and the socket is closed.
@@ -54,6 +54,25 @@ Any class implementing these methods can be used in NetWork, just change the def
 ::
 
 	NetWork.networking.NWSocket=MySocketClass
+
+Network security
+----------------
+In addition to the default NWSocketTCP class, NetWork also comes with socket classes that implement message encryption and verification.
+
+HMAC authentication
+===================
+The NWSocketHMAC impements HMAC authentication of messages, when sending a message it appends an SHA256 HMAC hash to the message, the receiving end strips the hash of the received message and calculates its own, if they both have the same keys the message is valid and it gets passed on.
+
+AES encryption/decryption
+=========================
+This type of security relies on PyCrypto module and it is enabled only if the import of PyCrypto succeeds. When sending, the message is encrypted with the given key, the actual key is not used but an SHA256 hash of the key is generated to ensure that the key length is a multiple of 16 as per AES requirement, the receiving end tries to decrypt the message with its own key and if the key is valid the message is decrypted successfully.
+
+Key management
+==============
+For every protection type (AES or HMAC) the master has a listener key and a key for each worker, the listner key is used to decrypt and/or authenticate messages from workers and it is set up using the :py:data:`keys` parameter of the :py:class:`Workgroup` constructor. The worker keys are passed allong with addresses in the :py:data:`workerAddresses` parameter of the :py:class:`Workgroup` constructor.
+
+Every worker computer has two keys given via command line arguments, its own listener key used to decrypt/authenticate messages from the master and the master key that is used when sending messages to the master.
+
 	
 :py:class:`NetWork.workgroup.Workgroup` internals
 #################################################

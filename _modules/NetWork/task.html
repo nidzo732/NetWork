@@ -62,6 +62,7 @@
 <span class="c">#import .handlers</span>
 
 <span class="k">class</span> <span class="nc">Task</span><span class="p">:</span>
+    <span class="c">#A class used to hold a task given to the workgroup</span>
     
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">kwargs</span><span class="o">=</span><span class="p">{},</span> <span class="nb">id</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">marshaled</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> 
                  <span class="n">globalVariables</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
@@ -77,6 +78,7 @@
 
 
     <span class="k">def</span> <span class="nf">marshal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c">#Prepare the task to be sent over the network</span>
         <span class="n">marshaledTask</span><span class="o">=</span><span class="n">b</span><span class="s">&quot;&quot;</span>
         
         <span class="n">marshaledTarget</span><span class="o">=</span><span class="n">marshal</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="o">.</span><span class="n">__code__</span><span class="p">)</span>
@@ -104,6 +106,7 @@
 
     
     <span class="k">def</span> <span class="nf">unmarshal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">marshaledTask</span><span class="p">,</span> <span class="n">globalVariables</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="c">#Crete a task from a string received from the network</span>
         <span class="n">targetLength</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">marshaledTask</span><span class="p">[:</span><span class="n">marshaledTask</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">b</span><span class="s">&quot;TRG&quot;</span><span class="p">)])</span>
         <span class="n">marshaledTask</span><span class="o">=</span><span class="n">marshaledTask</span><span class="p">[</span><span class="n">marshaledTask</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">b</span><span class="s">&quot;TRG&quot;</span><span class="p">)</span><span class="o">+</span><span class="mi">3</span><span class="p">:]</span>
         <span class="n">marshaledTarget</span><span class="o">=</span><span class="n">marshaledTask</span><span class="p">[:</span><span class="n">targetLength</span><span class="p">]</span>

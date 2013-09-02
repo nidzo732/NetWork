@@ -121,7 +121,8 @@
         <span class="n">masterSocket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
     
     <span class="k">def</span> <span class="nf">putOnMaster</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">putOnQueue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_PUT_ON_QUEUE</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">)</span><span class="o">+</span>
+                           <span class="n">b</span><span class="s">&quot;ID&quot;</span><span class="o">+</span><span class="n">data</span><span class="p">,)</span>
     
     <span class="k">def</span> <span class="nf">getOnWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">masterSocket</span><span class="o">=</span><span class="n">NWSocket</span><span class="p">()</span>
@@ -131,7 +132,9 @@
         <span class="k">return</span> <span class="n">queues</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
     
     <span class="k">def</span> <span class="nf">getOnMaster</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">getFromQueue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_GET_FROM_QUEUE</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">queues</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        
     
 <div class="viewcode-block" id="NWQueue.put"><a class="viewcode-back" href="../../NetWork.queue.html#NetWork.queue.NWQueue.put">[docs]</a>    <span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -167,31 +170,41 @@
         <span class="k">return</span> <span class="p">{</span><span class="s">&quot;id&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s">&quot;workgroup&quot;</span><span class="p">:</span><span class="bp">None</span><span class="p">}</span>
 </div>
 <span class="k">class</span> <span class="nc">MasterQueueHandler</span><span class="p">:</span>
+    <span class="c">#A class used on the master to hold information about the queue</span>
+    <span class="c">#It has two a list of workers waiting for an item and a list of items waiting</span>
+    <span class="c">#to be sent</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="nb">id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">=</span><span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">=</span><span class="p">[]</span>
     
     <span class="k">def</span> <span class="nf">putItem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="c">#put items on the queue</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
     
     <span class="k">def</span> <span class="nf">getItem</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c">#get the first item from the items list</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
     
     <span class="k">def</span> <span class="nf">putWaiter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="c">#add a waiter to the waiter list</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
     
     <span class="k">def</span> <span class="nf">getWaiter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c">#get the first waiter from the waiters list</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
     
     <span class="k">def</span> <span class="nf">hasWaiters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c">#check if queue has waiters</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span>
     
     <span class="k">def</span> <span class="nf">hasItems</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c">#check if queue has items</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span>
 
     <span class="k">def</span> <span class="nf">distributeContents</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controlls</span><span class="p">):</span>
-        <span class="c">#print(&quot;DISTRIBUTING&quot;, self.id, self.items, self.waiters)</span>
+        <span class="c">#if there are both items and waiters, send items to the waiters</span>
+        <span class="c">#print(&quot;DISTRIBUTING&quot;, self.id, self.items, self.waiters)#used for debuging</span>
         <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">hasItems</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">hasWaiters</span><span class="p">():</span>
             <span class="n">waiter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">getWaiter</span><span class="p">()</span>
             <span class="n">item</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">getItem</span><span class="p">()</span>
@@ -201,12 +214,14 @@
                 <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">waiter</span><span class="p">]</span><span class="o">.</span><span class="n">putOnQueue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">registerQueue</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+    <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="nb">id</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">getContents</span><span class="p">())</span>
     <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">]:</span>
         <span class="k">if</span> <span class="n">worker</span><span class="o">.</span><span class="n">alive</span><span class="p">:</span>
             <span class="n">worker</span><span class="o">.</span><span class="n">registerQueue</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">getFromQueue</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+    <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="nb">id</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">getContents</span><span class="p">())</span>
     <span class="n">queueLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
     <span class="n">workerId</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">requester</span>
@@ -217,6 +232,7 @@
     <span class="n">queueLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
 
 <span class="k">def</span> <span class="nf">putOnQueue</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+    <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="n">contents</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">getContents</span><span class="p">()</span>
     <span class="nb">id</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">contents</span><span class="p">[:</span><span class="n">contents</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">b</span><span class="s">&quot;ID&quot;</span><span class="p">)])</span>
     <span class="n">data</span><span class="o">=</span><span class="n">contents</span><span class="p">[</span><span class="n">contents</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">b</span><span class="s">&quot;ID&quot;</span><span class="p">)</span><span class="o">+</span><span class="mi">2</span><span class="p">:]</span>

@@ -52,7 +52,7 @@
 and functions.</p>
 <dl class="class">
 <dt id="NetWork.workgroup.Workgroup">
-<em class="property">class </em><tt class="descclassname">NetWork.workgroup.</tt><tt class="descname">Workgroup</tt><big>(</big><em>workerAddresses</em>, <em>skipBadWorkers=False</em>, <em>handleDeadWorkers=False</em><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">NetWork.workgroup.</tt><tt class="descname">Workgroup</tt><big>(</big><em>workerAddresses</em>, <em>skipBadWorkers=False</em>, <em>handleDeadWorkers=False</em>, <em>socketType='TCP'</em>, <em>keys=None</em><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup" title="Permalink to this definition">¶</a></dt>
 <dd><p>Defines the group of computers that will execute the tasks, handles requests
 from the user and from the worker computers, controlls execution, messaging
 and concurrency. Handles Locks, Queues, <a class="reference internal" href="NetWork.manager.html#module-NetWork.manager" title="NetWork.manager"><tt class="xref py py-mod docutils literal"><span class="pre">Managers</span></tt></a>, <a class="reference internal" href="NetWork.event.html#module-NetWork.event" title="NetWork.event"><tt class="xref py py-mod docutils literal"><span class="pre">Events</span></tt></a> and other tools.</p>
@@ -72,14 +72,48 @@ methods when starting and exiting.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><dl class="first docutils">
 <dt>workerAddresses <span class="classifier-delimiter">:</span> <span class="classifier">iterable</span></dt>
-<dd><p class="first last">An iterable of addresses of workers in the workgroup</p>
+<dd><p class="first last">An iterable of connection parameters for communicating with
+workers in the workgroup. If default <tt class="docutils literal"><span class="pre">socketType</span></tt> is used,
+these should be IP addresses of the workers, if secure sockets
+are used, parameters should contain keys for each worker.</p>
 </dd>
 <dt>skipBadWorkers <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
 <dd><p class="first last">Whether to raise an error when adding the worker fails or to 
 continue to the next worker</p>
 </dd>
 </dl>
-<p class="last">handleDeadWorkers : Currently not working, leave as it is</p>
+<p>handleDeadWorkers : Currently not working, leave as it is</p>
+<dl class="last docutils">
+<dt>socketType <span class="classifier-delimiter">:</span> <span class="classifier">string</span></dt>
+<dd><p class="first">NetWork has several socket types used internaly to communicate.
+Default is an ordinary TCP socket with no protection, other
+available values for this parameter are:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li><tt class="docutils literal"><span class="pre">&quot;HMAC&quot;</span></tt> Use HMAC verification on messages. Worker connection
+parameters must follow this format <tt class="docutils literal"><span class="pre">(IP,</span> <span class="pre">HMACKey)</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">&quot;AES&quot;</span></tt> Encrypt messages with AES encryption. Worker connection
+parameters must follow this format <tt class="docutils literal"><span class="pre">(IP,</span> <span class="pre">AESKey)</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">&quot;AES+HMAC&quot;</span></tt> Encrypt messages with AES and verify them with HMAC.
+Worker connection parameters must follow this format 
+<tt class="docutils literal"><span class="pre">(IP,</span> <span class="pre">HMACKey,</span> <span class="pre">AESKey)</span></tt></li>
+</ul>
+</div></blockquote>
+</dd>
+<dt>keys <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
+<dd><p class="first">If you selected a protected socket type, you need to provide keys
+for decrypting and/or verifying incomming messages from workers.
+Items to put in this dictionary:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li><tt class="docutils literal"><span class="pre">&quot;ListenerAES&quot;</span></tt> AES key used to decrypt messages from workers,
+must be specified if AES is enabled</li>
+<li><tt class="docutils literal"><span class="pre">&quot;ListenerHMAC&quot;</span></tt> HMAC key used to verify messages from the workers,
+must be specified if HMAC is enabled</li>
+</ul>
+</div></blockquote>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>

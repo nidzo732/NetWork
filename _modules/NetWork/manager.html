@@ -129,7 +129,9 @@
             <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
     
     <span class="k">def</span> <span class="nf">setItemOnMaster</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">setManagerItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_SET_MANAGER_ITEM</span><span class="o">+</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s">&quot;ID&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                                                                      <span class="s">&quot;ITEM&quot;</span><span class="p">:</span><span class="n">item</span><span class="p">,</span>
+                                                                      <span class="s">&quot;VALUE&quot;</span><span class="p">:</span><span class="n">value</span><span class="p">}))</span>
     
     <span class="k">def</span> <span class="nf">setItemOnWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="n">masterSocket</span><span class="o">=</span><span class="n">NWSocket</span><span class="p">()</span>
@@ -239,10 +241,12 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
 </div>
 <span class="k">def</span> <span class="nf">setManagerItem</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+    <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="n">contents</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">getContents</span><span class="p">())</span>
     <span class="n">managers</span><span class="p">[</span><span class="n">contents</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]][</span><span class="n">contents</span><span class="p">[</span><span class="s">&quot;ITEM&quot;</span><span class="p">]]</span><span class="o">=</span><span class="n">contents</span><span class="p">[</span><span class="s">&quot;VALUE&quot;</span><span class="p">]</span>
 
 <span class="k">def</span> <span class="nf">getManagerItem</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+    <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="n">contents</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">getContents</span><span class="p">())</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">value</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">managers</span><span class="p">[</span><span class="n">contents</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]][</span><span class="n">contents</span><span class="p">[</span><span class="s">&quot;ITEM&quot;</span><span class="p">]])</span>
