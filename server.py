@@ -99,8 +99,9 @@ def requestHandler(request):
 def requestReceiver(requestSocket):
     try:
         receivedData=requestSocket.recv()
-    except OSError:
-        print("Communication failed from", requestSocket.address)
+    except OSError as error:
+        print("Communication failed from", requestSocket.address, error)
+        return
     if receivedData==b"ALV" and requestSocket.address==masterAddress:
         requestSocket.send(COMCODE_ISALIVE)
     elif not receivedData[:3] in handlers:
