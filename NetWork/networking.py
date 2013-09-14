@@ -22,16 +22,18 @@ ISALIVE_TIMEOUT=10
 DEFAULT_TCP_PORT=32151
 BUFFER_READ_LENGTH=4096
 MESSAGE_LENGTH_DELIMITER=b"MLEN"
-HASH_LENGTH_DELIMITER=b"HLEN"
+MAX_MESSAGELENGTH_LENGTH=10
 DEFAULT_LISTENING_ADDRESS="0.0.0.0"
 LISTEN_QUEUE_LENGTH=5
 DEFAULT_SOCKET_TIMEOUT=5.0
 AES_KEY_LENGTH=16
 AES_IV_LENGTH=16
+MAX_MESSAGELENGTH_LENGTH+=len(MESSAGE_LENGTH_DELIMITER)
 
 class InvalidMessageFormatError(OSError):pass
 class MessageNotCompleteError(OSError):pass
 class UnauthenticatedMessage(OSError):pass
+class LengthIndicatorTooLong(OSError):pass
 class KeyNotSet(OSError):pass
 
 masterAddress=None
@@ -62,6 +64,8 @@ class NWSocketTCP:
         #safely receive all sent data
         receivedData=b""
         while receivedData.find(MESSAGE_LENGTH_DELIMITER)==-1:
+            if len(receivedData)>MAX_MESSAGELENGTH_LENGTH:
+                raise LengthIndicatorTooLong
             if not NWSocketTCP.checkMessageFormat(receivedData):
                 raise InvalidMessageFormatError("Received string not formatted properly")
             newData=self.internalSocket.recv(BUFFER_READ_LENGTH)
@@ -164,12 +168,7 @@ class NWSocketHMAC(NWSocketTCP):
     
     def recv(self):
         receivedData=NWSocketTCP.recv(self)
-        try:
-            hashLength=int(receivedData[:receivedData.find(HASH_LENGTH_DELIMITER)])
-            receivedData=receivedData[receivedData.find(HASH_LENGTH_DELIMITER)+len(HASH_LENGTH_DELIMITER):]
-        except ValueError:
-            raise InvalidMessageFormatError("Received string not formatted properly")
-        
+        hashLength=hashlib.sha256().digest_size
         message=receivedData[:-hashLength]
         receivedHash=receivedData[-hashLength:]
         messageHash=hmac.new(key=self.HMACKey, msg=message, digestmod=hashlib.sha256)
@@ -184,13 +183,12 @@ class NWSocketHMAC(NWSocketTCP):
         if messageValid:
             return message
         else:
-            raise UnauthenticatedMessage("Received message came from an unathhenticated source")
+            raise UnauthenticatedMessage("Bad HMAC")
     
     def send(self, data):
         messageHash=hmac.new(key=self.HMACKey, msg=data, digestmod=hashlib.sha256)
         hash=messageHash.digest()
-        message=str(len(hash)).encode(encoding="ASCII")+HASH_LENGTH_DELIMITER
-        message+=data+hash
+        message=data+hash
         NWSocketTCP.send(self, message)
     
     def accept(self):
@@ -207,8 +205,11 @@ NWSocket=None    #set default socket used in the framework
 if cryptoAvailable:
     def AESEncrypt(data, key):
         keygen=hashlib.sha256()
+        hashgen=hashlib.sha256()
         keygen.update(key)
+        hashgen.update(data)
         aesKey=keygen.digest()
+        data+=hashgen.digest()
         Random.atfork()
         initializationVector=Random.new().read(AES_IV_LENGTH)
         cipher=AES.new(aesKey, AES.MODE_CFB, initializationVector)
@@ -216,11 +217,25 @@ if cryptoAvailable:
 
     def AESDecrypt(data, key):
         keygen=hashlib.sha256()
+        hashgen=hashlib.sha256()
         keygen.update(key)
         aesKey=keygen.digest()
         initializationVector=b"1234567890123456"
         cipher=AES.new(aesKey, AES.MODE_CFB, initializationVector)
-        return cipher.decrypt(data)[AES_IV_LENGTH:]
+        decryptedData=cipher.decrypt(data)[AES_IV_LENGTH:]
+        hash=decryptedData[-hashgen.digest_size:]
+        data=decryptedData[:-hashgen.digest_size]
+        hashgen.update(data)
+        try:
+            messageValid=hmac.compare_digest(hashgen.digest(), hash)
+        except AttributeError:  
+            #Python version<3.3 doesn't have compare_digest
+            #so I had to rely on a less secure comparison with ==
+            messageValid=(hashgen.digest()==hash)
+        if messageValid:
+            return data
+        else:
+            raise UnauthenticatedMessage("Bad decryption")
     
     class NWSocketAES(NWSocketTCP):
         #A socket class that implements AES message encryption
