@@ -11,9 +11,8 @@ from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
 from .commcodes import *
 from .cntcodes import *
-from .lock import NWLock
 from .manager import NWManager
-from NetWork import event, queue, lock, manager
+from NetWork import event, queue, lock, manager, semaphore
 import pickle
 from .request import Request
 
@@ -115,6 +114,7 @@ class Workgroup:
         self.controlls[CNT_TASK_EXECUTORS]={-1:None}
         self.controlls[CNT_MANAGER_COUNT]=0
         self.controlls[CNT_DEAD_WORKERS]=set()
+        self.controlls[CNT_SEMAPHORE_COUNT]=set()
         self.currentWorker=-1
         NetWork.networking.setUp(socketType, keys)
         self.listenerSocket=NetWork.networking.NWSocket()
@@ -304,7 +304,17 @@ class Workgroup:
                          {
                           "ID":id
                           })
-        return NWLock(id, self)
+        return lock.NWLock(id, self)
+    
+    def registerSemaphore(self, value):
+        self.controlls[CNT_SEMAPHORE_COUNT]+=1
+        id=self.controlls[CNT_LOCK_COUNT]
+        self.sendRequest(CMD_REGISTER_SEMAPHORE,
+                         {
+                          "ID":id,
+                          "VALUE":value
+                          })
+        return semaphore.NWSEmaphore(id, self, value)
     
     def registerManager(self):
         """

@@ -13,6 +13,7 @@ from .lock import registerLock, releaseLock, acquireLock
 from .manager import setManagerItem, getManagerItem
 from .request import Request
 from .worker import DeadWorkerError
+from .semaphore import registerSemaphore, releaseSemaphore, acquireSemaphore
 
 class NoWorkersError(Exception):pass
 
@@ -102,5 +103,8 @@ handlerList={CMD_SET_EVENT:setEvent, CMD_REGISTER_EVENT:registerEvent,
              CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock,
              CMD_SET_MANAGER_ITEM:setManagerItem, 
              CMD_GET_MANAGER_ITEM:getManagerItem,
-             CMD_WORKER_DIED:deathHandler,
+             CMD_WORKER_DIED:deathHandler, 
+             CMD_ACQUIRE_SEMAPHORE:acquireSemaphore,
+             CMD_REGISTER_SEMAPHORE:registerSemaphore, 
+             CMD_RELEASE_SEMAPHORE:releaseSemaphore,
              }
