@@ -24,7 +24,7 @@ class NWSemaphore:
         if runningOnMaster:
             semaphoreLocks[id]=Lock()
             semaphoreHandlers[id]=MasterSemaphoreHandler(id, value)
-        semaphores[id]=Semaphore()
+        semaphores[id]=Semaphore(value)
         for i in range(value):
             semaphores[id].acquire()
     
@@ -88,10 +88,11 @@ class MasterSemaphoreHandler:
     def acquire(self, requester, controlls):
         #Acquire semaphore or wait for release
         semaphoreLocks[self.id].acquire()
-        if not self.values:
+        if not self.value:
             self.waiters.append(requester)
         else:
-            self.values-=1
+            self.value=self.value-1
+            print(self.value)
             if requester==-1:
                 semaphores[self.id].release()
             else:

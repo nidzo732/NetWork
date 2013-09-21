@@ -114,7 +114,7 @@ class Workgroup:
         self.controlls[CNT_TASK_EXECUTORS]={-1:None}
         self.controlls[CNT_MANAGER_COUNT]=0
         self.controlls[CNT_DEAD_WORKERS]=set()
-        self.controlls[CNT_SEMAPHORE_COUNT]=set()
+        self.controlls[CNT_SEMAPHORE_COUNT]=0
         self.currentWorker=-1
         NetWork.networking.setUp(socketType, keys)
         self.listenerSocket=NetWork.networking.NWSocket()
@@ -136,13 +136,17 @@ class Workgroup:
         event.events={-1:None}
         event.runningOnMaster=True
         queue.queues={-1:None}
-        queue.queueHandlers=Manager().dict()
+        queue.queueHandlers={-1:None}
         queue.queueLocks={-1:None}
         queue.runningOnMaster=True
         lock.locks={-1:None}
         lock.lockHandlers={-1:None}
         lock.lockLocks={-1:None}
         lock.runningOnMaster=True
+        semaphore.semaphores={-1:None}
+        semaphore.runningOnMaster=True
+        semaphore.semaphoreLocks={-1:None}
+        semaphore.semaphoreHandlers={-1:None}
         manager.runningOnMaster=True
         manager.managers={-1:None}
         self.handleDeadWorkers=handleDeadWorkers
@@ -314,7 +318,7 @@ class Workgroup:
                           "ID":id,
                           "VALUE":value
                           })
-        return semaphore.NWSEmaphore(id, self, value)
+        return semaphore.NWSemaphore(id, self, value)
     
     def registerManager(self):
         """
