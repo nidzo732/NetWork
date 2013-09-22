@@ -1,3 +1,16 @@
+"""
+Semaphores are used to limit simultaneous execution of taks.
+
+All semaphores have a counter value that determines how many paralel tasks
+can acquire the semaphore. When a task enters a critical section of code, 
+it calls :py:meth:`acquire <NWSemaphore.acquire>` method, if the counter
+value is greater than zero it gets decremented and the task goes on, if
+the value is zero the task is put to sleep until one of the tasks that 
+has acquired the semaphore calls :py:meth:`release <NWSemaphore.release>` 
+method.
+
+For more info about semaphores see `Python documentation page <http://docs.python.org/2/library/threading.html#semaphore-objects>`_
+"""
 from multiprocessing import Semaphore, Lock
 from .networking import sendRequest
 from .commcodes import CMD_ACQUIRE_SEMAPHORE, CMD_RELEASE_SEMAPHORE, CMD_REGISTER_SEMAPHORE, CMD_WORKER_DIED
@@ -13,7 +26,7 @@ masterAddress=None
 class NWSemaphore:
     """
     The semaphore class used to limit simultaneous execution.
-    New instance is usually created with :py:meth:`Workgroup.registerSemaphore <NetWork.workgroup.Workgroup.registerLock>`.
+    New instance is usually created with :py:meth:`Workgroup.registerSemaphore <NetWork.workgroup.Workgroup.registerSemaphore>`.
     
     When entering critical section call :py:meth:`acquire` and when exiting :py:meth:`release`.
     """
@@ -55,12 +68,21 @@ class NWSemaphore:
                      })
     
     def acquire(self):
+        """
+        Acquire the semaphore and decrement counter value.
+        If the counter is zero sleep until some other task
+        releases the semaphore
+        """
         if runningOnMaster:
             self.acquireOnMaster()
         else:
             self.acquireOnWorker()
     
     def release(self):
+        """
+        Release the semaphore, increment the counter value,
+        wake firs task from waiter list.
+        """
         if runningOnMaster:
             self.releaseOnMaster()
         else:

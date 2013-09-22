@@ -272,6 +272,10 @@ class Workgroup:
         """
         Create a new event to be used by the tasks
         
+        :Parameters:
+          target : int
+            Counter value for the semaphore                
+        
         :Return: instance of :py:class:`NWEvent <NetWork.event.NWEvent>`
         """
         self.controlls[CNT_EVENT_COUNT]+=1
@@ -311,6 +315,11 @@ class Workgroup:
         return lock.NWLock(id, self)
     
     def registerSemaphore(self, value):
+        """
+        Create a new semaphore to be used by the tasks
+        
+        :Return: instance of :py:class:`NWLock <NetWork.semaphore.NWSemaphore>`
+        """
         self.controlls[CNT_SEMAPHORE_COUNT]+=1
         id=self.controlls[CNT_LOCK_COUNT]
         self.sendRequest(CMD_REGISTER_SEMAPHORE,
