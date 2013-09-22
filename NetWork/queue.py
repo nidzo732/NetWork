@@ -191,7 +191,7 @@ def getFromQueue(request, controlls, commqueue):
     workerId=request.requester
     queueHandlers[id].putWaiter(workerId)
     try:
-        temporaryHandler.distributeContents(controlls)
+        queueHandlers[id].distributeContents(controlls)
     except DeadWorkerError as error:
         commqueue.put(Request(CMD_WORKER_DIED, 
                       {"WORKER":controlls[CNT_WORKERS][error.id]}))
@@ -205,7 +205,7 @@ def putOnQueue(request, controlls, commqueue):
     queueLocks[id].acquire()
     queueHandlers[id].putItem(data)
     try:
-        temporaryHandler.distributeContents(controlls)
+        queueHandlers[id].distributeContents(controlls)
     except DeadWorkerError as error:
         commqueue.put(Request(CMD_WORKER_DIED, 
                       {"WORKER":controlls[CNT_WORKERS][error.id]}))

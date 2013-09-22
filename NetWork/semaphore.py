@@ -114,7 +114,6 @@ class MasterSemaphoreHandler:
             self.waiters.append(requester)
         else:
             self.value=self.value-1
-            print(self.value)
             if requester==-1:
                 semaphores[self.id].release()
             else:
