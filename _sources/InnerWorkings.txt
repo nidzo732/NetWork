@@ -231,3 +231,28 @@ A put item request is sent to dispatcher (network or :py:data:`commqueue`), it a
 Distribution
 ============
 If the waiters and items list of :py:class:`MasterQueueHandler` are not empty it sends the first item from the items list to the first worker on the waiters list, the worker receives the item and puts it to an aprropriate queue in :py:data:`NetWork.queue.queues`, it the waiter is master dispatcher just puts the item on a local queue in :py:data:`NetWork.queue.queues`.
+
+Semaphores
+----------
+Registration
+============
+Semaphores are created with :py:meth:`Workgroup.registerSemaphore`, when it's called a register semaphore command is put on the :py:data:`commqueue` and the handler sends a register semaphore message to all workers. On the master a new instance of :py:class:`NetWork.semaphore.MasterSemaphoreHandler` is added to :py:class`NetWork.semaphore.semaphoreHandlers` dictionary. On the master and the workers, a new instance of :py:class:`multiprocessing.Semaphore` is added :py:data:`NetWork.semaphore.semaphores` dictionary. All created :py:class:`multiprocessing.Semaphore` have the counter value given to
+:py:meth:`Workgroup.registerSemaphore`, and upong creation they a loop acquires them to set their counter to zero. 
+
+:py:class:`MasterSemaphoreHandler`
+==================================
+A class that is used on the master to hold information about semaphores, each semaphore has one. It has a counter value, and it has a list of waiters that tried to acquire the semaphore when the counter was zero.
+
+Acquiring
+=========
+When :py:meth:`NWSemaphore.acquire` is called it sends a message to the dispacher (through the network if on worker or through the :py:data:`commqueue` if on master) that it wants to acquire the semaphore, after that it runs the acquire method on the apropriate semaphore in :py:data:`NetWork.semaphore.semaphores`.
+
+When dispatcher receives the message it checks apropriate :py:class:`MasterSemaphoreHandler` in :py:data:`NetWork.semaphore.semaphoreHandlers`, :py:class:`MasterSemaphoreHandler` has a counter value telling whether the semaphore can be acquired. If it is greater than zero it gets decremented, a release semaphore message is sent to the worker that tried to acquire the semaphore, when the message is received the appropriate semaphore in :py:data:`NetWork.semaphore.semaphores` is released and the process that called acquire on it continues its work. 
+
+If the master called acquire and the counter is greather than zero the counter gets decremented and then a semaphore in :py:data:`NetWork.semaphore.semaphores` on the master is released. 
+
+If the counter is zero the requester ID is added to the waiting list until the semaphore is released.
+
+Releasing
+=========
+A message is sent to the dispatcher (network or :py:data:`commqueue`) to release the semaphore. When releasing it checks the waiter list in :py:class:`MasterSemaphoreHandler`, if there are waiters it gets the ID of the first one, if the ID is -1 (master ID) the local semaphore on :py:data:`NetWork.semaphore.semaphores` is released, for other IDs a message is sent to the worker to release the semaphore, when the worker receives the message it releases the required semaphore. If there are no waiter the counter gets increased.

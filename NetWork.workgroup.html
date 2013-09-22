@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>NetWork.workgroup &mdash; NetWork 0.1.5 documentation</title>
+    <title>NetWork.workgroup &mdash; NetWork 0.1-alpha documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -16,7 +16,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.1.5',
+        VERSION:     '0.1-alpha',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,7 +25,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="NetWork 0.1.5 documentation" href="index.html" /> 
+    <link rel="top" title="NetWork 0.1-alpha documentation" href="index.html" /> 
   </head>
   <body>
     <div class="related">
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="index.html">NetWork 0.1.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">NetWork 0.1-alpha documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -175,6 +175,28 @@ must be specified if HMAC is enabled</li>
 </dd></dl>
 
 <dl class="method">
+<dt id="NetWork.workgroup.Workgroup.registerSemaphore">
+<tt class="descname">registerSemaphore</tt><big>(</big><em>value</em><big>)</big><a class="headerlink" href="#NetWork.workgroup.Workgroup.registerSemaphore" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new semaphore to be used by the tasks</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><dl class="first docutils">
+<dt>value <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">Counter value for the semaphore</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return :</th><td class="field-body"><p class="first last">instance of <a class="reference internal" href="NetWork.semaphore.html#NetWork.semaphore.NWSemaphore" title="NetWork.semaphore.NWSemaphore"><tt class="xref py py-class docutils literal"><span class="pre">NWSemaphore</span></tt></a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="NetWork.workgroup.Workgroup.startServing">
 <tt class="descname">startServing</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup.startServing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup.startServing" title="Permalink to this definition">¶</a></dt>
 <dd><p>Start the dipatcher and listener threads, the workgroup is ready
@@ -198,9 +220,17 @@ also invoked when exiting whe <tt class="docutils literal"><span class="pre">wit
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first">target : function to be executed</p>
-<p>args : optional tuple of positional arguments</p>
-<p>kwargs : optional dictionary of keyword arguments</p>
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><dl class="first docutils">
+<dt>target <span class="classifier-delimiter">:</span> <span class="classifier">callable</span></dt>
+<dd><p class="first last">function to be executed</p>
+</dd>
+<dt>args <span class="classifier-delimiter">:</span> <span class="classifier">iterable</span></dt>
+<dd><p class="first last">optional tuple of positional arguments</p>
+</dd>
+<dt>kwargs <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
+<dd><p class="first last">optional dictionary of keyword arguments</p>
+</dd>
+</dl>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return :</th><td class="field-body"><p class="first last">an instance of <a class="reference internal" href="NetWork.task.html#NetWork.task.TaskHandler" title="NetWork.task.TaskHandler"><tt class="xref py py-class docutils literal"><span class="pre">TaskHandler</span></tt></a></p>
@@ -251,7 +281,7 @@ also invoked when exiting whe <tt class="docutils literal"><span class="pre">wit
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="index.html">NetWork 0.1.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">NetWork 0.1-alpha documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
