@@ -16,8 +16,9 @@ import NetWork.queue as queue
 import NetWork.event as event
 import NetWork.lock as lock
 import NetWork.manager as manager
+import NetWork.semaphore as semaphore
 from threading import Thread
-from multiprocessing import Manager, Event, Queue, Lock
+from multiprocessing import Manager, Event, Queue, Lock, Semaphore
 from NetWork.commcodes import *
 import atexit
 import pickle
@@ -84,12 +85,27 @@ def registerLock(request):
 
 def releaseLock(request):
     lock.locks[request["ID"]].release()
-    
-handlers={b"TSK":executeTask, b"RSL":getResult, b"EXR":exceptionRaised,
-          b"TRM":terminateTask, b"TRN":taskRunning, b"EXC":getException,
-          b"EVS":setEvent, b"EVR":registerEvent, b"ALV":checkAlive, 
-          b"QUP":putOnQueue, b"QUR":registerQueue,
-          CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock}
+
+def registerSemaphore(request):
+    id=request["ID"]
+    value=request["VALUE"]
+    semaphore.semaphores[id]=Semaphore(value)
+    for i in range(value):
+        semaphore.semaphores[id].acquire()
+
+def releaseSemaphore(request):
+    semaphore.semaphores[request["ID"]].release()
+        
+handlers={CMD_SUBMIT_TASK:executeTask, CMD_GET_RESULT:getResult, 
+          CMD_CHECK_EXCEPTION:exceptionRaised,
+          CMD_TERMINATE_TASK:terminateTask, 
+          CMD_TASK_RUNNING:taskRunning, CMD_GET_EXCEPTION:getException,
+          CMD_SET_EVENT:setEvent, CMD_REGISTER_EVENT:registerEvent, 
+          b"ALV":checkAlive, 
+          CMD_PUT_ON_QUEUE:putOnQueue, CMD_REGISTER_QUEUE:registerQueue,
+          CMD_REGISTER_LOCK:registerLock, CMD_RELEASE_LOCK:releaseLock,
+          CMD_REGISTER_SEMAPHORE:registerSemaphore,
+          CMD_RELEASE_SEMAPHORE:releaseSemaphore}
 
 def requestHandler(request):
     handlers[request.getType()](request)
@@ -163,6 +179,8 @@ if __name__=="__main__":
     queue.runningOnMaster=False
     lock.locks={-1:None}
     lock.runningOnMaster=False
+    semaphore.semaphores={-1:None}
+    semaphore.runningOnMaster=False
     manager.runningOnMaster=False
     #Start receiving requests
     running=True

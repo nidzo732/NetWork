@@ -13,7 +13,6 @@ Here are the tools currently available
    Event <NetWork.event>
    Lock <NetWork.lock>
    Queue <NetWork.queue>
-   Semaphore <NetWork.semaphore>
   
 To create these tools use the :py:class:`Workgroup <NetWork.workgroup.Workgroup>`'s registration methods.
 

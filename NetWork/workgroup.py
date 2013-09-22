@@ -11,9 +11,8 @@ from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
 from .commcodes import *
 from .cntcodes import *
-from .lock import NWLock
 from .manager import NWManager
-from NetWork import event, queue, lock, manager
+from NetWork import event, queue, lock, manager, semaphore
 import pickle
 from .request import Request
 
@@ -115,6 +114,7 @@ class Workgroup:
         self.controlls[CNT_TASK_EXECUTORS]={-1:None}
         self.controlls[CNT_MANAGER_COUNT]=0
         self.controlls[CNT_DEAD_WORKERS]=set()
+        self.controlls[CNT_SEMAPHORE_COUNT]=0
         self.currentWorker=-1
         NetWork.networking.setUp(socketType, keys)
         self.listenerSocket=NetWork.networking.NWSocket()
@@ -136,13 +136,17 @@ class Workgroup:
         event.events={-1:None}
         event.runningOnMaster=True
         queue.queues={-1:None}
-        queue.queueHandlers=Manager().dict()
+        queue.queueHandlers={-1:None}
         queue.queueLocks={-1:None}
         queue.runningOnMaster=True
         lock.locks={-1:None}
         lock.lockHandlers={-1:None}
         lock.lockLocks={-1:None}
         lock.runningOnMaster=True
+        semaphore.semaphores={-1:None}
+        semaphore.runningOnMaster=True
+        semaphore.semaphoreLocks={-1:None}
+        semaphore.semaphoreHandlers={-1:None}
         manager.runningOnMaster=True
         manager.managers={-1:None}
         self.handleDeadWorkers=handleDeadWorkers
@@ -190,11 +194,14 @@ class Workgroup:
         Submit a task to be executed by the workgroup
         
         :Parameters:
-         target : function to be executed
+         target : callable
+           function to be executed
          
-         args : optional tuple of positional arguments
+         args : iterable
+           optional tuple of positional arguments
          
-         kwargs : optional dictionary of keyword arguments
+         kwargs : dict
+           optional dictionary of keyword arguments
          
         :Return: an instance of :py:class:`TaskHandler <NetWork.task.TaskHandler>`
         """
@@ -304,7 +311,26 @@ class Workgroup:
                          {
                           "ID":id
                           })
-        return NWLock(id, self)
+        return lock.NWLock(id, self)
+    
+    def registerSemaphore(self, value):
+        """
+        Create a new semaphore to be used by the tasks
+        
+        :Parameters:
+          value : int
+            Counter value for the semaphore
+        
+        :Return: instance of :py:class:`NWSemaphore <NetWork.semaphore.NWSemaphore>`
+        """
+        self.controlls[CNT_SEMAPHORE_COUNT]+=1
+        id=self.controlls[CNT_LOCK_COUNT]
+        self.sendRequest(CMD_REGISTER_SEMAPHORE,
+                         {
+                          "ID":id,
+                          "VALUE":value
+                          })
+        return semaphore.NWSemaphore(id, self, value)
     
     def registerManager(self):
         """
