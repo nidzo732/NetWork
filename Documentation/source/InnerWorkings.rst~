@@ -233,14 +233,14 @@ Distribution
 If the waiters and items list of :py:class:`MasterQueueHandler` are not empty it sends the first item from the items list to the first worker on the waiters list, the worker receives the item and puts it to an aprropriate queue in :py:data:`NetWork.queue.queues`, it the waiter is master dispatcher just puts the item on a local queue in :py:data:`NetWork.queue.queues`.
 
 Semaphores
-----------
+-----
 Registration
 ============
 Semaphores are created with :py:meth:`Workgroup.registerSemaphore`, when it's called a register semaphore command is put on the :py:data:`commqueue` and the handler sends a register semaphore message to all workers. On the master a new instance of :py:class:`NetWork.semaphore.MasterSemaphoreHandler` is added to :py:class`NetWork.semaphore.semaphoreHandlers` dictionary. On the master and the workers, a new instance of :py:class:`multiprocessing.Semaphore` is added :py:data:`NetWork.semaphore.semaphores` dictionary. All created :py:class:`multiprocessing.Semaphore` have the counter value given to
 :py:meth:`Workgroup.registerSemaphore`, and upong creation they a loop acquires them to set their counter to zero. 
 
 :py:class:`MasterSemaphoreHandler`
-==================================
+=============================
 A class that is used on the master to hold information about semaphores, each semaphore has one. It has a counter value, and it has a list of waiters that tried to acquire the semaphore when the counter was zero.
 
 Acquiring

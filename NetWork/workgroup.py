@@ -194,11 +194,14 @@ class Workgroup:
         Submit a task to be executed by the workgroup
         
         :Parameters:
-         target : function to be executed
+         target : callable
+           function to be executed
          
-         args : optional tuple of positional arguments
+         args : iterable
+           optional tuple of positional arguments
          
-         kwargs : optional dictionary of keyword arguments
+         kwargs : dict
+           optional dictionary of keyword arguments
          
         :Return: an instance of :py:class:`TaskHandler <NetWork.task.TaskHandler>`
         """
@@ -272,10 +275,6 @@ class Workgroup:
         """
         Create a new event to be used by the tasks
         
-        :Parameters:
-          target : int
-            Counter value for the semaphore                
-        
         :Return: instance of :py:class:`NWEvent <NetWork.event.NWEvent>`
         """
         self.controlls[CNT_EVENT_COUNT]+=1
@@ -318,7 +317,11 @@ class Workgroup:
         """
         Create a new semaphore to be used by the tasks
         
-        :Return: instance of :py:class:`NWLock <NetWork.semaphore.NWSemaphore>`
+        :Parameters:
+          value : int
+            Counter value for the semaphore
+        
+        :Return: instance of :py:class:`NWSemaphore <NetWork.semaphore.NWSemaphore>`
         """
         self.controlls[CNT_SEMAPHORE_COUNT]+=1
         id=self.controlls[CNT_LOCK_COUNT]
