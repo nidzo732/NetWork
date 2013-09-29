@@ -42,12 +42,12 @@ def executeTask(request):
 def getResult(request):
     id=request["ID"]
     result=tasks[id].getResult()
-    request.respond(pickle.dumps(result))
+    request.respond(result)
 
 def exceptionRaised(request):
     id=request["ID"]
     exceptionTest=tasks[id].exceptionRaised()
-    request.respond(pickle.dumps(exceptionTest))
+    request.respond(exceptionTest)
 
 def terminateTask(request):
     id=request["ID"]
@@ -56,12 +56,12 @@ def terminateTask(request):
 def taskRunning(request):
     id=request["ID"]
     status=tasks[id].running()
-    request.respond(pickle.dumps(status))
+    request.respond(status)
 
 def getException(request):
     id=request["ID"]
     exception=tasks[id].getException()
-    request.respond(pickle.dumps(exception))
+    request.respond(exception)
 
 def setEvent(request):
     event.events[request["ID"]].set()

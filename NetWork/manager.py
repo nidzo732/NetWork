@@ -87,7 +87,7 @@ class NWManager:
         if value==MANAGER_KEYERROR:
             raise KeyError(item)
         else:
-            return pickle.loads(value)
+            return value
     
     def setItemOnMaster(self, item, value):
         self.workgroup.sendRequest(CMD_SET_MANAGER_ITEM,
@@ -211,7 +211,7 @@ def setManagerItem(request, controlls, commqueue):
 def getManagerItem(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     try:
-        value=pickle.dumps(managers[request["ID"]][request["ITEM"]])
+        value=managers[request["ID"]][request["ITEM"]]
     except KeyError:
         value=MANAGER_KEYERROR
     request.respond(value)

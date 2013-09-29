@@ -51,7 +51,7 @@ class Worker:
             workerSocket.send(type+pickle.dumps(contents))
             response=workerSocket.recv()
             workerSocket.close()
-            return response
+            return pickle.loads(response)
         except OSError:
             self.alive=False
             raise DeadWorkerError(self.id)
@@ -62,10 +62,10 @@ class Worker:
         
         
     def getResult(self, id):
-        return pickle.loads(self.sendRequestWithResponse(CMD_GET_RESULT,
-                                                         {
-                                                          "ID":id
-                                                          }))
+        return self.sendRequestWithResponse(CMD_GET_RESULT,
+                                            {
+                                             "ID":id
+                                             })
     
     def terminateTask(self, id):
         self.sendRequest(CMD_TERMINATE_TASK,
@@ -74,19 +74,19 @@ class Worker:
                           })
     
     def taskRunning(self, id):
-        return pickle.loads(self.sendRequestWithResponse(CMD_TASK_RUNNING,
+        return self.sendRequestWithResponse(CMD_TASK_RUNNING,
                                             {
                                              "ID":id
-                                             }))
+                                             })
     
     def getException(self, id):
-        return pickle.loads(self.sendRequestWithResponse(CMD_GET_EXCEPTION,
-                                                         {
-                                                          "ID":id
-                                                          }))
+        return self.sendRequestWithResponse(CMD_GET_EXCEPTION,
+                                            {
+                                             "ID":id
+                                             })
     
     def exceptionRaised(self, id):
-        return pickle.loads(self.sendRequestWithResponse(CMD_CHECK_EXCEPTION,
-                                                         {
-                                                          "ID":id
-                                                          }))
+        return self.sendRequestWithResponse(CMD_CHECK_EXCEPTION,
+                                            {
+                                             "ID":id
+                                             })

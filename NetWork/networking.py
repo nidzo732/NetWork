@@ -354,6 +354,6 @@ def sendRequestWithResponse(type, contents):
     masterSocket.send(request.getType()+pickle.dumps(request.getContents()))
     receivedData=masterSocket.recv()
     masterSocket.close()
-    return receivedData
+    return pickle.loads(receivedData)
     
     

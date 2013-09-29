@@ -1,3 +1,4 @@
+import pickle
 class Request:
     #A class used to send commands to the Workgroup.dispatcher thread
     #Used internaly by workgroup, not by user
@@ -43,6 +44,6 @@ class Request:
     def respond(self, response):
         self.responseSent=True
         try:
-            self.socket.send(response)
+            self.socket.send(pickle.dumps(response))
         except OSError as error:
             print("Failed to send response to", self.socket.address, error)
