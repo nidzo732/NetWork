@@ -35,6 +35,17 @@ class WrongComputerError(Exception):pass
 runningOnMaster=None
 masterAddress=None
 events=None
+
+def masterInit():
+    global events, runningOnMaster
+    events={-1:None}
+    runningOnMaster=True
+
+def workerInit():
+    global events, runningOnMaster
+    events={-1:None}
+    runningOnMaster=False
+
 class NWEvent:
     """
     Event class that is used to signal events between tasks.

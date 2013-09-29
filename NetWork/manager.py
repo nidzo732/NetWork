@@ -50,6 +50,16 @@ from multiprocessing import Manager
 runningOnMaster=None
 masterAddress=None
 managers=None
+
+def masterInit():
+    global runningOnMaster, managers
+    runningOnMaster=True
+    managers={-1:None}
+
+def workerInit():
+    global runningOnMaster
+    runningOnMaster=False
+
 class NWManager:
     """
     The main manager class that manages a collection of shared data between 

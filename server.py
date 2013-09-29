@@ -27,6 +27,8 @@ from NetWork import networking
 from NetWork.args import getArgs
 class BadRequestError(Exception): pass
 
+plugins=[event, queue, lock, manager, semaphore]
+
 running=False
 tasks={-1:None}
 
@@ -172,16 +174,8 @@ if __name__=="__main__":
             print("A request was received but it was not valid:", request)
         except KeyboardInterrupt:
             exit()
-    workerManager=Manager().list(range(20))
-    event.events={-1:None}
-    event.runningOnMaster=False
-    queue.queues={-1:None}
-    queue.runningOnMaster=False
-    lock.locks={-1:None}
-    lock.runningOnMaster=False
-    semaphore.semaphores={-1:None}
-    semaphore.runningOnMaster=False
-    manager.runningOnMaster=False
+    for plugin in plugins:
+        plugin.workerInit()
     #Start receiving requests
     running=True
     atexit.register(onExit, listenerSocket)

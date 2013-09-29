@@ -2,8 +2,7 @@
 Functions that handle messages on the master computer.
 Each function is associated with a 3 letter code from commcodes.py
 """
-from NetWork import event
-from NetWork import queue
+from NetWork import event, lock, manager, queue, semaphore
 from pickle import dumps
 from .event import setEvent, registerEvent
 from .commcodes import *
@@ -14,6 +13,8 @@ from .manager import setManagerItem, getManagerItem
 from .request import Request
 from .worker import DeadWorkerError
 from .semaphore import registerSemaphore, releaseSemaphore, acquireSemaphore
+
+plugins=[event, lock, manager, queue, semaphore]
 
 class NoWorkersError(Exception):pass
 
@@ -91,7 +92,6 @@ def deathHandler(request, controlls, commqueue):
         if controlls[CNT_WORKER_COUNT]==0:
             raise NoWorkersError("All workers died, unable to continue working")
         
-
     
         
 handlerList={CMD_SET_EVENT:setEvent, CMD_REGISTER_EVENT:registerEvent, 

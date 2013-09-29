@@ -55,6 +55,18 @@ lockHandlers=None
 lockLocks=None
 masterAddress=None
 
+def masterInit():
+    global locks, lockHandlers, lockLocks, runningOnMaster
+    locks={-1:None}
+    lockHandlers={-1:None}
+    lockLocks={-1:None}
+    runningOnMaster=True
+
+def workerInit():
+    global locks, runningOnMaster
+    locks={-1:None}
+    runningOnMaster=False
+
 class NWLock:
     """
     The lock class used to prevent simultaneous execution.

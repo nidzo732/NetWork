@@ -49,6 +49,19 @@ queueHandlers=None
 queueLocks=None
 runningOnMaster=None
 masterAddress=None
+
+def masterInit():
+    global queues, queueHandlers, queueLocks, runningOnMaster
+    queues={-1:None}
+    queueHandlers={-1:None}
+    queueLocks={-1:None}
+    runningOnMaster=True
+
+def workerInit():
+    global queues, runningOnMaster
+    queues={-1:None}
+    runningOnMaster=False
+    
 class NWQueue:
     """
     The queue class used for inter-process communication.

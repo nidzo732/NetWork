@@ -23,6 +23,18 @@ semaphoreHandlers=None
 semaphoreLocks=None
 masterAddress=None
 
+def masterInit():
+    global semaphores, runningOnMaster, semaphoreLocks, semaphoreHandlers
+    semaphores={-1:None}
+    runningOnMaster=True
+    semaphoreLocks={-1:None}
+    semaphoreHandlers={-1:None}
+
+def workerInit():
+    global runningOnMaster, semaphores
+    semaphores={-1:None}
+    runningOnMaster=False
+
 class NWSemaphore:
     """
     The semaphore class used to limit simultaneous execution.

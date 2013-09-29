@@ -5,7 +5,7 @@ and functions.
 
 from multiprocessing import Process, Queue, Manager, Event
 import NetWork.networking
-from .handlers import receiveSocketData, handlerList
+from .handlers import receiveSocketData, handlerList, plugins
 from threading import Thread
 from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
@@ -15,8 +15,6 @@ from .manager import NWManager
 from NetWork import event, queue, lock, manager, semaphore
 import pickle
 from .request import Request
-
-
 
 
 class NoWorkersError(Exception):pass
@@ -105,7 +103,7 @@ class Workgroup:
 
     def __init__(self, workerAddresses, skipBadWorkers=False, 
                  handleDeadWorkers=False, socketType="TCP", keys=None):
-        self.controlls=Manager().list(range(20)) 
+        self.controlls=Manager().dict() 
         self.controlls[CNT_WORKER_COUNT]=0
         self.controlls[CNT_TASK_COUNT]=0
         self.controlls[CNT_EVENT_COUNT]=0
@@ -116,6 +114,8 @@ class Workgroup:
         self.controlls[CNT_DEAD_WORKERS]=set()
         self.controlls[CNT_SEMAPHORE_COUNT]=0
         self.currentWorker=-1
+        for plugin in plugins:
+            plugin.masterInit()
         NetWork.networking.setUp(socketType, keys)
         self.listenerSocket=NetWork.networking.NWSocket()
         self.workerList=[]
@@ -130,25 +130,8 @@ class Workgroup:
                     raise workerError
         if not self.controlls[CNT_WORKER_COUNT]:
             raise NoWorkersError("No workers were successfully added to workgroup")
-        self.controlls[CNT_LIVE_WORKERS]=self.controlls[CNT_WORKER_COUNT]
         self.controlls[CNT_WORKERS]=self.workerList
         self.commqueue=Queue()
-        event.events={-1:None}
-        event.runningOnMaster=True
-        queue.queues={-1:None}
-        queue.queueHandlers={-1:None}
-        queue.queueLocks={-1:None}
-        queue.runningOnMaster=True
-        lock.locks={-1:None}
-        lock.lockHandlers={-1:None}
-        lock.lockLocks={-1:None}
-        lock.runningOnMaster=True
-        semaphore.semaphores={-1:None}
-        semaphore.runningOnMaster=True
-        semaphore.semaphoreLocks={-1:None}
-        semaphore.semaphoreHandlers={-1:None}
-        manager.runningOnMaster=True
-        manager.managers={-1:None}
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
         
