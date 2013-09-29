@@ -4,10 +4,12 @@ items that can be read and updated by running tasks. All tasks on all computers
 share the item, when one task updates the item, another will see the new value
 when reading it.
 
-For more info on managers and what they are see `Python documentation page <http://docs.python.org/3.3/library/multiprocessing.html#managers>`_
+For more info on managers and what they are see `Python documentation page
+<http://docs.python.org/3.3/library/multiprocessing.html#managers>`_
 
 There are three types of managers in NetWork, the classic :py:class:`NWManager` 
-that uses :py:meth:`setItem <NWManager.setItem>` and :py:meth:`getItem <NWManager.getItem>` methods to update and read items, :py:class:`ManagerDict` which beahaves
+that uses :py:meth:`setItem <NWManager.setItem>` and :py:meth:`getItem <NWManager.getItem>`
+methods to update and read items, :py:class:`ManagerDict` which beahaves
 like a dictionary that contains shared items, and :py:class:`ManagerNamespace` which contains
 shared items as variables.
 Here are the examples of all types
@@ -42,69 +44,73 @@ Here are the examples of all types
         print(n.some_number)
 """
 
-import pickle
 from .networking import sendRequest, sendRequestWithResponse
 from .commcodes import CMD_GET_MANAGER_ITEM, CMD_SET_MANAGER_ITEM, MANAGER_KEYERROR
-from .request import Request
 from multiprocessing import Manager
-runningOnMaster=None
-masterAddress=None
-managers=None
+
+runningOnMaster = None
+masterAddress = None
+managers = None
+
 
 def masterInit():
     global runningOnMaster, managers
-    runningOnMaster=True
-    managers={-1:None}
+    runningOnMaster = True
+    managers = {-1: None}
+
 
 def workerInit():
     global runningOnMaster
-    runningOnMaster=False
+    runningOnMaster = False
+
 
 class NWManager:
     """
     The main manager class that manages a collection of shared data between 
     processes on multiple computers. 
-    A new instance is usually created by calling :py:meth:`Workgroup.registerManager <NetWork.workgroup.Workgroup.registerManager>`. 
+    A new instance is usually created by calling :py:meth:`Workgroup.registerManager
+    <NetWork.workgroup.Workgroup.registerManager>`.
     The data is managed by using :py:meth:`setItem` and :py:meth:`getItem` methods. 
     To get other types of managers use :py:meth:`dict` and :py:meth:`namespace` methods of :py:class:`NWManager`
     """
+
     def __init__(self, id, workgroup):
-        self.id=id
-        self.workgroup=workgroup
+        self.id = id
+        self.workgroup = workgroup
         if runningOnMaster:
-            managers[self.id]=Manager().dict()
-    
+            managers[self.id] = Manager().dict()
+
     def getItemOnMaster(self, item):
         return managers[self.id][item]
-    
-    def getItemOnWorker(self, item):
-        value=sendRequestWithResponse(CMD_GET_MANAGER_ITEM,
-                                      {
-                                       "ID":self.id,
-                                       "ITEM":item
-                                       })
 
-        if value==MANAGER_KEYERROR:
+    def getItemOnWorker(self, item):
+        value = sendRequestWithResponse(CMD_GET_MANAGER_ITEM,
+                                        {
+                                            "ID": self.id,
+                                            "ITEM": item
+                                        })
+
+        if value == MANAGER_KEYERROR:
             raise KeyError(item)
         else:
             return value
-    
+
     def setItemOnMaster(self, item, value):
         self.workgroup.sendRequest(CMD_SET_MANAGER_ITEM,
                                    {
-                                    "ID":self.id,
-                                    "ITEM":item,
-                                    "VALUE":value
-                                    })
-    
+                                       "ID": self.id,
+                                       "ITEM": item,
+                                       "VALUE": value
+                                   })
+
     def setItemOnWorker(self, item, value):
         sendRequest(CMD_SET_MANAGER_ITEM,
                     {
-                     "ID":self.id,
-                     "ITEM":item,
-                     "VALUE":value
-                     })
-    
+                        "ID": self.id,
+                        "ITEM": item,
+                        "VALUE": value
+                    })
+
     def getItem(self, item):
         """
         Get one of the shared data items in the manager. If the item doesn't 
@@ -118,7 +124,7 @@ class NWManager:
             return self.getItemOnMaster(item)
         else:
             return self.getItemOnWorker(item)
-    
+
     def setItem(self, item, value):
         """
         Set one of the shared data items in the manager. If the item doesn't 
@@ -135,7 +141,7 @@ class NWManager:
             self.setItemOnMaster(item, value)
         else:
             self.setItemOnWorker(item, value)
-    
+
     def dict(self, initial=None):
         """
         Get a manager that behaves like a dictionary as described above
@@ -146,9 +152,9 @@ class NWManager:
         
         :Return: an instance of :py:class:`ManagerDict`
         """
-        
+
         return ManagerDict(self.id, self.workgroup, initial)
-    
+
     def namespace(self):
         """
         Get a manager that behaves like a namespace as described above
@@ -156,13 +162,14 @@ class NWManager:
         :Return: an instance of :py:class:`ManagerNamespace`
         """
         return ManagerNamespace(self.id, self.workgroup)
-    
+
     def __setstate__(self, state):
-        self.id=state["id"]
-        self.workgroup=state["workgroup"]
-    
+        self.id = state["id"]
+        self.workgroup = state["workgroup"]
+
     def __getstate__(self):
-        return {"id":self.id, "workgroup":None}
+        return {"id": self.id, "workgroup": None}
+
 
 class ManagerDict(NWManager):
     """
@@ -171,18 +178,20 @@ class ManagerDict(NWManager):
     which might be more comfortable than using :py:meth:`getItem <NWManager.getItem>` and 
     :py:meth:`setItem <NWManager.setItem>` methods of the :py:class:`NWManager`.
     """
+
     def __init__(self, id, workgroup, initial=None):
-        self.id=id
-        self.workgroup=workgroup
+        self.id = id
+        self.workgroup = workgroup
         if initial:
             for key in initial:
                 self.setItem(key, initial[key])
-    
+
     def __getitem__(self, key):
         return self.getItem(key)
-    
+
     def __setitem__(self, key, value):
         self.setItem(key, value)
+
 
 class ManagerNamespace(NWManager):
     """A class that inherits :py:class:`NWManager` but adds :py:meth:`__getattr__` 
@@ -191,27 +200,30 @@ class ManagerNamespace(NWManager):
     than using :py:meth:`getItem <NWManager.getItem>` and 
     :py:meth:`setItem <NWManager.setItem>` methods of the :py:class:`NWManager`.
     """
+
     def __init__(self, id, workgroup):
-        self.id=id
-        self.workgroup=workgroup
-    
+        self.id = id
+        self.workgroup = workgroup
+
     def __getattr__(self, key):
         return self.getItem(key)
-    
+
     def __setattr__(self, key, value):
-        if key=="id" or key=="workgroup":
-            self.__dict__[key]=value
+        if key == "id" or key == "workgroup":
+            self.__dict__[key] = value
         else:
             self.setItem(key, value)
 
+
 def setManagerItem(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    managers[request["ID"]][request["ITEM"]]=request["VALUE"]
+    managers[request["ID"]][request["ITEM"]] = request["VALUE"]
+
 
 def getManagerItem(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     try:
-        value=managers[request["ID"]][request["ITEM"]]
+        value = managers[request["ID"]][request["ITEM"]]
     except KeyError:
-        value=MANAGER_KEYERROR
+        value = MANAGER_KEYERROR
     request.respond(value)

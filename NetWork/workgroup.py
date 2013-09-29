@@ -20,29 +20,10 @@ from .request import Request
 class NoWorkersError(Exception):pass
 
 
-def receiveSocketData(socket, commqueue, controlls):
-    workerId=-1
-    for worker in controlls[CNT_WORKERS]:
-        if socket.address==worker.realAddress:
-            workerId=worker.id
-    if workerId==-1:
-        return
-    try:
-        receivedData=socket.recv()
-    except OSError as error:
-        print("Network communication failed from address", socket.address, error)
-        return
-    if not receivedData[:3] in handlerList:
-        print("Request came with an invalid identifier code", receivedData[:3])
-        return
-    commqueue.put(Request(receivedData[:3], 
-                          pickle.loads(receivedData[3:]), workerId, socket))
-
-
 class Workgroup:
     """
     Defines the group of computers that will execute the tasks, handles requests
-    from the user and from the worker computers, controlls execution, messaging
+    from the user and from the worker computers, controls execution, messaging
     and concurrency. Handles Locks, Queues, :py:mod:`Managers <NetWork.manager>`, :py:mod:`Events <NetWork.event>` and other tools.
     
     In order for the Workgroup to be functional, the ``dispatcher`` and ``listener`` 
@@ -103,16 +84,16 @@ class Workgroup:
 
     def __init__(self, workerAddresses, skipBadWorkers=False, 
                  handleDeadWorkers=False, socketType="TCP", keys=None):
-        self.controlls=Manager().dict() 
-        self.controlls[CNT_WORKER_COUNT]=0
-        self.controlls[CNT_TASK_COUNT]=0
-        self.controlls[CNT_EVENT_COUNT]=0
-        self.controlls[CNT_QUEUE_COUNT]=0
-        self.controlls[CNT_LOCK_COUNT]=0
-        self.controlls[CNT_TASK_EXECUTORS]={-1:None}
-        self.controlls[CNT_MANAGER_COUNT]=0
-        self.controlls[CNT_DEAD_WORKERS]=set()
-        self.controlls[CNT_SEMAPHORE_COUNT]=0
+        self.controls=Manager().dict()
+        self.controls[CNT_WORKER_COUNT]=0
+        self.controls[CNT_TASK_COUNT]=0
+        self.controls[CNT_EVENT_COUNT]=0
+        self.controls[CNT_QUEUE_COUNT]=0
+        self.controls[CNT_LOCK_COUNT]=0
+        self.controls[CNT_TASK_EXECUTORS]={-1:None}
+        self.controls[CNT_MANAGER_COUNT]=0
+        self.controls[CNT_DEAD_WORKERS]=set()
+        self.controls[CNT_SEMAPHORE_COUNT]=0
         self.currentWorker=-1
         for plugin in plugins:
             plugin.masterInit()
@@ -122,15 +103,15 @@ class Workgroup:
         for workerAddress in workerAddresses:
             try:
                 newWorker=Worker(workerAddress,
-                                 self.controlls[CNT_WORKER_COUNT])
+                                 self.controls[CNT_WORKER_COUNT])
                 self.workerList.append(newWorker)
-                self.controlls[CNT_WORKER_COUNT]+=1
+                self.controls[CNT_WORKER_COUNT]+=1
             except WorkerUnavailableError as workerError:
                 if not skipBadWorkers:
                     raise workerError
-        if not self.controlls[CNT_WORKER_COUNT]:
+        if not self.controls[CNT_WORKER_COUNT]:
             raise NoWorkersError("No workers were successfully added to workgroup")
-        self.controlls[CNT_WORKERS]=self.workerList
+        self.controls[CNT_WORKERS]=self.workerList
         self.commqueue=Queue()
         self.handleDeadWorkers=handleDeadWorkers
         self.running=False
@@ -143,7 +124,7 @@ class Workgroup:
         self.stopServing()
     
     def deadWorkers(self):
-        return self.controlls[CNT_DEAD_WORKERS]
+        return self.controls[CNT_DEAD_WORKERS]
     
     def startServing(self):
         """
@@ -155,22 +136,22 @@ class Workgroup:
         self.listenerSocket.listen()
         self.networkListener=Thread(target=self.listenerProcess, 
                                      args=(self.listenerSocket, self.commqueue,
-                                           self.controlls))
+                                           self.controls))
         self.networkListener.daemon=True
         self.dispatcher=Thread(target=self.dispatcherProcess, 
-                                args=(self.commqueue, self.controlls))
+                                args=(self.commqueue, self.controls))
         self.dispatcher.start()
         self.networkListener.start()
         self.running=True
     
     def selectNextWorker(self):
-        if self.controlls[CNT_WORKER_COUNT]==0:
+        if self.controls[CNT_WORKER_COUNT]==0:
             raise NoWorkersError("All workers have died")
         self.currentWorker+=1
-        self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
-        while not self.controlls[CNT_WORKERS][self.currentWorker].alive:
+        self.currentWorker%=self.controls[CNT_WORKER_COUNT]
+        while not self.controls[CNT_WORKERS][self.currentWorker].alive:
             self.currentWorker+=1
-            self.currentWorker%=self.controlls[CNT_WORKER_COUNT]
+            self.currentWorker%=self.controls[CNT_WORKER_COUNT]
          
     def submit(self, target, args=(), kwargs={}):
         """
@@ -189,17 +170,17 @@ class Workgroup:
         :Return: an instance of :py:class:`TaskHandler <NetWork.task.TaskHandler>`
         """
         self.selectNextWorker()
-        self.controlls[CNT_TASK_COUNT]+=1
+        self.controls[CNT_TASK_COUNT]+=1
         newTask=Task(target=target, args=args, kwargs=kwargs, 
-                     id=self.controlls[CNT_TASK_COUNT])
+                     id=self.controls[CNT_TASK_COUNT])
         self.sendRequest(CMD_SUBMIT_TASK, 
                          {
                           "WORKER":self.currentWorker,
                           "TASK":newTask
                           })
-        executors=self.controlls[CNT_TASK_EXECUTORS]
+        executors=self.controls[CNT_TASK_EXECUTORS]
         executors[newTask.id]=self.currentWorker
-        self.controlls[CNT_TASK_EXECUTORS]=executors
+        self.controls[CNT_TASK_EXECUTORS]=executors
         return TaskHandler(newTask.id, self)
     
     def getResult(self, id):
@@ -260,8 +241,8 @@ class Workgroup:
         
         :Return: instance of :py:class:`NWEvent <NetWork.event.NWEvent>`
         """
-        self.controlls[CNT_EVENT_COUNT]+=1
-        id=self.controlls[CNT_EVENT_COUNT]
+        self.controls[CNT_EVENT_COUNT]+=1
+        id=self.controls[CNT_EVENT_COUNT]
         self.sendRequest(CMD_REGISTER_EVENT,
                          {
                           "ID":id
@@ -274,8 +255,8 @@ class Workgroup:
         
         :Return: instance of :py:class:`NWQueue <NetWork.queue.NWQueue>`
         """
-        self.controlls[CNT_QUEUE_COUNT]+=1
-        id=self.controlls[CNT_QUEUE_COUNT]
+        self.controls[CNT_QUEUE_COUNT]+=1
+        id=self.controls[CNT_QUEUE_COUNT]
         self.sendRequest(CMD_REGISTER_QUEUE,
                          {
                           "ID":id
@@ -288,8 +269,8 @@ class Workgroup:
         
         :Return: instance of :py:class:`NWLock <NetWork.lock.NWLock>`
         """
-        self.controlls[CNT_LOCK_COUNT]+=1
-        id=self.controlls[CNT_LOCK_COUNT]
+        self.controls[CNT_LOCK_COUNT]+=1
+        id=self.controls[CNT_LOCK_COUNT]
         self.sendRequest(CMD_REGISTER_LOCK,
                          {
                           "ID":id
@@ -306,8 +287,8 @@ class Workgroup:
         
         :Return: instance of :py:class:`NWSemaphore <NetWork.semaphore.NWSemaphore>`
         """
-        self.controlls[CNT_SEMAPHORE_COUNT]+=1
-        id=self.controlls[CNT_LOCK_COUNT]
+        self.controls[CNT_SEMAPHORE_COUNT]+=1
+        id=self.controls[CNT_LOCK_COUNT]
         self.sendRequest(CMD_REGISTER_SEMAPHORE,
                          {
                           "ID":id,
@@ -321,9 +302,9 @@ class Workgroup:
         
         :Return: instance of :py:class:`NWManager <NetWork.manager.NWManager>`
         """
-        self.controlls[CNT_MANAGER_COUNT]+=1
-        id=self.controlls[CNT_MANAGER_COUNT]
-        return NWManager(self.controlls[CNT_MANAGER_COUNT], self)        
+        self.controls[CNT_MANAGER_COUNT]+=1
+        id=self.controls[CNT_MANAGER_COUNT]
+        return NWManager(self.controls[CNT_MANAGER_COUNT], self)
     
     def stopServing(self):
         """
@@ -336,22 +317,22 @@ class Workgroup:
         
     
     @staticmethod
-    def listenerProcess(listenerSocket, commqueue, controlls):
+    def listenerProcess(listenerSocket, commqueue, controls):
         #A process that receives network requests
         while True:
             receivedRequest=listenerSocket.accept()
             handlerThread=Thread(target=receiveSocketData, 
-                                 args=(receivedRequest, commqueue, controlls))
+                                 args=(receivedRequest, commqueue, controls))
             handlerThread.start()
                 
     
     @staticmethod
-    def dispatcherProcess(commqueue, controlls):
+    def dispatcherProcess(commqueue, controls):
         #A process that handles requests
         request=commqueue.get()
         while not request==CMD_HALT:
             #print(request)
-            handlerList[request.getType()](request, controlls, commqueue)
+            handlerList[request.getType()](request, controls, commqueue)
             request.close()
             request=commqueue.get()
     

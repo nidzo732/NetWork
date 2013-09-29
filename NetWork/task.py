@@ -12,29 +12,28 @@ from types import FunctionType
 
 class Task:
     #A class used to hold a task given to the workgroup
-    
-    def __init__(self, target=None, args=(), kwargs={}, id=None, marshaled=None, 
+
+    def __init__(self, target=None, args=(), kwargs={}, id=None, marshaled=None,
                  globalVariables=None):
         if marshaled:
             self.unmarshal(marshaled, globalVariables)
         else:
-            self.target=target
-            self.target
-            self.args=args
-            self.kwargs=kwargs
-            self.id=id
-    
+            self.target = target
+            self.args = args
+            self.kwargs = kwargs
+            self.id = id
+
     def __getstate__(self):
-        state={"args":self.args, "kwargs":self.kwargs, "id":self.id}
-        state["target"]=marshal.dumps(self.target.__code__)
+        state = {"args": self.args, "kwargs": self.kwargs, "id": self.id,
+                 "target": marshal.dumps(self.target.__code__)}
         return state
-    
+
     def __setstate__(self, state):
-        self.args=state["args"]
-        self.kwargs=state["kwargs"]
-        self.target=FunctionType(code=marshal.loads(state["target"]), 
-                                 globals=globals())
-        self.id=state["id"]
+        self.args = state["args"]
+        self.kwargs = state["kwargs"]
+        self.target = FunctionType(code=marshal.loads(state["target"]),
+                                   globals=globals())
+        self.id = state["id"]
 
 
 class TaskHandler:
@@ -43,11 +42,11 @@ class TaskHandler:
     A new instance is returned by :py:meth:`Workgroup.submit <NetWork.workgroup.Workgroup.submit>`
     method.
     """
-    
+
     def __init__(self, id, workgroup):
-        self.workgroup=workgroup
-        self.id=id
-    
+        self.workgroup = workgroup
+        self.id = id
+
     def result(self):
         """
         Get return value of the submited function that's running in
@@ -57,21 +56,21 @@ class TaskHandler:
           hasn't returned.
         """
         return self.workgroup.getResult(self.id)
-    
+
     def terminate(self):
         """
         Stop this task, kill its process.
         """
         return self.workgroup.cancelTask(self.id)
-        
+
     def running(self):
         """
         Check if the task is still running.
         
         :Return: ``True`` or ``False`` depending on whether the task is running.
         """
-        return self.workgroup.taskRunning(self.id)        
-    
+        return self.workgroup.taskRunning(self.id)
+
     def exception(self):
         """
         Get the exception that the task has raised.
@@ -80,7 +79,7 @@ class TaskHandler:
           no exception.
         """
         return self.workgroup.getException(self.id)
-    
+
     def exceptionRaised(self):
         """
         Check if the task has raised an exception.
