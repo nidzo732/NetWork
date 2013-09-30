@@ -2,7 +2,6 @@
 This module implements a socket classes used to safely handle
 network messaging, message length and security.
 """
-from time import sleep
 import socket
 import pickle
 import hmac
@@ -212,7 +211,7 @@ class NWSocketHMAC(NWSocketTCP):
 
 
 sockets = {"TCP": NWSocketTCP, "HMAC": NWSocketHMAC}
-NWSocket = None    #set default socket used in the framework
+NWSocket = NWSocketTCP   # set default socket used in the framework
 
 if cryptoAvailable:
     def AESEncrypt(data, key):
@@ -343,31 +342,29 @@ else:
 sockets.update({"AES": NWSocketAES, "AES+HMAC": NWSocketHMACandAES})
 
 
-def setUp(type, keys):
-    if type:
+def setUp(requestType, keys):
+    if requestType:
         try:
-            sockets[type].setUp(keys)
+            sockets[requestType].setUp(keys)
         except KeyError:
-            raise KeyNotSet("Not all keys were set for the desired security type: " + str(type))
+            raise KeyNotSet("Not all keys were set for the desired security type: " + str(requestType))
         global NWSocket
-        NWSocket = sockets[type]
+        NWSocket = sockets[requestType]
 
 
-def sendRequest(type, contents):
-    request = Request(type, contents)
+def sendRequest(requestType, contents):
+    request = Request(requestType, contents)
     masterSocket = NWSocket()
     masterSocket.connect(masterAddress)
     masterSocket.send(request.getType() + pickle.dumps(request.getContents()))
     masterSocket.close()
 
 
-def sendRequestWithResponse(type, contents):
-    request = Request(type, contents)
+def sendRequestWithResponse(requestType, contents):
+    request = Request(requestType, contents)
     masterSocket = NWSocket()
     masterSocket.connect(masterAddress)
     masterSocket.send(request.getType() + pickle.dumps(request.getContents()))
     receivedData = masterSocket.recv()
     masterSocket.close()
     return pickle.loads(receivedData)
-    
-    

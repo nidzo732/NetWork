@@ -21,8 +21,8 @@ def getArgs():
     networkArgs.add_argument("--master_aes_key", 
                              help="Key used to encrypt messages sent to master")
     
-    args=argumentParser.parse_args()
-    netArgs={}
+    args = argumentParser.parse_args()
+    netArgs = {}
     
     if args.incomming_hmac_key:
         args.incomming_hmac_key = args.incomming_hmac_key.encode(encoding="ASCII")
@@ -38,5 +38,5 @@ def getArgs():
     if args.master_aes_key:
         args.master_aes_key = args.master_aes_key.encode(encoding="ASCII")
     
-    args.netArgs=netArgs
+    args.netArgs = netArgs
     return args

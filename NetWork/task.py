@@ -6,7 +6,6 @@ its state.
 
 """
 import marshal
-import pickle
 from types import FunctionType
 #import .handlers
 

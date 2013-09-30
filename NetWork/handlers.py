@@ -2,17 +2,14 @@
 Functions that handle messages on the master computer.
 Each function is associated with a 3 letter code from commcodes.py
 """
-from NetWork import event, lock, manager, queue, semaphore
 import pickle
-from .event import setEvent, registerEvent
+
+from NetWork import event, lock, manager, queue, semaphore
 from .commcodes import *
 from .cntcodes import *
-from .queue import registerQueue, putOnQueue, getFromQueue
-from .lock import registerLock, releaseLock, acquireLock
-from .manager import setManagerItem, getManagerItem
 from .request import Request
 from .worker import DeadWorkerError
-from .semaphore import registerSemaphore, releaseSemaphore, acquireSemaphore
+
 
 plugins = [event, lock, manager, queue, semaphore]
 
@@ -116,17 +113,12 @@ def deathHandler(request, controls, commqueue):
             raise NoWorkersError("All workers died, unable to continue working")
 
 
-handlerList = {CMD_SET_EVENT: setEvent, CMD_REGISTER_EVENT: registerEvent,
-               CMD_REGISTER_QUEUE: registerQueue, CMD_GET_FROM_QUEUE: getFromQueue,
-               CMD_PUT_ON_QUEUE: putOnQueue, CMD_SUBMIT_TASK: submitTask,
+handlerList = {CMD_SUBMIT_TASK: submitTask,
                CMD_TASK_RUNNING: taskRunning, CMD_GET_EXCEPTION: getException,
                CMD_CHECK_EXCEPTION: checkException, CMD_TERMINATE_TASK: terminateTask,
-               CMD_GET_RESULT: getResult, CMD_ACQUIRE_LOCK: acquireLock,
-               CMD_REGISTER_LOCK: registerLock, CMD_RELEASE_LOCK: releaseLock,
-               CMD_SET_MANAGER_ITEM: setManagerItem,
-               CMD_GET_MANAGER_ITEM: getManagerItem,
+               CMD_GET_RESULT: getResult,
                CMD_WORKER_DIED: deathHandler,
-               CMD_ACQUIRE_SEMAPHORE: acquireSemaphore,
-               CMD_REGISTER_SEMAPHORE: registerSemaphore,
-               CMD_RELEASE_SEMAPHORE: releaseSemaphore,
                }
+
+for plugin in plugins:
+    handlerList.update(plugin.masterHandlers)

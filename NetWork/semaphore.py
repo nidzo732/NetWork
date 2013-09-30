@@ -13,10 +13,14 @@ For more info about semaphores see `Python documentation page <http://docs.pytho
 """
 from multiprocessing import Semaphore, Lock
 from .networking import sendRequest
-from .commcodes import CMD_ACQUIRE_SEMAPHORE, CMD_RELEASE_SEMAPHORE, CMD_REGISTER_SEMAPHORE, CMD_WORKER_DIED
+from .commcodes import CMD_WORKER_DIED
 from .cntcodes import CNT_WORKERS
 from .request import Request
 from .worker import DeadWorkerError
+
+CMD_REGISTER_SEMAPHORE = b"SER"
+CMD_ACQUIRE_SEMAPHORE = b"SEA"
+CMD_RELEASE_SEMAPHORE = b"SEU"
 
 runningOnMaster = None
 semaphores = None
@@ -158,7 +162,7 @@ class MasterSemaphoreHandler:
         semaphoreLocks[self.id].release()
 
 
-def registerSemaphore(request, controlls, commqueue):
+def registerSemaphoreMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     value = request["VALUE"]
@@ -170,7 +174,7 @@ def registerSemaphore(request, controlls, commqueue):
                                   {"WORKER": worker}))
 
 
-def acquireSemaphore(request, controlls, commqueue):
+def acquireSemaphoreMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     try:
         semaphoreHandlers[request["ID"]].acquire(request.requester, controlls)
@@ -179,10 +183,26 @@ def acquireSemaphore(request, controlls, commqueue):
                               {"WORKER": controlls[CNT_WORKERS][error.id]}))
 
 
-def releaseSemaphore(request, controlls, commqueue):
+def releaseSemaphoreMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     try:
         semaphoreHandlers[request["ID"]].release(controlls)
     except DeadWorkerError as error:
         commqueue.put(Request(CMD_WORKER_DIED,
                               {"WORKER": controlls[CNT_WORKERS][error.id]}))
+
+
+def registerSemaphoreWorker(request):
+    id = request["ID"]
+    value = request["VALUE"]
+    semaphores[id] = Semaphore(value)
+    for i in range(value):
+        semaphores[id].acquire()
+
+
+def releaseSemaphoreWorker(request):
+    semaphores[request["ID"]].release()
+
+masterHandlers = {CMD_REGISTER_SEMAPHORE: registerSemaphoreMaster, CMD_ACQUIRE_SEMAPHORE: acquireSemaphoreMaster,
+                  CMD_RELEASE_SEMAPHORE: releaseSemaphoreMaster}
+workerHandlers = {CMD_RELEASE_SEMAPHORE: releaseSemaphoreWorker, CMD_REGISTER_SEMAPHORE: registerSemaphoreWorker}

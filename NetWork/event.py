@@ -26,9 +26,10 @@ of the same event the first task is waken up and continues it's work
 For more info about events see `Python documentation page
 <http://docs.python.org/3.3/library/threading.html#event-objects>`_
 """
-from .networking import sendRequest
 from multiprocessing import Event
-from .commcodes import CMD_SET_EVENT, CMD_REGISTER_EVENT, CMD_WORKER_DIED
+
+from .networking import sendRequest
+from .commcodes import CMD_WORKER_DIED
 from .cntcodes import CNT_WORKERS
 from .request import Request
 from .worker import DeadWorkerError
@@ -36,6 +37,8 @@ from .worker import DeadWorkerError
 
 class WrongComputerError(Exception): pass
 
+CMD_SET_EVENT = b"EVS"
+CMD_REGISTER_EVENT = b"EVR"
 
 runningOnMaster = None
 masterAddress = None
@@ -111,7 +114,7 @@ class NWEvent:
         return {"id": self.id, "workgroup": None}
 
 
-def setEvent(request, controls, commqueue):
+def setEventMaster(request, controls, commqueue):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controls[CNT_WORKERS]:
@@ -123,7 +126,7 @@ def setEvent(request, controls, commqueue):
     events[id].set()
 
 
-def registerEvent(request, controls, commqueue):
+def registerEventMaster(request, controls, commqueue):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controls[CNT_WORKERS]:
@@ -132,3 +135,14 @@ def registerEvent(request, controls, commqueue):
         except DeadWorkerError:
             commqueue.put(Request(CMD_WORKER_DIED,
                                   {"WORKER": worker}))
+
+def setEventWorker(request):
+    events[request["ID"]].set()
+
+
+def registerEventWorker(request):
+    id = request["ID"]
+    events[id] = Event()
+
+masterHandlers = {CMD_SET_EVENT: setEventMaster, CMD_REGISTER_EVENT: registerEventMaster}
+workerHandlers = {CMD_SET_EVENT: setEventWorker, CMD_REGISTER_EVENT: registerEventWorker}

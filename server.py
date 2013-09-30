@@ -9,6 +9,10 @@ from the master. The messages start with a 3 letter code that determines
 their type, the mainloop reads that code and runs a handler function associated
 with that code. Message codes can be seen in NetWork.commcodes.
 """
+from threading import Thread
+import atexit
+import pickle
+
 from NetWork.networking import COMCODE_CHECKALIVE, COMCODE_ISALIVE
 from NetWork.workerprocess import WorkerProcess
 import NetWork.queue as queue
@@ -16,11 +20,7 @@ import NetWork.event as event
 import NetWork.lock as lock
 import NetWork.manager as manager
 import NetWork.semaphore as semaphore
-from threading import Thread
-from multiprocessing import Event, Queue, Lock, Semaphore
 from NetWork.commcodes import *
-import atexit
-import pickle
 from NetWork.request import Request
 from NetWork import networking
 from NetWork.args import getArgs
@@ -72,60 +72,15 @@ def getException(request):
     request.respond(exception)
 
 
-def setEvent(request):
-    event.events[request["ID"]].set()
-
-
-def registerEvent(request):
-    id = request["ID"]
-    event.events[id] = Event()
-
-
 def checkAlive(request):
     if requestSocket.address == masterAddress:
         request.respond(COMCODE_ISALIVE)
-
-
-def putOnQueue(request):
-    id = request["ID"]
-    queue.queues[id].put(request["DATA"])
-
-
-def registerQueue(request):
-    queue.queues[request["ID"]] = Queue()
-
-
-def registerLock(request):
-    lock.locks[request["ID"]] = Lock()
-    lock.locks[request["ID"]].acquire()
-
-
-def releaseLock(request):
-    lock.locks[request["ID"]].release()
-
-
-def registerSemaphore(request):
-    id = request["ID"]
-    value = request["VALUE"]
-    semaphore.semaphores[id] = Semaphore(value)
-    for i in range(value):
-        semaphore.semaphores[id].acquire()
-
-
-def releaseSemaphore(request):
-    semaphore.semaphores[request["ID"]].release()
-
 
 handlers = {CMD_SUBMIT_TASK: executeTask, CMD_GET_RESULT: getResult,
             CMD_CHECK_EXCEPTION: exceptionRaised,
             CMD_TERMINATE_TASK: terminateTask,
             CMD_TASK_RUNNING: taskRunning, CMD_GET_EXCEPTION: getException,
-            CMD_SET_EVENT: setEvent, CMD_REGISTER_EVENT: registerEvent,
-            b"ALV": checkAlive,
-            CMD_PUT_ON_QUEUE: putOnQueue, CMD_REGISTER_QUEUE: registerQueue,
-            CMD_REGISTER_LOCK: registerLock, CMD_RELEASE_LOCK: releaseLock,
-            CMD_REGISTER_SEMAPHORE: registerSemaphore,
-            CMD_RELEASE_SEMAPHORE: releaseSemaphore}
+            b"ALV": checkAlive}
 
 
 def requestHandler(request):
@@ -194,6 +149,7 @@ if __name__ == "__main__":
             exit()
     for plugin in plugins:
         plugin.workerInit()
+        handlers.update(plugin.workerHandlers)
         #Start receiving requests
     running = True
     atexit.register(onExit, listenerSocket)

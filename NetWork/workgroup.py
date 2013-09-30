@@ -3,17 +3,21 @@ The Workgroup class is defined in this file, along with accompanying classes
 and functions.
 """
 
-from multiprocessing import Process, Queue, Manager, Event
+from multiprocessing import Queue, Manager
+from threading import Thread
+
 import NetWork.networking
 from .handlers import receiveSocketData, handlerList, plugins
-from threading import Thread
-from .worker import Worker, WorkerUnavailableError, DeadWorkerError
+from .worker import Worker, WorkerUnavailableError
 from .task import Task, TaskHandler
 from .commcodes import *
 from .cntcodes import *
 from .manager import NWManager
-from NetWork import event, queue, lock, manager, semaphore
-import pickle
+from NetWork import event, queue, lock, semaphore
+from NetWork.event import CMD_REGISTER_EVENT
+from NetWork.lock import CMD_REGISTER_LOCK
+from NetWork.queue import CMD_REGISTER_QUEUE
+from NetWork.semaphore import CMD_REGISTER_SEMAPHORE
 from .request import Request
 
 
@@ -187,8 +191,8 @@ class Workgroup:
         resultQueue=self.registerQueue()
         self.sendRequest(CMD_GET_RESULT,
                          {
-                          "ID":id,
-                          "QUEUE":resultQueue.id
+                          "ID": id,
+                          "QUEUE": resultQueue.id
                           })
         
         result=resultQueue.get()
@@ -234,19 +238,19 @@ class Workgroup:
     
     def sendRequest(self, type, contents):
         self.commqueue.put(Request(type, contents))
-            
+
     def registerEvent(self):
         """
-        Create a new event to be used by the tasks
-        
-        :Return: instance of :py:class:`NWEvent <NetWork.event.NWEvent>`
+            Create a new event to be used by the tasks
+    
+            :Return: instance of :py:class:`NWEvent <NetWork.event.NWEvent>`
         """
-        self.controls[CNT_EVENT_COUNT]+=1
-        id=self.controls[CNT_EVENT_COUNT]
+        self.controls[CNT_EVENT_COUNT] += 1
+        id = self.controls[CNT_EVENT_COUNT]
         self.sendRequest(CMD_REGISTER_EVENT,
                          {
-                          "ID":id
-                          })
+                             "ID": id
+                         })
         return event.NWEvent(id, self)
     
     def registerQueue(self):

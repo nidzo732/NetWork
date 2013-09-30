@@ -44,9 +44,15 @@ Here are the examples of all types
         print(n.some_number)
 """
 
-from .networking import sendRequest, sendRequestWithResponse
-from .commcodes import CMD_GET_MANAGER_ITEM, CMD_SET_MANAGER_ITEM, MANAGER_KEYERROR
 from multiprocessing import Manager
+
+from .networking import sendRequest, sendRequestWithResponse
+
+
+CMD_REGISTER_MANAGER = b"MNR"
+CMD_SET_MANAGER_ITEM = b"MNS"
+CMD_GET_MANAGER_ITEM = b"MNG"
+MANAGER_KEYERROR = b"KERR"
 
 runningOnMaster = None
 masterAddress = None
@@ -215,15 +221,19 @@ class ManagerNamespace(NWManager):
             self.setItem(key, value)
 
 
-def setManagerItem(request, controlls, commqueue):
+def setManagerItemMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     managers[request["ID"]][request["ITEM"]] = request["VALUE"]
 
 
-def getManagerItem(request, controlls, commqueue):
+def getManagerItemMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     try:
         value = managers[request["ID"]][request["ITEM"]]
     except KeyError:
         value = MANAGER_KEYERROR
     request.respond(value)
+
+masterHandlers = {CMD_SET_MANAGER_ITEM: setManagerItemMaster, CMD_GET_MANAGER_ITEM: getManagerItemMaster}
+workerHandlers = {}
+

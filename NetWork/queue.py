@@ -36,12 +36,18 @@ For more info about queues see `Python documentation page <http://docs.python.or
         print(queue5.get())    #Prints '5'
 
 """
+from multiprocessing import Lock, Queue
+
 from .networking import sendRequest
-from .commcodes import CMD_PUT_ON_QUEUE, CMD_GET_FROM_QUEUE, CMD_REGISTER_QUEUE, CMD_WORKER_DIED
+from .commcodes import CMD_WORKER_DIED
 from .cntcodes import CNT_WORKERS
 from .request import Request
-from multiprocessing import Lock, Queue
 from .worker import DeadWorkerError
+
+
+CMD_REGISTER_QUEUE = b"QUR"
+CMD_PUT_ON_QUEUE = b"QUP"
+CMD_GET_FROM_QUEUE = b"QUG"
 
 queues = None
 queueHandlers = None
@@ -190,7 +196,7 @@ class MasterQueueHandler:
                                                            })
 
 
-def registerQueue(request, controlls, commqueue):
+def registerQueueMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controlls[CNT_WORKERS]:
@@ -201,7 +207,7 @@ def registerQueue(request, controlls, commqueue):
                                   {"WORKER": worker}))
 
 
-def getFromQueue(request, controlls, commqueue):
+def getFromQueueMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     queueLocks[id].acquire()
@@ -215,7 +221,7 @@ def getFromQueue(request, controlls, commqueue):
     queueLocks[id].release()
 
 
-def putOnQueue(request, controlls, commqueue):
+def putOnQueueMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     data = request["DATA"]
@@ -227,3 +233,16 @@ def putOnQueue(request, controlls, commqueue):
         commqueue.put(Request(CMD_WORKER_DIED,
                               {"WORKER": controlls[CNT_WORKERS][error.id]}))
     queueLocks[id].release()
+
+
+def putOnQueueWorker(request):
+    id = request["ID"]
+    queues[id].put(request["DATA"])
+
+
+def registerQueueWorker(request):
+    queues[request["ID"]] = Queue()
+
+masterHandlers = {CMD_GET_FROM_QUEUE: getFromQueueMaster, CMD_PUT_ON_QUEUE: putOnQueueMaster,
+                  CMD_REGISTER_QUEUE: registerQueueMaster}
+workerHandlers = {CMD_REGISTER_QUEUE: registerQueueWorker, CMD_PUT_ON_QUEUE: putOnQueueWorker}

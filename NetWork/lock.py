@@ -7,7 +7,8 @@ method of the lock. If another task tries to acquire the same lock, it will be
 put to sleep. When the first task finishes the critical section it calls 
 :py:meth:`release <NWLock.release>` method of the lock and waiting task is waken up.
 
-For more info about locks see `Python documentation page <http://docs.python.org/3.3/library/threading.html#lock-objects>`_
+For more info about locks see `Python documentation page
+<http://docs.python.org/3.3/library/threading.html#lock-objects>`_
 
 ::
     
@@ -44,10 +45,14 @@ For more info about locks see `Python documentation page <http://docs.python.org
 
 from multiprocessing import Lock
 from .networking import sendRequest
-from .commcodes import CMD_ACQUIRE_LOCK, CMD_RELEASE_LOCK, CMD_REGISTER_LOCK, CMD_WORKER_DIED
+from .commcodes import CMD_WORKER_DIED
 from .cntcodes import CNT_WORKERS
 from .request import Request
 from .worker import DeadWorkerError
+
+CMD_REGISTER_LOCK = b"LCR"
+CMD_ACQUIRE_LOCK = b"LCA"
+CMD_RELEASE_LOCK = b"LCU"
 
 runningOnMaster = None
 locks = None
@@ -187,7 +192,7 @@ class MasterLockHandler:
         lockLocks[self.id].release()
 
 
-def registerLock(request, controlls, commqueue):
+def registerLockMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controlls[CNT_WORKERS]:
@@ -198,7 +203,7 @@ def registerLock(request, controlls, commqueue):
                                   {"WORKER": worker}))
 
 
-def acquireLock(request, controlls, commqueue):
+def acquireLockMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     try:
         lockHandlers[request["ID"]].acquire(request.requester, controlls)
@@ -207,10 +212,23 @@ def acquireLock(request, controlls, commqueue):
                               {"WORKER": controlls[CNT_WORKERS][error.id]}))
 
 
-def releaseLock(request, controlls, commqueue):
+def releaseLockMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
     try:
         lockHandlers[request["ID"]].release(controlls)
     except DeadWorkerError as error:
         commqueue.put(Request(CMD_WORKER_DIED,
                               {"WORKER": controlls[CNT_WORKERS][error.id]}))
+
+
+def registerLockWorker(request):
+    locks[request["ID"]] = Lock()
+    locks[request["ID"]].acquire()
+
+
+def releaseLockWorker(request):
+    locks[request["ID"]].release()
+
+masterHandlers = {CMD_REGISTER_LOCK: registerLockMaster, CMD_ACQUIRE_LOCK: acquireLockMaster,
+                  CMD_RELEASE_LOCK: releaseLockMaster}
+workerHandlers = {CMD_RELEASE_LOCK: releaseLockWorker, CMD_REGISTER_LOCK: registerLockWorker}

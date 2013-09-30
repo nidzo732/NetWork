@@ -13,9 +13,11 @@ class DeadWorkerError(Exception):
         Exception.__init__(self, message)
 
 
-import NetWork.networking
 import pickle
+
+import NetWork.networking
 from .commcodes import *
+
 
 COMCODE_TASK_STARTED = b"TASKSTART"
 
