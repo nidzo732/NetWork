@@ -150,7 +150,7 @@ if __name__ == "__main__":
     for plugin in plugins:
         plugin.workerInit()
         handlers.update(plugin.workerHandlers)
-        #Start receiving requests
+    #Start receiving requests
     running = True
     atexit.register(onExit, listenerSocket)
     try:

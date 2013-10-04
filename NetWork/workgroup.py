@@ -16,7 +16,7 @@ from .manager import NWManager
 from NetWork import event, queue, lock, semaphore
 from NetWork.event import CMD_REGISTER_EVENT
 from NetWork.lock import CMD_REGISTER_LOCK
-from NetWork.queue import CMD_REGISTER_QUEUE
+from NetWork.queue import CMD_REGISTER_QUEUE, NWQueue
 from NetWork.semaphore import CMD_REGISTER_SEMAPHORE
 from .request import Request
 
@@ -88,19 +88,14 @@ class Workgroup:
 
     def __init__(self, workerAddresses, skipBadWorkers=False, 
                  handleDeadWorkers=False, socketType="TCP", keys=None):
-        self.controls=Manager().dict()
+        self.controls=dict()
         self.controls[CNT_WORKER_COUNT]=0
         self.controls[CNT_TASK_COUNT]=0
-        self.controls[CNT_EVENT_COUNT]=0
-        self.controls[CNT_QUEUE_COUNT]=0
-        self.controls[CNT_LOCK_COUNT]=0
         self.controls[CNT_TASK_EXECUTORS]={-1:None}
-        self.controls[CNT_MANAGER_COUNT]=0
         self.controls[CNT_DEAD_WORKERS]=set()
-        self.controls[CNT_SEMAPHORE_COUNT]=0
         self.currentWorker=-1
         for plugin in plugins:
-            plugin.masterInit()
+            plugin.masterInit(self)
         NetWork.networking.setUp(socketType, keys)
         self.listenerSocket=NetWork.networking.NWSocket()
         self.workerList=[]
@@ -188,7 +183,7 @@ class Workgroup:
         return TaskHandler(newTask.id, self)
     
     def getResult(self, id):
-        resultQueue=self.registerQueue()
+        resultQueue=NWQueue(self)
         self.sendRequest(CMD_GET_RESULT,
                          {
                           "ID": id,
@@ -207,7 +202,7 @@ class Workgroup:
     
     
     def taskRunning(self, id):
-        resultQueue=self.registerQueue()
+        resultQueue=NWQueue(self)
         self.sendRequest(CMD_TASK_RUNNING,
                          {
                           "ID":id,
@@ -217,7 +212,7 @@ class Workgroup:
         return result
     
     def getException(self, id):
-        resultQueue=self.registerQueue()
+        resultQueue=NWQueue(self)
         self.sendRequest(CMD_GET_EXCEPTION,
                          {
                           "ID":id,
@@ -227,7 +222,7 @@ class Workgroup:
         return result
     
     def exceptionRaised(self, id):
-        resultQueue=self.registerQueue()
+        resultQueue=NWQueue(self)
         self.sendRequest(CMD_CHECK_EXCEPTION,
                          {
                           "ID":id,
@@ -239,48 +234,6 @@ class Workgroup:
     def sendRequest(self, type, contents):
         self.commqueue.put(Request(type, contents))
 
-    def registerEvent(self):
-        """
-            Create a new event to be used by the tasks
-    
-            :Return: instance of :py:class:`NWEvent <NetWork.event.NWEvent>`
-        """
-        self.controls[CNT_EVENT_COUNT] += 1
-        id = self.controls[CNT_EVENT_COUNT]
-        self.sendRequest(CMD_REGISTER_EVENT,
-                         {
-                             "ID": id
-                         })
-        return event.NWEvent(id, self)
-    
-    def registerQueue(self):
-        """
-        Create a new queue to be used by the tasks
-        
-        :Return: instance of :py:class:`NWQueue <NetWork.queue.NWQueue>`
-        """
-        self.controls[CNT_QUEUE_COUNT]+=1
-        id=self.controls[CNT_QUEUE_COUNT]
-        self.sendRequest(CMD_REGISTER_QUEUE,
-                         {
-                          "ID":id
-                          })
-        return queue.NWQueue(id, self)
-    
-    def registerLock(self):
-        """
-        Create a new lock to be used by the tasks
-        
-        :Return: instance of :py:class:`NWLock <NetWork.lock.NWLock>`
-        """
-        self.controls[CNT_LOCK_COUNT]+=1
-        id=self.controls[CNT_LOCK_COUNT]
-        self.sendRequest(CMD_REGISTER_LOCK,
-                         {
-                          "ID":id
-                          })
-        return lock.NWLock(id, self)
-    
     def registerSemaphore(self, value):
         """
         Create a new semaphore to be used by the tasks
@@ -349,6 +302,3 @@ class Workgroup:
             target.dispatcher.join()
             target.listenerSocket.close()
             target.running=False
-        
-    
-            

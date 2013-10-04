@@ -7,7 +7,6 @@ its state.
 """
 import marshal
 from types import FunctionType
-#import .handlers
 
 class Task:
     #A class used to hold a task given to the workgroup

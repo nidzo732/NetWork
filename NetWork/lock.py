@@ -53,6 +53,7 @@ from .worker import DeadWorkerError
 CMD_REGISTER_LOCK = b"LCR"
 CMD_ACQUIRE_LOCK = b"LCA"
 CMD_RELEASE_LOCK = b"LCU"
+CNT_LOCK_COUNT = "LOCK_COUNT"
 
 runningOnMaster = None
 locks = None
@@ -61,12 +62,13 @@ lockLocks = None
 masterAddress = None
 
 
-def masterInit():
+def masterInit(workgroup):
     global locks, lockHandlers, lockLocks, runningOnMaster
     locks = {-1: None}
     lockHandlers = {-1: None}
     lockLocks = {-1: None}
     runningOnMaster = True
+    workgroup.controls[CNT_LOCK_COUNT] = 0
 
 
 def workerInit():
@@ -83,14 +85,20 @@ class NWLock:
     When entering critical section call :py:meth:`acquire` and when exiting :py:meth:`release`.
     """
 
-    def __init__(self, id, workgroup):
-        self.id = id
+    def __init__(self, workgroup):
         self.workgroup = workgroup
+        self.workgroup.controls[CNT_LOCK_COUNT] += 1
+        self.id = self.workgroup.controls[CNT_LOCK_COUNT]
         if runningOnMaster:
-            lockLocks[id] = Lock()
-            lockHandlers[id] = MasterLockHandler(id)
-        locks[id] = Lock()
-        locks[id].acquire()
+            lockLocks[self.id] = Lock()
+            lockHandlers[self.id] = MasterLockHandler(self.id)
+        locks[self.id] = Lock()
+        locks[self.id].acquire()
+
+        self.workgroup.sendRequest(CMD_REGISTER_LOCK,
+                                   {
+                                       "ID": self.id
+                                   })
 
     def acquireOnMaster(self):
         self.workgroup.sendRequest(CMD_ACQUIRE_LOCK,

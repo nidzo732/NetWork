@@ -35,20 +35,20 @@ from .request import Request
 from .worker import DeadWorkerError
 
 
-class WrongComputerError(Exception): pass
-
 CMD_SET_EVENT = b"EVS"
 CMD_REGISTER_EVENT = b"EVR"
+CNT_EVENT_COUNT = "EVENT_COUNT"
 
 runningOnMaster = None
 masterAddress = None
 events = None
 
 
-def masterInit():
+def masterInit(workgroup):
     global events, runningOnMaster
     events = {-1: None}
     runningOnMaster = True
+    workgroup.controls[CNT_EVENT_COUNT] = 0
 
 
 def workerInit():
@@ -65,10 +65,17 @@ class NWEvent:
     To wait for an event call it's :py:meth:`wait` method and to signal the event use :py:meth:`set` method.
     """
 
-    def __init__(self, id, workgroup=None):
-        self.id = id
+    def __init__(self, workgroup=None):
+        #self.id = id
+        #self.workgroup = workgroup
         self.workgroup = workgroup
-        events[id] = Event()
+        self.workgroup.controls[CNT_EVENT_COUNT] += 1
+        self.id = self.workgroup.controls[CNT_EVENT_COUNT]
+        events[self.id] = Event()
+        self.workgroup.sendRequest(CMD_REGISTER_EVENT,
+                                   {
+                                       "ID": self.id
+                                   })
 
     def waitOnWorker(self):
         events[self.id].wait()

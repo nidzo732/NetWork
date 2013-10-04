@@ -48,6 +48,7 @@ from .worker import DeadWorkerError
 CMD_REGISTER_QUEUE = b"QUR"
 CMD_PUT_ON_QUEUE = b"QUP"
 CMD_GET_FROM_QUEUE = b"QUG"
+CNT_QUEUE_COUNT = "QUEUE_COUNT"
 
 queues = None
 queueHandlers = None
@@ -56,12 +57,13 @@ runningOnMaster = None
 masterAddress = None
 
 
-def masterInit():
+def masterInit(workgroup):
     global queues, queueHandlers, queueLocks, runningOnMaster
     queues = {-1: None}
     queueHandlers = {-1: None}
     queueLocks = {-1: None}
     runningOnMaster = True
+    workgroup.controls[CNT_QUEUE_COUNT] = 0
 
 
 def workerInit():
@@ -78,13 +80,18 @@ class NWQueue:
     To put data on the queue call :py:meth:`put` and call :py:meth:`get` to get it.
     """
 
-    def __init__(self, id, workgroup):
-        self.id = id
+    def __init__(self, workgroup):
         self.workgroup = workgroup
+        self.workgroup.controls[CNT_QUEUE_COUNT] += 1
+        self.id = self.workgroup.controls[CNT_QUEUE_COUNT]
         if runningOnMaster:
-            queueHandlers[id] = MasterQueueHandler(id)
-            queueLocks[id] = Lock()
-        queues[id] = Queue()
+            queueHandlers[self.id] = MasterQueueHandler(self.id)
+            queueLocks[self.id] = Lock()
+        queues[self.id] = Queue()
+        self.workgroup.sendRequest(CMD_REGISTER_QUEUE,
+                                   {
+                                       "ID": self.id
+                                   })
 
     def putOnWorker(self, data):
         sendRequest(CMD_PUT_ON_QUEUE,

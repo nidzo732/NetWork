@@ -53,16 +53,18 @@ CMD_REGISTER_MANAGER = b"MNR"
 CMD_SET_MANAGER_ITEM = b"MNS"
 CMD_GET_MANAGER_ITEM = b"MNG"
 MANAGER_KEYERROR = b"KERR"
+CNT_MANAGER_COUNT = "MANAGER_COUNT"
 
 runningOnMaster = None
 masterAddress = None
 managers = None
 
 
-def masterInit():
+def masterInit(workgroup):
     global runningOnMaster, managers
     runningOnMaster = True
     managers = {-1: None}
+    workgroup.controls[CNT_MANAGER_COUNT]=0
 
 
 def workerInit():

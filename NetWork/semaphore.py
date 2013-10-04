@@ -21,6 +21,7 @@ from .worker import DeadWorkerError
 CMD_REGISTER_SEMAPHORE = b"SER"
 CMD_ACQUIRE_SEMAPHORE = b"SEA"
 CMD_RELEASE_SEMAPHORE = b"SEU"
+CNT_SEMAPHORE_COUNT = "SEMAPHORE_COUNT"
 
 runningOnMaster = None
 semaphores = None
@@ -29,12 +30,13 @@ semaphoreLocks = None
 masterAddress = None
 
 
-def masterInit():
+def masterInit(workgroup):
     global semaphores, runningOnMaster, semaphoreLocks, semaphoreHandlers
     semaphores = {-1: None}
     runningOnMaster = True
     semaphoreLocks = {-1: None}
     semaphoreHandlers = {-1: None}
+    workgroup.controls[CNT_SEMAPHORE_COUNT]=0
 
 
 def workerInit():
