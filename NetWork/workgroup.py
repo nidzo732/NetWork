@@ -12,12 +12,7 @@ from .worker import Worker, WorkerUnavailableError
 from .task import Task, TaskHandler
 from .commcodes import *
 from .cntcodes import *
-from .manager import NWManager
-from NetWork import event, queue, lock, semaphore
-from NetWork.event import CMD_REGISTER_EVENT
-from NetWork.lock import CMD_REGISTER_LOCK
-from NetWork.queue import CMD_REGISTER_QUEUE, NWQueue
-from NetWork.semaphore import CMD_REGISTER_SEMAPHORE
+from NetWork.queue import NWQueue
 from .request import Request
 
 
@@ -28,7 +23,8 @@ class Workgroup:
     """
     Defines the group of computers that will execute the tasks, handles requests
     from the user and from the worker computers, controls execution, messaging
-    and concurrency. Handles Locks, Queues, :py:mod:`Managers <NetWork.manager>`, :py:mod:`Events <NetWork.event>` and other tools.
+    and concurrency. Handles Locks, Queues, :py:mod:`Managers <NetWork.manager>`,
+    :py:mod:`Events <NetWork.event>` and other tools.
     
     In order for the Workgroup to be functional, the ``dispatcher`` and ``listener`` 
     threads must be started and they must be terminated properly on exit. The
@@ -233,35 +229,6 @@ class Workgroup:
     
     def sendRequest(self, type, contents):
         self.commqueue.put(Request(type, contents))
-
-    def registerSemaphore(self, value):
-        """
-        Create a new semaphore to be used by the tasks
-        
-        :Parameters:
-          value : int
-            Counter value for the semaphore
-        
-        :Return: instance of :py:class:`NWSemaphore <NetWork.semaphore.NWSemaphore>`
-        """
-        self.controls[CNT_SEMAPHORE_COUNT]+=1
-        id=self.controls[CNT_LOCK_COUNT]
-        self.sendRequest(CMD_REGISTER_SEMAPHORE,
-                         {
-                          "ID":id,
-                          "VALUE":value
-                          })
-        return semaphore.NWSemaphore(id, self, value)
-    
-    def registerManager(self):
-        """
-        Create a new manager to be used by the tasks
-        
-        :Return: instance of :py:class:`NWManager <NetWork.manager.NWManager>`
-        """
-        self.controls[CNT_MANAGER_COUNT]+=1
-        id=self.controls[CNT_MANAGER_COUNT]
-        return NWManager(self.controls[CNT_MANAGER_COUNT], self)
     
     def stopServing(self):
         """
@@ -297,7 +264,6 @@ class Workgroup:
     def onExit(target):
         #Ran on exit to clean up the workgroup
         if (target.running):
-            #Need to fix this for a nice exit, preferably with join#########
             target.commqueue.put(CMD_HALT)
             target.dispatcher.join()
             target.listenerSocket.close()

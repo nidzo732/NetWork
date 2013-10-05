@@ -64,7 +64,7 @@ def masterInit(workgroup):
     global runningOnMaster, managers
     runningOnMaster = True
     managers = {-1: None}
-    workgroup.controls[CNT_MANAGER_COUNT]=0
+    workgroup.controls[CNT_MANAGER_COUNT] = 0
 
 
 def workerInit():
@@ -82,9 +82,10 @@ class NWManager:
     To get other types of managers use :py:meth:`dict` and :py:meth:`namespace` methods of :py:class:`NWManager`
     """
 
-    def __init__(self, id, workgroup):
-        self.id = id
+    def __init__(self, workgroup):
         self.workgroup = workgroup
+        self.workgroup.controls[CNT_MANAGER_COUNT] += 1
+        self.id = self.workgroup.controls[CNT_MANAGER_COUNT]
         if runningOnMaster:
             managers[self.id] = Manager().dict()
 

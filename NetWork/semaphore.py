@@ -9,7 +9,8 @@ the value is zero the task is put to sleep until one of the tasks that
 has acquired the semaphore calls :py:meth:`release <NWSemaphore.release>` 
 method.
 
-For more info about semaphores see `Python documentation page <http://docs.python.org/2/library/threading.html#semaphore-objects>`_
+For more info about semaphores see `Python documentation page
+<http://docs.python.org/2/library/threading.html#semaphore-objects>`_
 """
 from multiprocessing import Semaphore, Lock
 from .networking import sendRequest
@@ -36,7 +37,7 @@ def masterInit(workgroup):
     runningOnMaster = True
     semaphoreLocks = {-1: None}
     semaphoreHandlers = {-1: None}
-    workgroup.controls[CNT_SEMAPHORE_COUNT]=0
+    workgroup.controls[CNT_SEMAPHORE_COUNT] = 0
 
 
 def workerInit():
@@ -54,15 +55,22 @@ class NWSemaphore:
     When entering critical section call :py:meth:`acquire` and when exiting :py:meth:`release`.
     """
 
-    def __init__(self, id, workgroup, value):
-        self.id = id
+    def __init__(self, workgroup, value=1):
+        self.value = value
         self.workgroup = workgroup
+        self.workgroup.controls[CNT_SEMAPHORE_COUNT] += 1
+        self.id = self.workgroup.controls[CNT_SEMAPHORE_COUNT]
         if runningOnMaster:
-            semaphoreLocks[id] = Lock()
-            semaphoreHandlers[id] = MasterSemaphoreHandler(id, value)
-        semaphores[id] = Semaphore(value)
-        for i in range(value):
-            semaphores[id].acquire()
+            semaphoreLocks[self.id] = Lock()
+            semaphoreHandlers[self.id] = MasterSemaphoreHandler(self.id, self.value)
+        semaphores[self.id] = Semaphore(self.value)
+        for i in range(self.value):
+            semaphores[self.id].acquire()
+        self.workgroup.sendRequest(CMD_REGISTER_SEMAPHORE,
+                                   {
+                                       "ID": self.id,
+                                       "VALUE": self.value
+                                   })
 
     def acquireOnMaster(self):
         self.workgroup.sendRequest(CMD_ACQUIRE_SEMAPHORE,
