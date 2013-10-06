@@ -40,7 +40,6 @@ def executeTask(request):
     newProcess = WorkerProcess(newTask)
     tasks[newTask.id] = newProcess
     tasks[newTask.id].start()
-    request.respond(COMCODE_ISALIVE)
 
 
 def getResult(request):

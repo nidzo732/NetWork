@@ -143,6 +143,7 @@ def registerEventMaster(request, controls, commqueue):
             commqueue.put(Request(CMD_WORKER_DIED,
                                   {"WORKER": worker}))
 
+
 def setEventWorker(request):
     events[request["ID"]].set()
 

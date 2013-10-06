@@ -23,8 +23,8 @@ class Workgroup:
     """
     Defines the group of computers that will execute the tasks, handles requests
     from the user and from the worker computers, controls execution, messaging
-    and concurrency. Handles Locks, Queues, :py:mod:`Managers <NetWork.manager>`,
-    :py:mod:`Events <NetWork.event>` and other tools.
+    and concurrency. Handles :py:mod:`Locks <NetWork.lock>`, :py:mod:`Queues NetWork.queue`,
+    :py:mod:`Managers <NetWork.manager>`, :py:mod:`Events <NetWork.event>` and other tools.
     
     In order for the Workgroup to be functional, the ``dispatcher`` and ``listener`` 
     threads must be started and they must be terminated properly on exit. The
@@ -77,13 +77,11 @@ class Workgroup:
             must be specified if AES is enabled
           * ``"ListenerHMAC"`` HMAC key used to verify messages from the workers,
             must be specified if HMAC is enabled
-          
-        
-        
+
     """
 
     def __init__(self, workerAddresses, skipBadWorkers=False, 
-                 handleDeadWorkers=False, socketType="TCP", keys=None):
+                 socketType="TCP", keys=None):
         self.controls=dict()
         self.controls[CNT_WORKER_COUNT]=0
         self.controls[CNT_TASK_COUNT]=0
@@ -108,7 +106,6 @@ class Workgroup:
             raise NoWorkersError("No workers were successfully added to workgroup")
         self.controls[CNT_WORKERS]=self.workerList
         self.commqueue=Queue()
-        self.handleDeadWorkers=handleDeadWorkers
         self.running=False
         
     def __enter__(self):

@@ -8,18 +8,15 @@ its state.
 import marshal
 from types import FunctionType
 
+
 class Task:
     #A class used to hold a task given to the workgroup
 
-    def __init__(self, target=None, args=(), kwargs={}, id=None, marshaled=None,
-                 globalVariables=None):
-        if marshaled:
-            self.unmarshal(marshaled, globalVariables)
-        else:
-            self.target = target
-            self.args = args
-            self.kwargs = kwargs
-            self.id = id
+    def __init__(self, target=None, args=(), kwargs={}, id=None,):
+        self.target = target
+        self.args = args
+        self.kwargs = kwargs
+        self.id = id
 
     def __getstate__(self):
         state = {"args": self.args, "kwargs": self.kwargs, "id": self.id,

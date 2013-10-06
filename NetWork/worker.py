@@ -69,7 +69,6 @@ class Worker:
         self.myTasks[task.id] = task
         self.sendRequest(CMD_SUBMIT_TASK, {"TASK": task})
 
-
     def getResult(self, id):
         return self.sendRequestWithResponse(CMD_GET_RESULT,
                                             {

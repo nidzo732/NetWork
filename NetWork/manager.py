@@ -239,4 +239,3 @@ def getManagerItemMaster(request, controlls, commqueue):
 
 masterHandlers = {CMD_SET_MANAGER_ITEM: setManagerItemMaster, CMD_GET_MANAGER_ITEM: getManagerItemMaster}
 workerHandlers = {}
-
