@@ -60,14 +60,15 @@ def workerInit():
 class NWEvent:
     """
     Event class that is used to signal events between tasks.
-    A new instance is usually created by calling :py:meth:`Workgroup.registerEvent
-    <NetWork.workgroup.Workgroup.registerEvent>`.
     To wait for an event call it's :py:meth:`wait` method and to signal the event use :py:meth:`set` method.
+
+
+    :type workgroup: NetWork.workgroup.Workgroup
+    :param workgroup: workgroup that will be using this Event
+
     """
 
     def __init__(self, workgroup=None):
-        #self.id = id
-        #self.workgroup = workgroup
         self.workgroup = workgroup
         self.workgroup.controls[CNT_EVENT_COUNT] += 1
         self.id = self.workgroup.controls[CNT_EVENT_COUNT]

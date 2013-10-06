@@ -42,36 +42,32 @@ class Workgroup:
 
     Constructor:
     
-    :Parameters:
-      workerAddresses : iterable
-        An iterable of connection parameters for communicating with
+    :type workerAddresses: iterable
+    :param  workerAddresses: An iterable of connection parameters for communicating with
         workers in the workgroup. If default ``socketType`` is used,
         these should be IP addresses of the workers, if secure sockets
         are used, parameters should contain keys for each worker.
-        
-      skipBadWorkers : bool
-        Whether to raise an error when adding the worker fails or to 
+
+    :type skipBadWorkers: bool
+    :param skipBadWorkers: Whether to raise an error when adding the worker fails or to
         continue to the next worker
-        
-      handleDeadWorkers : Currently not working, leave as it is
       
-      socketType : string
-        NetWork has several socket types used internaly to communicate.
-        Default is an ordinary TCP socket with no protection, other
-        available values for this parameter are:
-          
+    :type socketType: str
+    :param socketType: NetWork has several socket types used internaly to communicate.
+      Default is an ordinary TCP socket with no protection, other
+      available values for this parameter are:
+
           * ``"HMAC"`` Use HMAC verification on messages. Worker connection
             parameters must follow this format ``(IP, HMACKey)``
           * ``"AES"`` Encrypt messages with AES encryption. Worker connection
             parameters must follow this format ``(IP, AESKey)``
           * ``"AES+HMAC"`` Encrypt messages with AES and verify them with HMAC.
-            Worker connection parameters must follow this format 
-            ``(IP, HMACKey, AESKey)``
-      
-      keys : dict
-        If you selected a protected socket type, you need to provide keys
-        for decrypting and/or verifying incomming messages from workers.
-        Items to put in this dictionary:
+            Worker connection parameters must follow this format ``(IP, HMACKey, AESKey)``
+
+    :type keys: dict
+    :param keys: If you selected a protected socket type, you need to provide keys
+      for decrypting and/or verifying incomming messages from workers.
+      Items to put in this dictionary:
         
           * ``"ListenerAES"`` AES key used to decrypt messages from workers,
             must be specified if AES is enabled
@@ -148,18 +144,18 @@ class Workgroup:
     def submit(self, target, args=(), kwargs={}):
         """
         Submit a task to be executed by the workgroup
-        
-        :Parameters:
-         target : callable
-           function to be executed
-         
-         args : iterable
-           optional tuple of positional arguments
-         
-         kwargs : dict
-           optional dictionary of keyword arguments
-         
-        :Return: an instance of :py:class:`TaskHandler <NetWork.task.TaskHandler>`
+
+        :type target: function
+        :param target: function to be executed
+
+        :type args: iterable
+        :param args: optional tuple of positional arguments
+
+        :type kwargs: dict
+        :param kwargs: optional dictionary of keyword arguments
+
+        :rtype: :py:class:`TaskHandler <NetWork.task.TaskHandler>`
+        :return: handler used for controling the task
         """
         self.selectNextWorker()
         self.controls[CNT_TASK_COUNT]+=1

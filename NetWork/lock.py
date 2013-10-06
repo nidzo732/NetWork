@@ -80,9 +80,10 @@ def workerInit():
 class NWLock:
     """
     The lock class used to prevent simultaneous execution.
-    New instance is usually created with :py:meth:`Workgroup.registerLock <NetWork.workgroup.Workgroup.registerLock>`.
-    
     When entering critical section call :py:meth:`acquire` and when exiting :py:meth:`release`.
+
+    :type workgroup: NetWork.workgroup.Workgroup
+    :param workgroup: workgroup that will be using this Lock
     """
 
     def __init__(self, workgroup):

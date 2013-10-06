@@ -49,10 +49,12 @@ def workerInit():
 class NWSemaphore:
     """
     The semaphore class used to limit simultaneous execution.
-    New instance is usually created with :py:meth:`Workgroup.registerSemaphore
-    <NetWork.workgroup.Workgroup.registerSemaphore>`.
-    
     When entering critical section call :py:meth:`acquire` and when exiting :py:meth:`release`.
+
+    :type workgroup: NetWork.workgroup.Workgroup
+    :param workgroup: workgroup that will be using this Event
+    :type value: int
+    :param value: initial value for the semaphore counter
     """
 
     def __init__(self, workgroup, value=1):

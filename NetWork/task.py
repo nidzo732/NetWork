@@ -46,8 +46,9 @@ class TaskHandler:
         """
         Get return value of the submited function that's running in
         this task. 
-        
-        :Return: return value of the function in the task, ``None`` if the task
+
+        :rtype: pickleable object or None
+        :return: return value of the function in the task, ``None`` if the task
           hasn't returned.
         """
         return self.workgroup.getResult(self.id)
@@ -61,16 +62,18 @@ class TaskHandler:
     def running(self):
         """
         Check if the task is still running.
-        
-        :Return: ``True`` or ``False`` depending on whether the task is running.
+
+        :rtype: bool
+        :return: ``True`` or ``False`` depending on whether the task is running.
         """
         return self.workgroup.taskRunning(self.id)
 
     def exception(self):
         """
         Get the exception that the task has raised.
-        
-        :Return: exception that the task has raised, ``None`` if there was
+
+        :rtype: pickleable object or none
+        :return: exception that the task has raised, ``None`` if there was
           no exception.
         """
         return self.workgroup.getException(self.id)
@@ -78,8 +81,9 @@ class TaskHandler:
     def exceptionRaised(self):
         """
         Check if the task has raised an exception.
-        
-        :Return: ``True`` or ``False`` depending on whether the task has raised an
+
+        :rtype: bool
+        :return: ``True`` or ``False`` depending on whether the task has raised an
           exception.
         """
         return self.workgroup.exceptionRaised(self.id)

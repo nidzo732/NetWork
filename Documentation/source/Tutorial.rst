@@ -77,7 +77,7 @@ Here is a program that gives three tasks to the workgroup, waits for them to fin
         handler1=w.submit(target=long_running_function1, args=(1,2,3))
         handler2=w.submit(target=long_running_function2, args=(4,5,6))
         handler3=w.submit(target=long_running_function3, args=(7,8,9))
-        while hanler1.running() or handler2.running() or handler3.running():
+        while handler1.running() or handler2.running() or handler3.running():
             sleep(0.5)
         print(handler1.result(), handler2.result(), handler3.result())
 

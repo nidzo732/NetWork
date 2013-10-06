@@ -33,7 +33,7 @@ All socket classes must have these methods and members:
     Accept a new request, return an instance of a socket class that will be used to receive and respond to that request.
 
   connect(parameters) : method
-  	Parameters used to connect to another computer. The paramets usually contain just an address, but if secure networking is used keys are passed in parameters.
+    Parameters used to connect to another computer. The paramets usually contain just an address, but if secure networking is used keys are passed in parameters.
 
   send(data) : method
     Send given data to the other side. All data must be handled safely, no buffer overflows, no parital messages. There won't be two sends on the same socket. Usually one message is sent, a response is received and the socket is closed.
@@ -45,15 +45,15 @@ All socket classes must have these methods and members:
     Close the socket, it will no longer be used for communication.
 
   address : member
-  	The address of the remote computer to whitch this socket is connected to, used to identify which worker sent the request.
+    The address of the remote computer to whitch this socket is connected to, used to identify which worker sent the request.
 
   checkAvailability(address) : static method
-  	Check if a worker is present at the given address. This method is called on startup when adding workers.
+    Check if a worker is present at the given address. This method is called on startup when adding workers.
 
 Any class implementing these methods can be used in NetWork, just change the default class to your own
 ::
 
-	NetWork.networking.NWSocket=MySocketClass
+    NetWork.networking.NWSocket=MySocketClass
 
 Network security
 ----------------
@@ -100,11 +100,11 @@ Requests begin with a 3 letter code that determines their handler function. The 
 
 commqueue
 =========
-Commqueue is a queue created during :py:meth:`__init__` and is used to pass commands to the dispatcher. All requests are passed through this queue, when tasks on workers use a tool it sends a message to :py:attr:`networkListener` and it passes it via :py:attr:`commqueue` to the dispatcher. Tools on the master put their requests directly to this queue.
+Commqueue is a queue created during :py:meth:`__init__` and is used to pass commands to the dispatcher. All requests are passed through this queue, when tasks on workers use a tool it sends a message to :py:attr:`networkListener` and it passes it via :py:attr:`commqueue` to the dispatcher. Tools on the master put their requests directly to this queue using :py:meth:`sendRequest` method of the workgroup
 
-Command
+Request
 =======
-Command is a class used to pack requests that are passed to the dispatcher, in addition to the request itself the Command also has additional data:
+Request is a class used to pack requests that are passed to the dispatcher, in addition to the request itself the Request also has additional data:
   
   * ID number of the worker who sent the request, if the request was sent from the master the ID is -1
   * if the request was sent from the worker a socket is also passed to the dispatcher and the handler, this way the handler can respond to the request if needed
@@ -112,17 +112,17 @@ Command is a class used to pack requests that are passed to the dispatcher, in a
 
 Controlls
 ---------
-Controlls is a manager used internaly in the Workgroup, it contains various properties like list of workers, nubmer of registered queues etc. It is used because dispatcher and listener need to access this shared data.
+Controlls is a manager by the Workgroup and multiprocessing tools to store various properties like list of workers, nubmer of registered queues etc. It is used because dispatcher and listener need to access this shared data.
 
 Communication with workers
 ##############################
-Each worker in the workgroup is represented with an instance of :py:class:`NetWork.worker.Worker` class, these objects are used to control the workers. Workes have methods that are used for controling tasks and using IPC and concurrency control tools, they also have generic :py:meth:`sendMessage` and :py:meth:`sendMessageWithResponse` methods used to pass messages to the workers.
+Each worker in the workgroup is represented with an instance of :py:class:`NetWork.worker.Worker` class, these objects are used to control the workers. Workes have methods that are used for controling tasks and generic they also have generic :py:meth:`sendMessage` and :py:meth:`sendMessageWithResponse` methods used by other tools.
 
 Passing requests
 ################
 Most of the functionality of NetWork relies on passing requests, over the network and through the :py:data:`commqueue` to the dispatcher.
 
-These requests have to be identified and handled by a proper handler function. To identify them 3-letter codes are prepended to each request, the codes are defined in :py:mod:`NetWork.commcodes`. Every code has its handler function.
+These requests have to be identified and handled by a proper handler function. To identify them 3-letter codes are prepended to each request, the core codes are defined in :py:mod:`NetWork.commcodes`, codes used by multiprocessing tools are in their respective modules. Every code has its handler function.
 
 When a request is received (in dispatcher or on the worker server) a dictionary (:py:data:`NetWork.handlers.handlerList` for dispatcher, :py:data:`server.handlers` on worker) is searched for the appropriate handler function.
 
@@ -152,9 +152,8 @@ Multiprocessing tools
 Despite serving difrent purposes all multiprocessing tools have some common properties. 
 Each instance of a tool has its own integer ID, every queue, lock, manager or event has its own ID. When requests are sent to the dispatcher an ID is also sent to identify which item is used.
 
-They are all created with :py:meth:`Workgroup.register*` methods - :py:meth:`registerQueue`, :py:meth:`registerLock`...
-
 Most of them also have local dictionaries containing stuff that is used to handle them localy, for example - for every :py:class:`NWQueue` an instance of :py:class:`multiprocessing.Queue` is added to :py:data:`NetWork.queue.queues` dictionary on every computer in the workgroup, and the position of those queues in the dictionary is determined by the ID of the particular :py:class:`NWQueue`.
+They use :py:meth:`Workgroup.sendRequest` and :py:meth:`Worker.sendRequest` to communicate with workgroup and workers`
 
 Events
 ------

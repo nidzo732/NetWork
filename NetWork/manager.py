@@ -76,10 +76,11 @@ class NWManager:
     """
     The main manager class that manages a collection of shared data between 
     processes on multiple computers. 
-    A new instance is usually created by calling :py:meth:`Workgroup.registerManager
-    <NetWork.workgroup.Workgroup.registerManager>`.
-    The data is managed by using :py:meth:`setItem` and :py:meth:`getItem` methods. 
+    The data is managed by using :py:meth:`setItem` and :py:meth:`getItem` methods.
     To get other types of managers use :py:meth:`dict` and :py:meth:`namespace` methods of :py:class:`NWManager`
+
+    :type workgroup: NetWork.workgroup.Workgroup
+    :param workgroup: workgroup that will be using this Manager
     """
 
     def __init__(self, workgroup):
@@ -124,10 +125,11 @@ class NWManager:
         """
         Get one of the shared data items in the manager. If the item doesn't 
         exist a ``KeyError`` will be raised.
-        
-        :Parameters:
-          item : any variable that can be used as dict key
-            a key identifying the desired item
+
+        :type item: any pickleable object that can be used as dict key
+        :param item: a key identifying the desired item
+
+        :return: item in the manager that has the given key
         """
         if runningOnMaster:
             return self.getItemOnMaster(item)
@@ -139,12 +141,11 @@ class NWManager:
         Set one of the shared data items in the manager. If the item doesn't 
         exist it will be created.
         
-        :Parameters:
-          item : any variable that can be used as dict key
-            a key identifying the desired item
-          
-          value : any pickleable variable
-            new value for the item
+        :type item: any pickleable object that can be used as dict key
+        :param item:    a key identifying the desired item
+
+        :type value: any pickleable object
+        :param value: new value for the item
         """
         if runningOnMaster:
             self.setItemOnMaster(item, value)
@@ -155,11 +156,11 @@ class NWManager:
         """
         Get a manager that behaves like a dictionary as described above
         
-        :Parameters:
-          initial : dict
-            optional initial values and names for items in the manager
-        
-        :Return: an instance of :py:class:`ManagerDict`
+        :type initial: dict
+        :param initial: optional initial values and names for items in the manager
+
+        :rtype: :py:class:`ManagerDict <NetWork.manager.ManagerDict>`
+        :return: a manager that behaves like a dictionary
         """
 
         return ManagerDict(self.id, self.workgroup, initial)
@@ -167,8 +168,9 @@ class NWManager:
     def namespace(self):
         """
         Get a manager that behaves like a namespace as described above
-                
-        :Return: an instance of :py:class:`ManagerNamespace`
+
+        :rtype: :py:class:`ManagerNamespace <NetWork.manager.ManagerNamespace>`
+        :return: a manager that behaves like a namespace
         """
         return ManagerNamespace(self.id, self.workgroup)
 

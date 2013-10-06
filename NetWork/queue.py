@@ -75,9 +75,10 @@ def workerInit():
 class NWQueue:
     """
     The queue class used for inter-process communication.
-    New instance is usually created with :py:meth:`Workgroup.registerQueue <NetWork.workgroup.Workgroup.registerQueue>`.
-    
     To put data on the queue call :py:meth:`put` and call :py:meth:`get` to get it.
+
+    :type workgroup: NetWork.workgroup.Workgroup
+    :param workgroup: workgroup that will be using this Queue
     """
 
     def __init__(self, workgroup):
@@ -125,9 +126,8 @@ class NWQueue:
         """
         Put data on the queue. A task that calls get will get that data
         
-        :Parameters:
-          data : any pickleable object
-            item to be put on the queue
+        :type data: any pickleable object
+        :param  data: item to be put on the queue
         """
         if runningOnMaster:
             self.putOnMaster(data)
@@ -139,7 +139,7 @@ class NWQueue:
         Get next item off the queue. If queue is emtpy sleep until something
         gets put on it
         
-        :Return: next item in the queue
+        :return: next item in the queue
         """
         if runningOnMaster:
             return self.getOnMaster()

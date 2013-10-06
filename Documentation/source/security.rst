@@ -76,7 +76,7 @@ As you can see, the worker key has changed but the master key remains the same.
 
 Using both AES and HMAC
 #######################
-If you want private messages and you want to make sure they were not tampered with, you can enable bot AES and HMAC, you just need to give two sets of keys to the workgroup and to the worker, one for message verification and one for encryption/decryption.
+Although AES encryption adds a hash to the message to check for tampering, you can enable bot AES and HMAC, you just need to give two sets of keys to the workgroup and to the worker, one for message verification and one for encryption/decryption.
 
 Master setup
 ------------
