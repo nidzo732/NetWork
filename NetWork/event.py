@@ -23,47 +23,78 @@ of the same event the first task is waken up and continues it's work
         myEvent.set()
         sleep(1)    #Dont kill workgroup until the message is sent to worker
 
-For more info about events see `Python documentation page <http://docs.python.org/3.3/library/threading.html#event-objects>`_ 
+For more info about events see `Python documentation page
+<http://docs.python.org/3.3/library/threading.html#event-objects>`_
 """
-from .networking import sendRequest
 from multiprocessing import Event
-from .commcodes import CMD_SET_EVENT, CMD_REGISTER_EVENT, CMD_WORKER_DIED
+
+from .networking import sendRequest
+from .commcodes import CMD_WORKER_DIED
 from .cntcodes import CNT_WORKERS
 from .request import Request
 from .worker import DeadWorkerError
-class WrongComputerError(Exception):pass
-runningOnMaster=None
-masterAddress=None
-events=None
+
+
+CMD_SET_EVENT = b"EVS"
+CMD_REGISTER_EVENT = b"EVR"
+CNT_EVENT_COUNT = "EVENT_COUNT"
+
+runningOnMaster = None
+masterAddress = None
+events = None
+
+
+def masterInit(workgroup):
+    global events, runningOnMaster
+    events = {-1: None}
+    runningOnMaster = True
+    workgroup.controls[CNT_EVENT_COUNT] = 0
+
+
+def workerInit():
+    global events, runningOnMaster
+    events = {-1: None}
+    runningOnMaster = False
+
+
 class NWEvent:
     """
     Event class that is used to signal events between tasks.
-    A new instance is usually created by calling :py:meth:`Workgroup.registerEvent <NetWork.workgroup.Workgroup.registerEvent>`.
+    A new instance is usually created by calling :py:meth:`Workgroup.registerEvent
+    <NetWork.workgroup.Workgroup.registerEvent>`.
     To wait for an event call it's :py:meth:`wait` method and to signal the event use :py:meth:`set` method.
     """
-    def __init__(self, id, workgroup=None):
-        self.id=id
-        self.workgroup=workgroup
-        events[id]=Event()
-    
+
+    def __init__(self, workgroup=None):
+        #self.id = id
+        #self.workgroup = workgroup
+        self.workgroup = workgroup
+        self.workgroup.controls[CNT_EVENT_COUNT] += 1
+        self.id = self.workgroup.controls[CNT_EVENT_COUNT]
+        events[self.id] = Event()
+        self.workgroup.sendRequest(CMD_REGISTER_EVENT,
+                                   {
+                                       "ID": self.id
+                                   })
+
     def waitOnWorker(self):
         events[self.id].wait()
-    
+
     def setOnWorker(self):
         sendRequest(CMD_SET_EVENT,
                     {
-                     "ID":self.id
-                     })
-    
+                        "ID": self.id
+                    })
+
     def waitOnMaster(self):
         return events[self.id].wait()
-    
+
     def setOnMaster(self):
         self.workgroup.sendRequest(CMD_SET_EVENT,
                                    {
-                                    "ID":self.id
-                                    })
-    
+                                       "ID": self.id
+                                   })
+
     def set(self):
         """
         Set the event, any task that called the :py:meth:`wait` method will be waken up
@@ -72,7 +103,7 @@ class NWEvent:
             self.setOnMaster()
         else:
             self.setOnWorker()
-    
+
     def wait(self):
         """
         Sleep until some task calls the :py:meth:`set` method
@@ -81,32 +112,45 @@ class NWEvent:
             self.waitOnMaster()
         else:
             self.waitOnWorker()
-    
-    def __setstate__(self, state):
-        self.id=state["id"]
-        self.workgroup=state["workgroup"]
-    
-    def __getstate__(self):
-        return {"id":self.id, "workgroup":None}
 
-def setEvent(request, controlls, commqueue):
+    def __setstate__(self, state):
+        self.id = state["id"]
+        self.workgroup = state["workgroup"]
+
+    def __getstate__(self):
+        return {"id": self.id, "workgroup": None}
+
+
+def setEventMaster(request, controls, commqueue):
     #A handler used by Workgroup.dispatcher
-    id=request["ID"]
-    for worker in controlls[CNT_WORKERS]:
+    id = request["ID"]
+    for worker in controls[CNT_WORKERS]:
         try:
-            worker.sendRequest(CMD_SET_EVENT, {"ID":id})
+            worker.sendRequest(CMD_SET_EVENT, {"ID": id})
         except DeadWorkerError:
-            commqueue.put(Request(CMD_WORKER_DIED, 
-                          {"WORKER":worker}))
+            commqueue.put(Request(CMD_WORKER_DIED,
+                                  {"WORKER": worker}))
     events[id].set()
-    
-def registerEvent(request, controlls, commqueue):
+
+
+def registerEventMaster(request, controls, commqueue):
     #A handler used by Workgroup.dispatcher
-    id=request["ID"]
-    for worker in controlls[CNT_WORKERS]:
+    id = request["ID"]
+    for worker in controls[CNT_WORKERS]:
         try:
-            worker.sendRequest(CMD_REGISTER_EVENT,{"ID":id})
+            worker.sendRequest(CMD_REGISTER_EVENT, {"ID": id})
         except DeadWorkerError:
-            commqueue.put(Request(CMD_WORKER_DIED, 
-                          {"WORKER":worker}))
-    
+            commqueue.put(Request(CMD_WORKER_DIED,
+                                  {"WORKER": worker}))
+
+
+def setEventWorker(request):
+    events[request["ID"]].set()
+
+
+def registerEventWorker(request):
+    id = request["ID"]
+    events[id] = Event()
+
+masterHandlers = {CMD_SET_EVENT: setEventMaster, CMD_REGISTER_EVENT: registerEventMaster}
+workerHandlers = {CMD_SET_EVENT: setEventWorker, CMD_REGISTER_EVENT: registerEventWorker}
