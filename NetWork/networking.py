@@ -16,6 +16,13 @@ try:
 except ImportError:
     cryptoAvailable = False
 
+try:
+    from ssl import SSLContext, PROTOCOL_TLSv1, CERT_REQUIRED, SSLError
+
+    SSLAvailable = True
+except ImportError:
+    SSLAvailable = False
+
 COMCODE_CHECKALIVE = b"ALV"
 COMCODE_ISALIVE = b"IMALIVE"
 ISALIVE_TIMEOUT = 10
@@ -44,6 +51,9 @@ class LengthIndicatorTooLong(OSError): pass
 
 
 class KeyNotSet(OSError): pass
+
+
+class SSLProblem(OSError): pass
 
 
 masterAddress = None
@@ -339,15 +349,73 @@ else:
     class NWSocketHMACandAES(NWSocketAES):
         pass
 
-sockets.update({"AES": NWSocketAES, "AES+HMAC": NWSocketHMACandAES})
+if SSLAvailable:
+    class NWSocketSSL(NWSocketTCP):
+        localCertFile = None
+        localKeyFile = None
+        localKeyPassword = None
+        peerCertFile = None
+        peerCertDir = None
+        context = None
+
+        def __init__(self, socketToUse=None, address=None):
+            if socketToUse:
+                self.internalSocket = socketToUse
+            else:
+                NWSocketTCP.__init__(self)
+            self.address = address
+
+        def connect(self, address):
+            try:
+                self.internalSocket = self.context.wrap_socket(self.internalSocket)
+                NWSocketTCP.connect(self, address)
+            except SSLError:
+                raise
+
+        def accept(self):
+            request = self.internalSocket.accept()
+            sock = request[0]
+            address = request[1][0]
+            sock = self.context.wrap_socket(sock, server_side=True)
+            return NWSocketSSL(sock, address)
+
+        @staticmethod
+        def setUp(params):
+            NWSocketSSL.localCert = params["LocalCert"]
+            NWSocketSSL.localKey = params["LocalKey"]
+            if not (("PeerCertFile" in params) or ("PeerCertDir" in params)):
+                raise KeyError("PeerCertFile or PeerCertDir")
+            if "PeerCertFile" in params:
+                NWSocketSSL.peerCertFile = params["PeerCertFile"]
+            if "PeerCertDir" in params:
+                NWSocketSSL.peerCertFile = params["PeerCertDir"]
+            if "LocalKeyPassword" in params:
+                NWSocketSSL.localKeyPassword = params["LocalKeyPassword"]
+
+            NWSocketSSL.context = SSLContext(PROTOCOL_TLSv1)
+            NWSocketSSL.context.load_cert_chain(NWSocketSSL.localCertFile, keyfile=NWSocketSSL.localKeyFile,
+                                                password=NWSocketSSL.localKeyPassword)
+            NWSocketSSL.context.load_verify_locations(cafile=NWSocketSSL.peerCertFile,
+                                                      capath=NWSocketSSL.peerCertDir)
+            NWSocketSSL.context.verify_mode = CERT_REQUIRED
+
+else:
+    class NWSocketSSL:
+        @staticmethod
+        def setUp(keys):
+            raise NotImplementedError("SSL could not be used because SSL module is not available")
+
+sockets.update({"AES": NWSocketAES, "AES+HMAC": NWSocketHMACandAES,
+                "SSL": NWSocketSSL})
 
 
-def setUp(requestType, keys):
+def setUp(requestType, params):
     if requestType:
         try:
-            sockets[requestType].setUp(keys)
-        except KeyError:
-            raise KeyNotSet("Not all keys were set for the desired security type: " + str(requestType))
+            sockets[requestType].setUp(params)
+        except KeyError as error:
+            raise KeyNotSet("Not all parameters were set for the desired security type: "
+                            + str(requestType) + " could not find " + str(error))
         global NWSocket
         NWSocket = sockets[requestType]
 

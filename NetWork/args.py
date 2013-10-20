@@ -20,7 +20,18 @@ def getArgs():
     
     networkArgs.add_argument("--master_aes_key", 
                              help="Key used to encrypt messages sent to master")
-    
+
+    networkArgs.add_argument("--master_ssl_cert",
+                             help="Certificate file used to identify the master")
+
+    networkArgs.add_argument("--local_ssl_cert",
+                             help="Certificate used to verify this computer")
+
+    networkArgs.add_argument("--local_ssl_key",
+                             help="Private key used to decrypt incomming requests")
+
+    networkArgs.add_argument("--local_key_password",
+                             help="Password used to decrypt private key")
     args = argumentParser.parse_args()
     netArgs = {}
     
@@ -37,6 +48,18 @@ def getArgs():
     
     if args.master_aes_key:
         args.master_aes_key = args.master_aes_key.encode(encoding="ASCII")
+
+    if args.master_ssl_cert:
+        netArgs["PeerCertFile"] = args.master_ssl_cert
+
+    if args.local_ssl_cert:
+        netArgs["LocalCert"]=args.local_ssl_cert
+
+    if args.local_ssl_key:
+        netArgs["LocalKey"] = args.local_ssl_key
+
+    if args.local_key_password:
+        netArgs["LocalKeyPassword"] = args.local_key_password
     
     args.netArgs = netArgs
     return args
