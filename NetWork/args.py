@@ -7,7 +7,7 @@ def getArgs():
     
     networkArgs.add_argument("-s", "--socket_type", 
                              help="Type of security applied to TCP communication with master, 'TCP' means no security",
-                             default="TCP", choices=["TCP", "AES", "HMAC", "AES+HMAC"])
+                             default="TCP", choices=["TCP", "AES", "HMAC", "AES+HMAC", "SSL"])
     
     networkArgs.add_argument("--incomming_hmac_key",
                              help="Key used to authenticate incomming messages with HMAC")
@@ -53,7 +53,7 @@ def getArgs():
         netArgs["PeerCertFile"] = args.master_ssl_cert
 
     if args.local_ssl_cert:
-        netArgs["LocalCert"]=args.local_ssl_cert
+        netArgs["LocalCert"] = args.local_ssl_cert
 
     if args.local_ssl_key:
         netArgs["LocalKey"] = args.local_ssl_key

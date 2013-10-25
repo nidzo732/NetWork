@@ -121,7 +121,7 @@ class Workgroup:
         Instead of running this method manually it is recomened to use
         the ``with`` statement
         """
-        self.listenerSocket.listen()
+        #self.listenerSocket.listen()
         self.networkListener = Thread(target=self.listenerProcess,
                                       args=(self.listenerSocket, self.commqueue,
                                             self.controls))
@@ -233,11 +233,15 @@ class Workgroup:
     @staticmethod
     def listenerProcess(listenerSocket, commqueue, controls):
         #A process that receives network requests
+        listenerSocket.listen()
         while True:
-            receivedRequest = listenerSocket.accept()
-            handlerThread = Thread(target=receiveSocketData,
-                                   args=(receivedRequest, commqueue, controls))
-            handlerThread.start()
+            try:
+                receivedRequest = listenerSocket.accept()
+                handlerThread = Thread(target=receiveSocketData,
+                                       args=(receivedRequest, commqueue, controls))
+                handlerThread.start()
+            except OSError as error:
+                print("There was a connection attempt but a network error occured", error)
 
     @staticmethod
     def dispatcherProcess(commqueue, controls):

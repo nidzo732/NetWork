@@ -7,6 +7,7 @@ import pickle
 import hmac
 import hashlib
 from .request import Request
+from multiprocessing import Lock
 
 try:
     from Crypto.Cipher import AES
@@ -17,7 +18,7 @@ except ImportError:
     cryptoAvailable = False
 
 try:
-    from ssl import SSLContext, PROTOCOL_TLSv1, CERT_REQUIRED, SSLError
+    from ssl import SSLContext, PROTOCOL_TLSv1, CERT_REQUIRED, SSLError, SSLSocket
 
     SSLAvailable = True
 except ImportError:
@@ -357,6 +358,8 @@ if SSLAvailable:
         peerCertFile = None
         peerCertDir = None
         context = None
+        sockets = []
+        socketLock = Lock()
 
         def __init__(self, socketToUse=None, address=None):
             if socketToUse:
@@ -369,31 +372,45 @@ if SSLAvailable:
             try:
                 self.internalSocket = self.context.wrap_socket(self.internalSocket)
                 NWSocketTCP.connect(self, address)
-            except SSLError:
-                raise
+            except SSLError as error:
+                raise SSLProblem("SSL connection failed ", error)
 
         def accept(self):
-            request = self.internalSocket.accept()
-            sock = request[0]
-            address = request[1][0]
-            sock = self.context.wrap_socket(sock, server_side=True)
-            return NWSocketSSL(sock, address)
+            try:
+                request = self.internalSocket.accept()
+                sock = request[0]
+                address = request[1][0]
+                sock = self.context.wrap_socket(sock, server_side=True)
+                return NWSocketSSL(sock, address)
+            except SSLError as error:
+                raise SSLProblem("Bad request received ", error)
+
+        def __getstate__(self):
+            self.socketLock.acquire()
+            self.sockets.append(self.internalSocket)
+            sockId = len(self.sockets) - 1
+            self.socketLock.release()
+            return {"address": self.address, "sockId": sockId}
+
+        def __setstate__(self, state):
+            self.address = state["address"]
+            self.internalSocket = self.sockets[state["sockId"]]
 
         @staticmethod
         def setUp(params):
-            NWSocketSSL.localCert = params["LocalCert"]
-            NWSocketSSL.localKey = params["LocalKey"]
-            if not (("PeerCertFile" in params) or ("PeerCertDir" in params)):
+            NWSocketSSL.localCertFile = params["LocalCert"]
+            NWSocketSSL.localKeyFile = params["LocalKey"]
+            if (not "PeerCertFile" in params) and (not "PeerCertDir" in params):
                 raise KeyError("PeerCertFile or PeerCertDir")
             if "PeerCertFile" in params:
                 NWSocketSSL.peerCertFile = params["PeerCertFile"]
             if "PeerCertDir" in params:
-                NWSocketSSL.peerCertFile = params["PeerCertDir"]
+                NWSocketSSL.peerCertDir = params["PeerCertDir"]
             if "LocalKeyPassword" in params:
                 NWSocketSSL.localKeyPassword = params["LocalKeyPassword"]
 
             NWSocketSSL.context = SSLContext(PROTOCOL_TLSv1)
-            NWSocketSSL.context.load_cert_chain(NWSocketSSL.localCertFile, keyfile=NWSocketSSL.localKeyFile,
+            NWSocketSSL.context.load_cert_chain(certfile=NWSocketSSL.localCertFile, keyfile=NWSocketSSL.localKeyFile,
                                                 password=NWSocketSSL.localKeyPassword)
             NWSocketSSL.context.load_verify_locations(cafile=NWSocketSSL.peerCertFile,
                                                       capath=NWSocketSSL.peerCertDir)
@@ -409,15 +426,15 @@ sockets.update({"AES": NWSocketAES, "AES+HMAC": NWSocketHMACandAES,
                 "SSL": NWSocketSSL})
 
 
-def setUp(requestType, params):
-    if requestType:
+def setUp(socketType, params):
+    if socketType:
         try:
-            sockets[requestType].setUp(params)
+            sockets[socketType].setUp(params)
         except KeyError as error:
             raise KeyNotSet("Not all parameters were set for the desired security type: "
-                            + str(requestType) + " could not find " + str(error))
+                            + str(socketType) + " could not find " + str(error))
         global NWSocket
-        NWSocket = sockets[requestType]
+        NWSocket = sockets[socketType]
 
 
 def sendRequest(requestType, contents):

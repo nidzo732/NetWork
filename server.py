@@ -154,7 +154,11 @@ if __name__ == "__main__":
     atexit.register(onExit, listenerSocket)
     try:
         while True:
-            requestSocket = listenerSocket.accept()
+            try:
+                requestSocket = listenerSocket.accept()
+            except OSError as error:
+                print("There was a connection attempt but a network error occured", error)
+                continue
             handlerThread = Thread(target=requestReceiver, args=(requestSocket,))
             handlerThread.start()
     except KeyboardInterrupt:

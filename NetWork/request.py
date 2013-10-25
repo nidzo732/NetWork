@@ -35,7 +35,7 @@ class Request:
         s += "Request contents:\n"
         for item in self.contents:
             s += str(item) + " : " + str(self.contents[item]) + "\n"
-        return s[:-1]   #Strip last newline character
+        return s[:-1]   # Strip last newline character
 
     def close(self):
         if self.socket:
