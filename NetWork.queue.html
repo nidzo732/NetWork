@@ -73,17 +73,18 @@ is the first item returned by the <a class="reference internal" href="#NetWork.q
 <span class="c">#Each task has inputQueue and outputQueue</span>
 <span class="c">#A task gets a number from it&#39;s inputQueue increments it and puts it to outputQueue</span>
 
+<span class="kn">from</span> <span class="nn">NetWork</span> <span class="kn">import</span> <span class="n">Workgroup</span><span class="p">,</span> <span class="n">Queue</span>
 <span class="k">def</span> <span class="nf">getIncrementPut</span><span class="p">(</span><span class="n">inputQueue</span><span class="p">,</span> <span class="n">outputQueue</span><span class="p">):</span>
     <span class="n">number</span><span class="o">=</span><span class="n">inputQueue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
     <span class="n">number</span><span class="o">+=</span><span class="mi">1</span>
     <span class="n">outputQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">number</span><span class="p">)</span>
 
 <span class="k">with</span> <span class="n">Workgroup</span><span class="p">(</span><span class="n">addresses</span><span class="p">)</span> <span class="k">as</span> <span class="n">w</span><span class="p">:</span>
-    <span class="n">queue1</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">registerQueue</span><span class="p">()</span>
-    <span class="n">queue2</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">registerQueue</span><span class="p">()</span>
-    <span class="n">queue3</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">registerQueue</span><span class="p">()</span>
-    <span class="n">queue4</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">registerQueue</span><span class="p">()</span>
-    <span class="n">queue5</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">registerQueue</span><span class="p">()</span>
+    <span class="n">queue1</span><span class="o">=</span><span class="n">Queue</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">queue2</span><span class="o">=</span><span class="n">Queue</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">queue3</span><span class="o">=</span><span class="n">Queue</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">queue4</span><span class="o">=</span><span class="n">Queue</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">queue5</span><span class="o">=</span><span class="n">Queue</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
     <span class="n">task1</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">getIncrementPut</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">queue1</span><span class="p">,</span> <span class="n">queue2</span><span class="p">))</span>
     <span class="n">task2</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">getIncrementPut</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">queue2</span><span class="p">,</span> <span class="n">queue3</span><span class="p">))</span>
     <span class="n">task3</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">getIncrementPut</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">queue3</span><span class="p">,</span> <span class="n">queue4</span><span class="p">))</span>
@@ -94,10 +95,17 @@ is the first item returned by the <a class="reference internal" href="#NetWork.q
 </div>
 <dl class="class">
 <dt id="NetWork.queue.NWQueue">
-<em class="property">class </em><tt class="descclassname">NetWork.queue.</tt><tt class="descname">NWQueue</tt><big>(</big><em>id</em>, <em>workgroup</em><big>)</big><a class="reference internal" href="_modules/NetWork/queue.html#NWQueue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.queue.NWQueue" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">NetWork.queue.</tt><tt class="descname">NWQueue</tt><big>(</big><em>workgroup</em><big>)</big><a class="reference internal" href="_modules/NetWork/queue.html#NWQueue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.queue.NWQueue" title="Permalink to this definition">¶</a></dt>
 <dd><p>The queue class used for inter-process communication.
-New instance is usually created with <a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerQueue" title="NetWork.workgroup.Workgroup.registerQueue"><tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.registerQueue</span></tt></a>.</p>
-<p>To put data on the queue call <a class="reference internal" href="#NetWork.queue.NWQueue.put" title="NetWork.queue.NWQueue.put"><tt class="xref py py-meth docutils literal"><span class="pre">put()</span></tt></a> and call <a class="reference internal" href="#NetWork.queue.NWQueue.get" title="NetWork.queue.NWQueue.get"><tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt></a> to get it.</p>
+To put data on the queue call <a class="reference internal" href="#NetWork.queue.NWQueue.put" title="NetWork.queue.NWQueue.put"><tt class="xref py py-meth docutils literal"><span class="pre">put()</span></tt></a> and call <a class="reference internal" href="#NetWork.queue.NWQueue.get" title="NetWork.queue.NWQueue.get"><tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt></a> to get it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>workgroup</strong> (<a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup" title="NetWork.workgroup.Workgroup"><em>NetWork.workgroup.Workgroup</em></a>) &#8211; workgroup that will be using this Queue</td>
+</tr>
+</tbody>
+</table>
 <dl class="method">
 <dt id="NetWork.queue.NWQueue.get">
 <tt class="descname">get</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/queue.html#NWQueue.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.queue.NWQueue.get" title="Permalink to this definition">¶</a></dt>
@@ -107,7 +115,7 @@ gets put on it</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Return :</th><td class="field-body">next item in the queue</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">next item in the queue</td>
 </tr>
 </tbody>
 </table>
@@ -121,12 +129,7 @@ gets put on it</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><dl class="first last docutils">
-<dt>data <span class="classifier-delimiter">:</span> <span class="classifier">any pickleable object</span></dt>
-<dd><p class="first last">item to be put on the queue</p>
-</dd>
-</dl>
-</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> (<em>any pickleable object</em>) &#8211; item to be put on the queue</td>
 </tr>
 </tbody>
 </table>

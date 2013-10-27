@@ -56,9 +56,14 @@
             
   <div class="section" id="ipc-and-concurrency-control-tools">
 <h1>IPC and concurrency control tools<a class="headerlink" href="#ipc-and-concurrency-control-tools" title="Permalink to this headline">¶</a></h1>
-<p>One of the main advantages of NetWork are IPC and concurrency control tools that behave just like their equivalents used for multiprocessing on single computer.
-The tools are simple to use, you don&#8217;t have to wory about network communication and low level stuff, just use them like you&#8217;re running on a single computer.
-The only difference with these tools is that you don&#8217;t create them directly like ordinary classes but you use the methods of the <a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup" title="NetWork.workgroup.Workgroup"><tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt></a>.</p>
+<p>One of the main advantages of NetWork are IPC and concurrency control tools that behave just like their
+equivalents used for multiprocessing on single computer.
+The tools are simple to use, you don&#8217;t have to wory about network communication and low level stuff, just
+use them like you&#8217;re running on a single computer.
+They are regular classes imported from NetWork</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">NetWork</span> <span class="kn">import</span> <span class="n">Manager</span><span class="p">,</span> <span class="n">Event</span><span class="p">,</span> <span class="n">Lock</span><span class="p">,</span> <span class="n">Queue</span><span class="p">,</span> <span class="n">Semaphore</span>
+</pre></div>
+</div>
 <p>Here are the tools currently available</p>
 <div class="toctree-wrapper compound">
 <ul>
@@ -69,13 +74,6 @@ The only difference with these tools is that you don&#8217;t create them directl
 <li class="toctree-l1"><a class="reference internal" href="NetWork.semaphore.html">Semaphore</a></li>
 </ul>
 </div>
-<p>To create these tools use the <a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup" title="NetWork.workgroup.Workgroup"><tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt></a>&#8216;s registration methods.</p>
-<ul class="simple">
-<li><a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerManager" title="NetWork.workgroup.Workgroup.registerManager"><tt class="xref py py-meth docutils literal"><span class="pre">registerManager</span></tt></a> for managers</li>
-<li><a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerEvent" title="NetWork.workgroup.Workgroup.registerEvent"><tt class="xref py py-meth docutils literal"><span class="pre">registerEvent</span></tt></a> for events</li>
-<li><a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerLock" title="NetWork.workgroup.Workgroup.registerLock"><tt class="xref py py-meth docutils literal"><span class="pre">registerLock</span></tt></a> for locks</li>
-<li><a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerQueue" title="NetWork.workgroup.Workgroup.registerQueue"><tt class="xref py py-meth docutils literal"><span class="pre">registerQueue</span></tt></a> for queues</li>
-</ul>
 </div>
 
 

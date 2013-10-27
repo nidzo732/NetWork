@@ -92,17 +92,34 @@
 <span class="sd">                                   #if might have printed &#39;2&#39;</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
-        
-    
+
 <span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Lock</span>
-<span class="kn">from</span> <span class="nn">.networking</span> <span class="kn">import</span> <span class="n">NWSocket</span>
-<span class="kn">from</span> <span class="nn">.commcodes</span> <span class="kn">import</span> <span class="n">CMD_ACQUIRE_LOCK</span><span class="p">,</span> <span class="n">CMD_RELEASE_LOCK</span>
+<span class="kn">from</span> <span class="nn">.networking</span> <span class="kn">import</span> <span class="n">sendRequest</span>
+<span class="kn">from</span> <span class="nn">.commcodes</span> <span class="kn">import</span> <span class="n">CMD_ACQUIRE_LOCK</span><span class="p">,</span> <span class="n">CMD_RELEASE_LOCK</span><span class="p">,</span> <span class="n">CMD_REGISTER_LOCK</span><span class="p">,</span> <span class="n">CMD_WORKER_DIED</span>
 <span class="kn">from</span> <span class="nn">.cntcodes</span> <span class="kn">import</span> <span class="n">CNT_WORKERS</span>
-<span class="n">runningOnMaster</span><span class="o">=</span><span class="bp">None</span>
-<span class="n">locks</span><span class="o">=</span><span class="bp">None</span>
-<span class="n">lockHandlers</span><span class="o">=</span><span class="bp">None</span>
-<span class="n">lockLocks</span><span class="o">=</span><span class="bp">None</span>
-<span class="n">masterAddress</span><span class="o">=</span><span class="bp">None</span>
+<span class="kn">from</span> <span class="nn">.request</span> <span class="kn">import</span> <span class="n">Request</span>
+<span class="kn">from</span> <span class="nn">.worker</span> <span class="kn">import</span> <span class="n">DeadWorkerError</span>
+
+<span class="n">runningOnMaster</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">locks</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">lockHandlers</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">lockLocks</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">masterAddress</span> <span class="o">=</span> <span class="bp">None</span>
+
+
+<span class="k">def</span> <span class="nf">masterInit</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">locks</span><span class="p">,</span> <span class="n">lockHandlers</span><span class="p">,</span> <span class="n">lockLocks</span><span class="p">,</span> <span class="n">runningOnMaster</span>
+    <span class="n">locks</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
+    <span class="n">lockHandlers</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
+    <span class="n">lockLocks</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
+    <span class="n">runningOnMaster</span> <span class="o">=</span> <span class="bp">True</span>
+
+
+<span class="k">def</span> <span class="nf">workerInit</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">locks</span><span class="p">,</span> <span class="n">runningOnMaster</span>
+    <span class="n">locks</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
+    <span class="n">runningOnMaster</span> <span class="o">=</span> <span class="bp">False</span>
+
 
 <div class="viewcode-block" id="NWLock"><a class="viewcode-back" href="../../NetWork.lock.html#NetWork.lock.NWLock">[docs]</a><span class="k">class</span> <span class="nc">NWLock</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -111,36 +128,42 @@
 <span class="sd">    </span>
 <span class="sd">    When entering critical section call :py:meth:`acquire` and when exiting :py:meth:`release`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">workgroup</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="nb">id</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">=</span><span class="n">workgroup</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span> <span class="o">=</span> <span class="n">workgroup</span>
         <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
-            <span class="n">lockLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">=</span><span class="n">Lock</span><span class="p">()</span>
-            <span class="n">lockHandlers</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">=</span><span class="n">MasterLockHandler</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
-        <span class="n">locks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">=</span><span class="n">Lock</span><span class="p">()</span>
+            <span class="n">lockLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+            <span class="n">lockHandlers</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">MasterLockHandler</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="n">locks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
         <span class="n">locks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
-    
+
     <span class="k">def</span> <span class="nf">acquireOnMaster</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_ACQUIRE_LOCK</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_ACQUIRE_LOCK</span><span class="p">,</span>
+                                   <span class="p">{</span>
+                                       <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                                   <span class="p">})</span>
         <span class="n">locks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
-    
+
     <span class="k">def</span> <span class="nf">releaseOnMaster</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_RELEASE_LOCK</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">))</span>
-    
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_RELEASE_LOCK</span><span class="p">,</span>
+                                   <span class="p">{</span>
+                                       <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                                   <span class="p">})</span>
+
     <span class="k">def</span> <span class="nf">acquireOnWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">masterSocket</span><span class="o">=</span><span class="n">NWSocket</span><span class="p">()</span>
-        <span class="n">masterSocket</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">masterAddress</span><span class="p">)</span>
-        <span class="n">masterSocket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">CMD_ACQUIRE_LOCK</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">))</span>
-        <span class="n">masterSocket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_ACQUIRE_LOCK</span><span class="p">,</span>
+                    <span class="p">{</span>
+                        <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                    <span class="p">})</span>
         <span class="n">locks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
-    
+
     <span class="k">def</span> <span class="nf">releaseOnWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">masterSocket</span><span class="o">=</span><span class="n">NWSocket</span><span class="p">()</span>
-        <span class="n">masterSocket</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">masterAddress</span><span class="p">)</span>
-        <span class="n">masterSocket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">CMD_RELEASE_LOCK</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s">&#39;ASCII&#39;</span><span class="p">))</span>
-        <span class="n">masterSocket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-    
+        <span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_RELEASE_LOCK</span><span class="p">,</span>
+                    <span class="p">{</span>
+                        <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                    <span class="p">})</span>
+
 <div class="viewcode-block" id="NWLock.acquire"><a class="viewcode-back" href="../../NetWork.lock.html#NetWork.lock.NWLock.acquire">[docs]</a>    <span class="k">def</span> <span class="nf">acquire</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Call this when entering critical section, all other tasks that call</span>
@@ -151,7 +174,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">acquireOnMaster</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">acquireOnWorker</span><span class="p">()</span>
-    </div>
+</div>
 <div class="viewcode-block" id="NWLock.release"><a class="viewcode-back" href="../../NetWork.lock.html#NetWork.lock.NWLock.release">[docs]</a>    <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Call this when exiting critical section. Wake a task that was trying to</span>
@@ -161,13 +184,14 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">releaseOnMaster</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">releaseOnWorker</span><span class="p">()</span>
-    </div>
+</div>
     <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="n">state</span><span class="p">[</span><span class="s">&quot;id&quot;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">=</span><span class="n">state</span><span class="p">[</span><span class="s">&quot;workgroup&quot;</span><span class="p">]</span>
-    
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s">&quot;id&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s">&quot;workgroup&quot;</span><span class="p">]</span>
+
     <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s">&quot;id&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s">&quot;workgroup&quot;</span><span class="p">:</span><span class="bp">None</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s">&quot;workgroup&quot;</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
+
 </div>
 <span class="k">class</span> <span class="nc">MasterLockHandler</span><span class="p">:</span>
     <span class="c">#A class used to hold information about locks on the master</span>
@@ -176,53 +200,71 @@
     <span class="c">#in the list</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
         <span class="n">lockLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="nb">id</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">locked</span><span class="o">=</span><span class="bp">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">=</span><span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">locked</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">lockLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
-    
+
     <span class="k">def</span> <span class="nf">acquire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">requester</span><span class="p">,</span> <span class="n">controlls</span><span class="p">):</span>
         <span class="c">#Acquire lock or wait for release</span>
         <span class="n">lockLocks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">locked</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">requester</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">locked</span><span class="o">=</span><span class="bp">True</span>
-            <span class="k">if</span> <span class="n">requester</span><span class="o">==-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">locked</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">if</span> <span class="n">requester</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
                 <span class="n">locks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">requester</span><span class="p">]</span><span class="o">.</span><span class="n">releaseLock</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+                <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">requester</span><span class="p">]</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_RELEASE_LOCK</span><span class="p">,</span>
+                                                              <span class="p">{</span>
+                                                                  <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                                                              <span class="p">})</span>
         <span class="n">lockLocks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
-    
+
     <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controlls</span><span class="p">):</span>
         <span class="c">#Release lock and wake up the first from the waiting list</span>
         <span class="n">lockLocks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="p">:</span>
-            <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">id</span><span class="o">==-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
                 <span class="n">locks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">releaseLock</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+                <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_RELEASE_LOCK</span><span class="p">,</span>
+                                                       <span class="p">{</span>
+                                                           <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                                                       <span class="p">})</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">locked</span><span class="o">=</span><span class="bp">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">locked</span> <span class="o">=</span> <span class="bp">False</span>
         <span class="n">lockLocks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+
 
 <span class="k">def</span> <span class="nf">registerLock</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
     <span class="c">#A handler used by Workgroup.dispatcher</span>
-    <span class="nb">id</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">getContents</span><span class="p">())</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">]:</span>
-        <span class="n">worker</span><span class="o">.</span><span class="n">registerLock</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">worker</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_REGISTER_LOCK</span><span class="p">,</span> <span class="p">{</span><span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="p">})</span>
+        <span class="k">except</span> <span class="n">DeadWorkerError</span><span class="p">:</span>
+            <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span>
+                                  <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span> <span class="n">worker</span><span class="p">}))</span>
+
 
 <span class="k">def</span> <span class="nf">acquireLock</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
     <span class="c">#A handler used by Workgroup.dispatcher</span>
-    <span class="n">lockHandlers</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">getContents</span><span class="p">())]</span><span class="o">.</span><span class="n">acquire</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">requester</span><span class="p">,</span> <span class="n">controlls</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">lockHandlers</span><span class="p">[</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">acquire</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">requester</span><span class="p">,</span> <span class="n">controlls</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">DeadWorkerError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span>
+                              <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span> <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">error</span><span class="o">.</span><span class="n">id</span><span class="p">]}))</span>
+
 
 <span class="k">def</span> <span class="nf">releaseLock</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
     <span class="c">#A handler used by Workgroup.dispatcher</span>
-    <span class="n">lockHandlers</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">getContents</span><span class="p">())]</span><span class="o">.</span><span class="n">release</span><span class="p">(</span><span class="n">controlls</span><span class="p">)</span>
-        
-    
-    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">lockHandlers</span><span class="p">[</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">release</span><span class="p">(</span><span class="n">controlls</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">DeadWorkerError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span>
+                              <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span> <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">error</span><span class="o">.</span><span class="n">id</span><span class="p">]}))</span>
 </pre></div>
 
           </div>

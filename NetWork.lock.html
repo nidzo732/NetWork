@@ -75,6 +75,7 @@ put to sleep. When the first task finishes the critical section it calls
 <span class="c">#Unless we use lock and put the acquire and release call around the</span>
 <span class="c">#code that checks and increments number</span>
 
+<span class="kn">from</span> <span class="nn">NetWork</span> <span class="kn">import</span> <span class="n">Workgroup</span><span class="p">,</span> <span class="n">Lock</span><span class="p">,</span> <span class="n">Manager</span>
 <span class="k">def</span> <span class="nf">checkAndIncrement</span><span class="p">(</span><span class="n">manager</span><span class="p">,</span> <span class="n">lock</span><span class="p">):</span>
     <span class="n">lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>    <span class="c">#Make sure another tasks are not checking at the same time</span>
     <span class="k">if</span> <span class="n">manager</span><span class="o">.</span><span class="n">shouldIncrease</span><span class="p">:</span>
@@ -83,8 +84,8 @@ put to sleep. When the first task finishes the critical section it calls
     <span class="n">lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
 
 <span class="k">with</span> <span class="n">Workgroup</span><span class="p">(</span><span class="n">addresses</span><span class="p">)</span> <span class="k">as</span> <span class="n">w</span><span class="p">:</span>
-    <span class="n">lock</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">registerLock</span><span class="p">()</span>
-    <span class="n">manager</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">registerManager</span><span class="p">()</span>
+    <span class="n">lock</span><span class="o">=</span><span class="n">Lock</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">manager</span><span class="o">=</span><span class="n">Manager</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
     <span class="n">namespace</span><span class="o">=</span><span class="n">manager</span><span class="o">.</span><span class="n">namespace</span><span class="p">()</span>
     <span class="n">namespace</span><span class="o">.</span><span class="n">shouldIncrement</span><span class="o">=</span><span class="bp">True</span>
     <span class="n">namespace</span><span class="o">.</span><span class="n">number</span><span class="o">=</span><span class="mi">0</span>
@@ -97,10 +98,17 @@ put to sleep. When the first task finishes the critical section it calls
 </div>
 <dl class="class">
 <dt id="NetWork.lock.NWLock">
-<em class="property">class </em><tt class="descclassname">NetWork.lock.</tt><tt class="descname">NWLock</tt><big>(</big><em>id</em>, <em>workgroup</em><big>)</big><a class="reference internal" href="_modules/NetWork/lock.html#NWLock"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.lock.NWLock" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">NetWork.lock.</tt><tt class="descname">NWLock</tt><big>(</big><em>workgroup</em><big>)</big><a class="reference internal" href="_modules/NetWork/lock.html#NWLock"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.lock.NWLock" title="Permalink to this definition">¶</a></dt>
 <dd><p>The lock class used to prevent simultaneous execution.
-New instance is usually created with <a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerLock" title="NetWork.workgroup.Workgroup.registerLock"><tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.registerLock</span></tt></a>.</p>
-<p>When entering critical section call <a class="reference internal" href="#NetWork.lock.NWLock.acquire" title="NetWork.lock.NWLock.acquire"><tt class="xref py py-meth docutils literal"><span class="pre">acquire()</span></tt></a> and when exiting <a class="reference internal" href="#NetWork.lock.NWLock.release" title="NetWork.lock.NWLock.release"><tt class="xref py py-meth docutils literal"><span class="pre">release()</span></tt></a>.</p>
+When entering critical section call <a class="reference internal" href="#NetWork.lock.NWLock.acquire" title="NetWork.lock.NWLock.acquire"><tt class="xref py py-meth docutils literal"><span class="pre">acquire()</span></tt></a> and when exiting <a class="reference internal" href="#NetWork.lock.NWLock.release" title="NetWork.lock.NWLock.release"><tt class="xref py py-meth docutils literal"><span class="pre">release()</span></tt></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>workgroup</strong> (<a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup" title="NetWork.workgroup.Workgroup"><em>NetWork.workgroup.Workgroup</em></a>) &#8211; workgroup that will be using this Lock</td>
+</tr>
+</tbody>
+</table>
 <dl class="method">
 <dt id="NetWork.lock.NWLock.acquire">
 <tt class="descname">acquire</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/lock.html#NWLock.acquire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.lock.NWLock.acquire" title="Permalink to this definition">¶</a></dt>

@@ -68,56 +68,73 @@
 <span class="kn">from</span> <span class="nn">.cntcodes</span> <span class="kn">import</span> <span class="n">CNT_WORKERS</span>
 <span class="kn">from</span> <span class="nn">.request</span> <span class="kn">import</span> <span class="n">Request</span>
 <span class="kn">from</span> <span class="nn">.worker</span> <span class="kn">import</span> <span class="n">DeadWorkerError</span>
-<span class="n">runningOnMaster</span><span class="o">=</span><span class="bp">None</span>
-<span class="n">semaphores</span><span class="o">=</span><span class="bp">None</span>
-<span class="n">semaphoreHandlers</span><span class="o">=</span><span class="bp">None</span>
-<span class="n">semaphoreLocks</span><span class="o">=</span><span class="bp">None</span>
-<span class="n">masterAddress</span><span class="o">=</span><span class="bp">None</span>
+
+<span class="n">runningOnMaster</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">semaphores</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">semaphoreHandlers</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">semaphoreLocks</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">masterAddress</span> <span class="o">=</span> <span class="bp">None</span>
+
+
+<span class="k">def</span> <span class="nf">masterInit</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">semaphores</span><span class="p">,</span> <span class="n">runningOnMaster</span><span class="p">,</span> <span class="n">semaphoreLocks</span><span class="p">,</span> <span class="n">semaphoreHandlers</span>
+    <span class="n">semaphores</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
+    <span class="n">runningOnMaster</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">semaphoreLocks</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
+    <span class="n">semaphoreHandlers</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">workerInit</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">runningOnMaster</span><span class="p">,</span> <span class="n">semaphores</span>
+    <span class="n">semaphores</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
+    <span class="n">runningOnMaster</span> <span class="o">=</span> <span class="bp">False</span>
+
 
 <div class="viewcode-block" id="NWSemaphore"><a class="viewcode-back" href="../../NetWork.semaphore.html#NetWork.semaphore.NWSemaphore">[docs]</a><span class="k">class</span> <span class="nc">NWSemaphore</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    The semaphore class used to limit simultaneous execution.</span>
-<span class="sd">    New instance is usually created with :py:meth:`Workgroup.registerSemaphore &lt;NetWork.workgroup.Workgroup.registerSemaphore&gt;`.</span>
+<span class="sd">    New instance is usually created with :py:meth:`Workgroup.registerSemaphore</span>
+<span class="sd">    &lt;NetWork.workgroup.Workgroup.registerSemaphore&gt;`.</span>
 <span class="sd">    </span>
 <span class="sd">    When entering critical section call :py:meth:`acquire` and when exiting :py:meth:`release`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">workgroup</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="nb">id</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">=</span><span class="n">workgroup</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span> <span class="o">=</span> <span class="n">workgroup</span>
         <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
-            <span class="n">semaphoreLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">=</span><span class="n">Lock</span><span class="p">()</span>
-            <span class="n">semaphoreHandlers</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">=</span><span class="n">MasterSemaphoreHandler</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-        <span class="n">semaphores</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">=</span><span class="n">Semaphore</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">semaphoreLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+            <span class="n">semaphoreHandlers</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">MasterSemaphoreHandler</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="n">semaphores</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">Semaphore</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
             <span class="n">semaphores</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
-    
+
     <span class="k">def</span> <span class="nf">acquireOnMaster</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_ACQUIRE_SEMAPHORE</span><span class="p">,</span>
                                    <span class="p">{</span>
-                                    <span class="s">&quot;ID&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span>
-                                    <span class="p">})</span>
+                                       <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                                   <span class="p">})</span>
         <span class="n">semaphores</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
-    
+
     <span class="k">def</span> <span class="nf">releaseOnMaster</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_RELEASE_SEMAPHORE</span><span class="p">,</span>
                                    <span class="p">{</span>
-                                    <span class="s">&quot;ID&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span>
-                                    <span class="p">})</span>
-    
+                                       <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                                   <span class="p">})</span>
+
     <span class="k">def</span> <span class="nf">acquireOnWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_ACQUIRE_SEMAPHORE</span><span class="p">,</span>
                     <span class="p">{</span>
-                     <span class="s">&quot;ID&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span>
-                     <span class="p">})</span>
+                        <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                    <span class="p">})</span>
         <span class="n">semaphores</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
-    
+
     <span class="k">def</span> <span class="nf">releaseOnWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_RELEASE_SEMAPHORE</span><span class="p">,</span>
                     <span class="p">{</span>
-                     <span class="s">&quot;ID&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span>
-                     <span class="p">})</span>
-    
+                        <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                    <span class="p">})</span>
+
 <div class="viewcode-block" id="NWSemaphore.acquire"><a class="viewcode-back" href="../../NetWork.semaphore.html#NetWork.semaphore.NWSemaphore.acquire">[docs]</a>    <span class="k">def</span> <span class="nf">acquire</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Acquire the semaphore and decrement counter value.</span>
@@ -128,7 +145,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">acquireOnMaster</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">acquireOnWorker</span><span class="p">()</span>
-    </div>
+</div>
 <div class="viewcode-block" id="NWSemaphore.release"><a class="viewcode-back" href="../../NetWork.semaphore.html#NetWork.semaphore.NWSemaphore.release">[docs]</a>    <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Release the semaphore, increment the counter value,</span>
@@ -138,13 +155,14 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">releaseOnMaster</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">releaseOnWorker</span><span class="p">()</span>
-    </div>
+</div>
     <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="n">state</span><span class="p">[</span><span class="s">&quot;id&quot;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">=</span><span class="n">state</span><span class="p">[</span><span class="s">&quot;workgroup&quot;</span><span class="p">]</span>
-    
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s">&quot;id&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s">&quot;workgroup&quot;</span><span class="p">]</span>
+
     <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s">&quot;id&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s">&quot;workgroup&quot;</span><span class="p">:</span><span class="bp">None</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s">&quot;workgroup&quot;</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
+
 </div>
 <span class="k">class</span> <span class="nc">MasterSemaphoreHandler</span><span class="p">:</span>
     <span class="c">#A class used to hold information about semaphores on the master</span>
@@ -153,70 +171,72 @@
     <span class="c">#is released a message is send to the first waiter in the list</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
         <span class="n">semaphoreLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">=</span><span class="nb">id</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">=</span><span class="n">value</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">=</span><span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">semaphoreLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
-    
+
     <span class="k">def</span> <span class="nf">acquire</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">requester</span><span class="p">,</span> <span class="n">controlls</span><span class="p">):</span>
         <span class="c">#Acquire semaphore or wait for release</span>
         <span class="n">semaphoreLocks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">requester</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">-</span><span class="mi">1</span>
-            <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">requester</span><span class="o">==-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">requester</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
                 <span class="n">semaphores</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">requester</span><span class="p">]</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_RELEASE_SEMAPHORE</span><span class="p">,</span>
                                                               <span class="p">{</span>
-                                                               <span class="s">&quot;ID&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span>
-                                                               <span class="p">})</span>
+                                                                  <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                                                              <span class="p">})</span>
         <span class="n">semaphoreLocks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
-    
+
     <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controlls</span><span class="p">):</span>
         <span class="c">#Release semaphore and wake up the first from the waiting list</span>
         <span class="n">semaphoreLocks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="p">:</span>
-            <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">id</span><span class="o">==-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">waiters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
                 <span class="n">semaphores</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_RELEASE_SEMAPHORE</span><span class="p">,</span>
                                                        <span class="p">{</span>
-                                                        <span class="s">&quot;ID&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span>
-                                                        <span class="p">})</span>
+                                                           <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                                                       <span class="p">})</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="o">+=</span><span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="n">semaphoreLocks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+
 
 <span class="k">def</span> <span class="nf">registerSemaphore</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
     <span class="c">#A handler used by Workgroup.dispatcher</span>
-    <span class="nb">id</span><span class="o">=</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]</span>
-    <span class="n">value</span><span class="o">=</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;VALUE&quot;</span><span class="p">]</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;VALUE&quot;</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">]:</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">worker</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_REGISTER_SEMAPHORE</span><span class="p">,</span> <span class="p">{</span><span class="s">&quot;ID&quot;</span><span class="p">:</span><span class="nb">id</span><span class="p">,</span> <span class="s">&quot;VALUE&quot;</span><span class="p">:</span><span class="n">value</span><span class="p">})</span>
+            <span class="n">worker</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_REGISTER_SEMAPHORE</span><span class="p">,</span> <span class="p">{</span><span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="s">&quot;VALUE&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
         <span class="k">except</span> <span class="n">DeadWorkerError</span><span class="p">:</span>
-            <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span> 
-                          <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span><span class="n">worker</span><span class="p">}))</span>
-            
+            <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span>
+                                  <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span> <span class="n">worker</span><span class="p">}))</span>
+
+
 <span class="k">def</span> <span class="nf">acquireSemaphore</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
     <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">semaphoreHandlers</span><span class="p">[</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">acquire</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">requester</span><span class="p">,</span> <span class="n">controlls</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">DeadWorkerError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-        <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span> 
-                      <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">error</span><span class="o">.</span><span class="n">id</span><span class="p">]}))</span>
+        <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span>
+                              <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span> <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">error</span><span class="o">.</span><span class="n">id</span><span class="p">]}))</span>
+
 
 <span class="k">def</span> <span class="nf">releaseSemaphore</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
     <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">semaphoreHandlers</span><span class="p">[</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">release</span><span class="p">(</span><span class="n">controlls</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">DeadWorkerError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-        <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span> 
-                      <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span><span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">error</span><span class="o">.</span><span class="n">id</span><span class="p">]}))</span>
+        <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span>
+                              <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span> <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">error</span><span class="o">.</span><span class="n">id</span><span class="p">]}))</span>
 </pre></div>
 
           </div>

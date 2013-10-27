@@ -52,10 +52,11 @@
 and functions.</p>
 <dl class="class">
 <dt id="NetWork.workgroup.Workgroup">
-<em class="property">class </em><tt class="descclassname">NetWork.workgroup.</tt><tt class="descname">Workgroup</tt><big>(</big><em>workerAddresses</em>, <em>skipBadWorkers=False</em>, <em>handleDeadWorkers=False</em>, <em>socketType='TCP'</em>, <em>keys=None</em><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">NetWork.workgroup.</tt><tt class="descname">Workgroup</tt><big>(</big><em>workerAddresses</em>, <em>skipBadWorkers=False</em>, <em>socketType='TCP'</em>, <em>socketParams={}</em><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup" title="Permalink to this definition">¶</a></dt>
 <dd><p>Defines the group of computers that will execute the tasks, handles requests
-from the user and from the worker computers, controlls execution, messaging
-and concurrency. Handles Locks, Queues, <a class="reference internal" href="NetWork.manager.html#module-NetWork.manager" title="NetWork.manager"><tt class="xref py py-mod docutils literal"><span class="pre">Managers</span></tt></a>, <a class="reference internal" href="NetWork.event.html#module-NetWork.event" title="NetWork.event"><tt class="xref py py-mod docutils literal"><span class="pre">Events</span></tt></a> and other tools.</p>
+from the user and from the worker computers, controls execution, messaging
+and concurrency. Handles <a class="reference internal" href="NetWork.lock.html#module-NetWork.lock" title="NetWork.lock"><tt class="xref py py-mod docutils literal"><span class="pre">Locks</span></tt></a>, <tt class="xref py py-mod docutils literal"><span class="pre">Queues</span> <span class="pre">NetWork.queue</span></tt>,
+<a class="reference internal" href="NetWork.manager.html#module-NetWork.manager" title="NetWork.manager"><tt class="xref py py-mod docutils literal"><span class="pre">Managers</span></tt></a>, <a class="reference internal" href="NetWork.event.html#module-NetWork.event" title="NetWork.event"><tt class="xref py py-mod docutils literal"><span class="pre">Events</span></tt></a> and other tools.</p>
 <p>In order for the Workgroup to be functional, the <tt class="docutils literal"><span class="pre">dispatcher</span></tt> and <tt class="docutils literal"><span class="pre">listener</span></tt> 
 threads must be started and they must be terminated properly on exit. The
 recomended way to do this is to use the <tt class="docutils literal"><span class="pre">with</span></tt> statement, it will ensure
@@ -70,132 +71,53 @@ methods when starting and exiting.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><dl class="first docutils">
-<dt>workerAddresses <span class="classifier-delimiter">:</span> <span class="classifier">iterable</span></dt>
-<dd><p class="first last">An iterable of connection parameters for communicating with
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>workerAddresses</strong> (<em>iterable</em>) &#8211; An iterable of connection parameters for communicating with
 workers in the workgroup. If default <tt class="docutils literal"><span class="pre">socketType</span></tt> is used,
 these should be IP addresses of the workers, if secure sockets
-are used, parameters should contain keys for each worker.</p>
-</dd>
-<dt>skipBadWorkers <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd><p class="first last">Whether to raise an error when adding the worker fails or to 
-continue to the next worker</p>
-</dd>
-</dl>
-<p>handleDeadWorkers : Currently not working, leave as it is</p>
-<dl class="last docutils">
-<dt>socketType <span class="classifier-delimiter">:</span> <span class="classifier">string</span></dt>
-<dd><p class="first">NetWork has several socket types used internaly to communicate.
+are used, parameters should contain keys for each worker.</li>
+<li><strong>skipBadWorkers</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; Whether to raise an error when adding the worker fails or to
+continue to the next worker</li>
+<li><strong>socketType</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; <p>NetWork has several socket types used internaly to communicate.
 Default is an ordinary TCP socket with no protection, other
 available values for this parameter are:</p>
-<blockquote class="last">
-<div><ul class="simple">
+<blockquote>
+<div><ul>
 <li><tt class="docutils literal"><span class="pre">&quot;HMAC&quot;</span></tt> Use HMAC verification on messages. Worker connection
 parameters must follow this format <tt class="docutils literal"><span class="pre">(IP,</span> <span class="pre">HMACKey)</span></tt></li>
 <li><tt class="docutils literal"><span class="pre">&quot;AES&quot;</span></tt> Encrypt messages with AES encryption. Worker connection
 parameters must follow this format <tt class="docutils literal"><span class="pre">(IP,</span> <span class="pre">AESKey)</span></tt></li>
 <li><tt class="docutils literal"><span class="pre">&quot;AES+HMAC&quot;</span></tt> Encrypt messages with AES and verify them with HMAC.
-Worker connection parameters must follow this format 
-<tt class="docutils literal"><span class="pre">(IP,</span> <span class="pre">HMACKey,</span> <span class="pre">AESKey)</span></tt></li>
+Worker connection parameters must follow this format <tt class="docutils literal"><span class="pre">(IP,</span> <span class="pre">HMACKey,</span> <span class="pre">AESKey)</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">SSL</span></tt> Use SSL (TLSv1) for encryption and authentication. Worker parameters
+are given as IPs just like when using TCP, certificates are passed through socketParams.</li>
 </ul>
 </div></blockquote>
-</dd>
-<dt>keys <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
-<dd><p class="first">If you selected a protected socket type, you need to provide keys
-for decrypting and/or verifying incomming messages from workers.
+</li>
+<li><strong>socketParams</strong> (<a class="reference external" href="http://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; <p>Pass special parameters to networking system, such as crypto keys and
+SSL certificates.
 Items to put in this dictionary:</p>
-<blockquote class="last">
-<div><ul class="simple">
+<blockquote>
+<div><ul>
 <li><tt class="docutils literal"><span class="pre">&quot;ListenerAES&quot;</span></tt> AES key used to decrypt messages from workers,
 must be specified if AES is enabled</li>
 <li><tt class="docutils literal"><span class="pre">&quot;ListenerHMAC&quot;</span></tt> HMAC key used to verify messages from the workers,
 must be specified if HMAC is enabled</li>
+<li><tt class="docutils literal"><span class="pre">PeerCertFile</span></tt> A file that contains SSL certificates that will be used to
+verify workers, you must provide PeerCertFile or PeerCertDir</li>
+<li><tt class="docutils literal"><span class="pre">PeerCertDir</span></tt> A folder that contains SSL certificates that will be used to
+verify workers, you must provide either PeerCertFile or PeerCertDir or both</li>
+<li><tt class="docutils literal"><span class="pre">LocalCert</span></tt> SSL certificate used to let workers verify this master (mandatory is SSL is enabled)</li>
+<li><tt class="docutils literal"><span class="pre">LocalKey</span></tt> Private SSL key for this master (mandatory if SSL is enabled)</li>
+<li><tt class="docutils literal"><span class="pre">LocalKeyPassword</span></tt> Password used to decrypt local key if it&#8217;s encrypted (optional)</li>
 </ul>
 </div></blockquote>
-</dd>
-</dl>
+</li>
+</ul>
 </td>
 </tr>
 </tbody>
 </table>
-<dl class="method">
-<dt id="NetWork.workgroup.Workgroup.registerEvent">
-<tt class="descname">registerEvent</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup.registerEvent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup.registerEvent" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a new event to be used by the tasks</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Return :</th><td class="field-body">instance of <a class="reference internal" href="NetWork.event.html#NetWork.event.NWEvent" title="NetWork.event.NWEvent"><tt class="xref py py-class docutils literal"><span class="pre">NWEvent</span></tt></a></td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="NetWork.workgroup.Workgroup.registerLock">
-<tt class="descname">registerLock</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup.registerLock"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup.registerLock" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a new lock to be used by the tasks</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Return :</th><td class="field-body">instance of <a class="reference internal" href="NetWork.lock.html#NetWork.lock.NWLock" title="NetWork.lock.NWLock"><tt class="xref py py-class docutils literal"><span class="pre">NWLock</span></tt></a></td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="NetWork.workgroup.Workgroup.registerManager">
-<tt class="descname">registerManager</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup.registerManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup.registerManager" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a new manager to be used by the tasks</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Return :</th><td class="field-body">instance of <a class="reference internal" href="NetWork.manager.html#NetWork.manager.NWManager" title="NetWork.manager.NWManager"><tt class="xref py py-class docutils literal"><span class="pre">NWManager</span></tt></a></td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="NetWork.workgroup.Workgroup.registerQueue">
-<tt class="descname">registerQueue</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup.registerQueue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup.registerQueue" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a new queue to be used by the tasks</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Return :</th><td class="field-body">instance of <a class="reference internal" href="NetWork.queue.html#NetWork.queue.NWQueue" title="NetWork.queue.NWQueue"><tt class="xref py py-class docutils literal"><span class="pre">NWQueue</span></tt></a></td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="NetWork.workgroup.Workgroup.registerSemaphore">
-<tt class="descname">registerSemaphore</tt><big>(</big><em>value</em><big>)</big><a class="headerlink" href="#NetWork.workgroup.Workgroup.registerSemaphore" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a new semaphore to be used by the tasks</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><dl class="first docutils">
-<dt>value <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
-<dd><p class="first last">Counter value for the semaphore</p>
-</dd>
-</dl>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return :</th><td class="field-body"><p class="first last">instance of <a class="reference internal" href="NetWork.semaphore.html#NetWork.semaphore.NWSemaphore" title="NetWork.semaphore.NWSemaphore"><tt class="xref py py-class docutils literal"><span class="pre">NWSemaphore</span></tt></a></p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
 <dl class="method">
 <dt id="NetWork.workgroup.Workgroup.startServing">
 <tt class="descname">startServing</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/workgroup.html#Workgroup.startServing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.workgroup.Workgroup.startServing" title="Permalink to this definition">¶</a></dt>
@@ -220,20 +142,17 @@ also invoked when exiting whe <tt class="docutils literal"><span class="pre">wit
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><dl class="first docutils">
-<dt>target <span class="classifier-delimiter">:</span> <span class="classifier">callable</span></dt>
-<dd><p class="first last">function to be executed</p>
-</dd>
-<dt>args <span class="classifier-delimiter">:</span> <span class="classifier">iterable</span></dt>
-<dd><p class="first last">optional tuple of positional arguments</p>
-</dd>
-<dt>kwargs <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
-<dd><p class="first last">optional dictionary of keyword arguments</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>target</strong> (<em>function</em>) &#8211; function to be executed</li>
+<li><strong>args</strong> (<em>iterable</em>) &#8211; optional tuple of positional arguments</li>
+<li><strong>kwargs</strong> (<a class="reference external" href="http://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; optional dictionary of keyword arguments</li>
+</ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return :</th><td class="field-body"><p class="first last">an instance of <a class="reference internal" href="NetWork.task.html#NetWork.task.TaskHandler" title="NetWork.task.TaskHandler"><tt class="xref py py-class docutils literal"><span class="pre">TaskHandler</span></tt></a></p>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first"><a class="reference internal" href="NetWork.task.html#NetWork.task.TaskHandler" title="NetWork.task.TaskHandler"><tt class="xref py py-class docutils literal"><span class="pre">TaskHandler</span></tt></a></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">handler used for controling the task</p>
 </td>
 </tr>
 </tbody>

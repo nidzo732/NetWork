@@ -56,19 +56,33 @@
             
   <div class="section" id="inner-workings-of-the-network-framework">
 <h1>Inner workings of the NetWork framework<a class="headerlink" href="#inner-workings-of-the-network-framework" title="Permalink to this headline">¶</a></h1>
-<p>This document describes how NetWork works internaly. You don&#8217;t need to read this document to use NetWork properly but if you want to know more about NetWork or if you want to help in development the contents of this document could be useful.</p>
+<p>This document describes how NetWork works internaly. You don&#8217;t need to read this document to use NetWork properly
+but if you want to know more about NetWork or if you want to help in development the contents of this document
+could be useful.</p>
 <div class="section" id="basic-structure-of-the-network">
 <h2>Basic structure of the network<a class="headerlink" href="#basic-structure-of-the-network" title="Permalink to this headline">¶</a></h2>
-<p>The workgroup in NetWork is made of one master computer and one or more worker computers.  Workers run a server program that receives instructions from the master. When that server starts it listens on port <strong>32151</strong> and waits for master to register.
+<p>The workgroup in NetWork is made of one master computer and one or more worker computers.  Workers run a server
+program that receives instructions from the master. When that server starts it listens on port <strong>32151</strong>
+and waits for master to register.
 When an instance of Workgroup is created the constructor is given a list of IP addresses.</p>
-<p>The constructor sends a test code (<tt class="xref py py-const docutils literal"><span class="pre">NetWork.networking.COMCODE_CHECKALIVE</span></tt>) to each of the given IPs and waits for response, when the server program on the worker receives the test code it responds with a return code (<tt class="xref py py-const docutils literal"><span class="pre">NetWork.networking.COMCODE_ISALIVE</span></tt>), if all goes well and the codes are received the worker is added to the workgroup.</p>
-<p>Once the workgroup starts working the master computer manages all communication, worker computers can&#8217;t communicate between themselves. All multiprocessing tools send request to the master when used on worker computers.</p>
+<p>The constructor sends a test code (<tt class="xref py py-const docutils literal"><span class="pre">NetWork.networking.COMCODE_CHECKALIVE</span></tt>) to each of the given IPs
+and waits for response, when the server program on the worker receives the test code it responds with a return
+code (<tt class="xref py py-const docutils literal"><span class="pre">NetWork.networking.COMCODE_ISALIVE</span></tt>), if all goes well and the codes are received the worker
+is added to the workgroup.</p>
+<p>Once the workgroup starts working the master computer manages all communication, worker computers can&#8217;t
+communicate between themselves. All multiprocessing tools send request to the master when used on worker computers.</p>
 </div>
 <div class="section" id="low-level-networking">
 <h2>Low level networking<a class="headerlink" href="#low-level-networking" title="Permalink to this headline">¶</a></h2>
-<p>NetWork relies heavily on network communication. Classes used for networking are defined in <tt class="xref py py-mod docutils literal"><span class="pre">NetWork.networking</span></tt>.</p>
-<p>When communicating all parts of the framework use the <tt class="xref py py-class docutils literal"><span class="pre">NetWork.networking.NWSocket</span></tt> class, this class is set to the default socket class in NetWork (currently that&#8217;s <tt class="xref py py-class docutils literal"><span class="pre">NetWork.networking.NWSocketTCP</span></tt>). There are also classes for secure communication using AES encryption and HMAC verification.</p>
-<p>The default class can be changed to adapt to various types of networks, but all networking classes must implement certain methods and must be self contained, when adapting to another network, no part of NetWork should be changed but the <tt class="xref py py-mod docutils literal"><span class="pre">NetWork.networking</span> <span class="pre">module</span></tt>.</p>
+<p>NetWork relies heavily on network communication. Classes used for networking are defined in
+<tt class="xref py py-mod docutils literal"><span class="pre">NetWork.networking</span></tt>.</p>
+<p>When communicating all parts of the framework use the <tt class="xref py py-class docutils literal"><span class="pre">NetWork.networking.NWSocket</span></tt> class,
+this class is set to the default socket class in NetWork
+(currently that&#8217;s <tt class="xref py py-class docutils literal"><span class="pre">NetWork.networking.NWSocketTCP</span></tt>). There are also classes for secure communication
+using AES encryption, HMAC verification and SSL.</p>
+<p>The default class can be changed to adapt to various types of networks, but all networking classes must
+implement certain methods and must be self contained, when adapting to another network, no part of NetWork
+should be changed but the <tt class="xref py py-mod docutils literal"><span class="pre">NetWork.networking</span> <span class="pre">module</span></tt>.</p>
 <p>All socket classes must have these methods and members:</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -76,28 +90,44 @@ When an instance of Workgroup is created the constructor is given a list of IP a
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">NWSocket:</th><td class="field-body"><dl class="first last docutils">
 <dt>listen <span class="classifier-delimiter">:</span> <span class="classifier">method</span></dt>
-<dd><p class="first last">Start listening for incoming connections, after call to this method the socket must be ready to accept requests. There is no bind method, binding must be done automaticaly by the class.</p>
+<dd><p class="first last">Start listening for incoming connections, after call to this method the socket must be ready to accept
+requests. There is no bind method, binding must be done automaticaly by the class.</p>
 </dd>
 <dt>accept <span class="classifier-delimiter">:</span> <span class="classifier">method</span></dt>
-<dd><p class="first last">Accept a new request, return an instance of a socket class that will be used to receive and respond to that request.</p>
+<dd><p class="first last">Accept a new request, return an instance of a socket class that will be used to receive and respond to that
+request.</p>
 </dd>
 <dt>connect(parameters) <span class="classifier-delimiter">:</span> <span class="classifier">method</span></dt>
-<dd><p class="first last">Parameters used to connect to another computer. The paramets usually contain just an address, but if secure networking is used keys are passed in parameters.</p>
+<dd><p class="first last">Parameters used to connect to another computer. The paramets usually contain just an address, but if secure
+networking is used keys are passed in parameters.</p>
 </dd>
 <dt>send(data) <span class="classifier-delimiter">:</span> <span class="classifier">method</span></dt>
-<dd><p class="first last">Send given data to the other side. All data must be handled safely, no buffer overflows, no parital messages. There won&#8217;t be two sends on the same socket. Usually one message is sent, a response is received and the socket is closed.</p>
+<dd><dl class="first last docutils">
+<dt>Send given data to the other side. All data must be handled safely, no buffer overflows, no parital messages.</dt>
+<dd><p class="first last">There won&#8217;t be two sends on the same socket. Usually one message is sent, a response is received and the
+socket is closed.</p>
+</dd>
+</dl>
 </dd>
 <dt>recv <span class="classifier-delimiter">:</span> <span class="classifier">method</span></dt>
-<dd><p class="first last">Receive all data sent from the other side. All data must be handled safely, no buffer overflows, no parital messages. Messages have variable length, it is the responsibility of the socket class to know that length and receive the entire message.</p>
+<dd><p class="first last">Receive all data sent from the other side. All data must be handled safely, no buffer overflows, no parital
+messages. Messages have variable length, it is the responsibility of the socket class to know that length and
+receive the entire message.</p>
 </dd>
 <dt>close <span class="classifier-delimiter">:</span> <span class="classifier">method</span></dt>
 <dd><p class="first last">Close the socket, it will no longer be used for communication.</p>
 </dd>
 <dt>address <span class="classifier-delimiter">:</span> <span class="classifier">member</span></dt>
-<dd><p class="first last">The address of the remote computer to whitch this socket is connected to, used to identify which worker sent the request.</p>
+<dd><p class="first last">The address of the remote computer to whitch this socket is connected to, used to identify which worker
+sent the request.</p>
 </dd>
 <dt>checkAvailability(address) <span class="classifier-delimiter">:</span> <span class="classifier">static method</span></dt>
 <dd><p class="first last">Check if a worker is present at the given address. This method is called on startup when adding workers.</p>
+</dd>
+<dt>setUp(parameters) <span class="classifier-delimiter">:</span> <span class="classifier">static method</span></dt>
+<dd><p class="first last">Get the class ready for operation, this method is calleb before any objects are created. It&#8217;s usually used
+to set keys or SSL certificate files. The socketParams argument of Workgroup.__init__ gets passed to this
+function.</p>
 </dd>
 </dl>
 </td>
@@ -110,19 +140,38 @@ When an instance of Workgroup is created the constructor is given a list of IP a
 </div>
 <div class="section" id="network-security">
 <h3>Network security<a class="headerlink" href="#network-security" title="Permalink to this headline">¶</a></h3>
-<p>In addition to the default NWSocketTCP class, NetWork also comes with socket classes that implement message encryption and verification.</p>
+<p>In addition to the default NWSocketTCP class, NetWork also comes with socket classes that implement message
+encryption and verification.</p>
+<div class="section" id="ssl-authentication-encryption">
+<h4>SSL Authentication/Encryption<a class="headerlink" href="#ssl-authentication-encryption" title="Permalink to this headline">¶</a></h4>
+<p>NetWork supports SSL for communication between master and workers. Master has it&#8217;s own SSL
+certificate and private key, and every worker has a key and certificate. The verification is done both ways,
+workers and master both need to have certs.</p>
+<p>The certificates are set with setUp method. On the master, the setUp gets worker certificates and
+masters key and certificate. On the worker the setUp gets worker key and certificate and master certificate</p>
+</div>
 <div class="section" id="hmac-authentication">
 <h4>HMAC authentication<a class="headerlink" href="#hmac-authentication" title="Permalink to this headline">¶</a></h4>
-<p>The NWSocketHMAC impements HMAC authentication of messages, when sending a message it appends an SHA256 HMAC hash to the message, the receiving end strips the hash of the received message and calculates its own, if they both have the same keys the message is valid and it gets passed on.</p>
+<p>The NWSocketHMAC impements HMAC authentication of messages, when sending a message it appends an SHA256 HMAC
+hash to the message, the receiving end strips the hash of the received message and calculates its own, if they
+both have the same keys the message is valid and it gets passed on.</p>
 </div>
 <div class="section" id="aes-encryption-decryption">
 <h4>AES encryption/decryption<a class="headerlink" href="#aes-encryption-decryption" title="Permalink to this headline">¶</a></h4>
-<p>This type of security relies on PyCrypto module and it is enabled only if the import of PyCrypto succeeds. When sending, the message is encrypted with the given key, the actual key is not used but an SHA256 hash of the key is generated to ensure that the key length is a multiple of 16 as per AES requirement, the receiving end tries to decrypt the message with its own key and if the key is valid the message is decrypted successfully.</p>
+<p>This type of security relies on PyCrypto module and it is enabled only if the import of PyCrypto succeeds.
+When sending, the message is encrypted with the given key, the actual key is not used but an SHA256 hash of the
+key is generated to ensure that the key length is a multiple of 16 as per AES requirement, the receiving end t
+ries to decrypt the message with its own key and if the key is valid the message is decrypted successfully.</p>
 </div>
 <div class="section" id="key-management">
 <h4>Key management<a class="headerlink" href="#key-management" title="Permalink to this headline">¶</a></h4>
-<p>For every protection type (AES or HMAC) the master has a listener key and a key for each worker, the listner key is used to decrypt and/or authenticate messages from workers and it is set up using the <tt class="xref py py-data docutils literal"><span class="pre">keys</span></tt> parameter of the <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> constructor. The worker keys are passed allong with addresses in the <tt class="xref py py-data docutils literal"><span class="pre">workerAddresses</span></tt> parameter of the <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> constructor.</p>
-<p>Every worker computer has two keys given via command line arguments, its own listener key used to decrypt/authenticate messages from the master and the master key that is used when sending messages to the master.</p>
+<p>For every protection type (AES or HMAC) the master has a listener key and a key for each worker, the listner
+key is used to decrypt and/or authenticate messages from workers and it is set up using the <tt class="xref py py-data docutils literal"><span class="pre">keys</span></tt>
+parameter of the <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> constructor. The worker keys are passed allong with addresses in
+the <tt class="xref py py-data docutils literal"><span class="pre">workerAddresses</span></tt> parameter of the <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> constructor.</p>
+<p>Every worker computer has two keys given via command line arguments, its own listener key used to
+decrypt/authenticate messages from the master and the master key that is used when sending messages to the master.</p>
+<p>Listener keys are set through setUp method.</p>
 </div>
 </div>
 </div>
@@ -130,171 +179,301 @@ When an instance of Workgroup is created the constructor is given a list of IP a
 <h2><a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup" title="NetWork.workgroup.Workgroup"><tt class="xref py py-class docutils literal"><span class="pre">NetWork.workgroup.Workgroup</span></tt></a> internals<a class="headerlink" href="#network-workgroup-workgroup-internals" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="init">
 <h3><tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt><a class="headerlink" href="#init" title="Permalink to this headline">¶</a></h3>
-<p>When a new instance is created the constructor goes through the given list of IPs, for each of thos IPs it tries to create an instance of <tt class="xref py py-class docutils literal"><span class="pre">NetWork.worker.Worker</span></tt> class, the worker uses <tt class="xref py py-func docutils literal"><span class="pre">NetWork.networking.NWSocket.checkAvailability()</span></tt> to test if the IP is valid, if all goes well without exception the worker is added to the workgroup.</p>
-<p>After the workers are added initialization is done on other modules (<a class="reference internal" href="NetWork.event.html#module-NetWork.event" title="NetWork.event"><tt class="xref py py-mod docutils literal"><span class="pre">NetWork.event</span></tt></a>, <a class="reference internal" href="NetWork.manager.html#module-NetWork.manager" title="NetWork.manager"><tt class="xref py py-mod docutils literal"><span class="pre">NetWork.manager</span></tt></a>...) their internal variables (<tt class="xref py py-data docutils literal"><span class="pre">runningOnMaster</span></tt>, various dictionaries of items etc) are set to their apropriate initial values.</p>
+<dl class="docutils">
+<dt>When a new instance is created the constructor goes through the given list of IPs, for each of thos IPs it tries</dt>
+<dd>to create an instance of <tt class="xref py py-class docutils literal"><span class="pre">NetWork.worker.Worker</span></tt> class, the worker uses
+<tt class="xref py py-func docutils literal"><span class="pre">NetWork.networking.NWSocket.checkAvailability()</span></tt> to test if the IP is valid, if all goes well without
+exception the worker is added to the workgroup.</dd>
+</dl>
+<p>After the workers are added initialization is done on other modules
+(<a class="reference internal" href="NetWork.event.html#module-NetWork.event" title="NetWork.event"><tt class="xref py py-mod docutils literal"><span class="pre">NetWork.event</span></tt></a>, <a class="reference internal" href="NetWork.manager.html#module-NetWork.manager" title="NetWork.manager"><tt class="xref py py-mod docutils literal"><span class="pre">NetWork.manager</span></tt></a>...) their internal variables
+(<tt class="xref py py-data docutils literal"><span class="pre">runningOnMaster</span></tt>, various dictionaries of items etc) are set to their apropriate initial values.</p>
 </div>
 <div class="section" id="dispatcher-listener-commqueue-and-commands">
 <h3>Dispatcher, Listener, <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> and commands<a class="headerlink" href="#dispatcher-listener-commqueue-and-commands" title="Permalink to this headline">¶</a></h3>
-<p>The workgroup has two internal threads (or processes, this can change) that run in the background to receive requests from workers and from the main program that runs on the master computer and uses this Workgroup. These processes don&#8217;t start during <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt>, they are run manualy using the <tt class="xref py py-meth docutils literal"><span class="pre">startServing()</span></tt> method and are stoped with <tt class="xref py py-meth docutils literal"><span class="pre">stopServing()</span></tt>.</p>
+<p>The workgroup has two internal threads (or processes, this can change) that run in the background to receive
+requests from workers and from the main program that runs on the master computer and uses this Workgroup. These
+processes don&#8217;t start during <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt>, they are run manualy using the <tt class="xref py py-meth docutils literal"><span class="pre">startServing()</span></tt> method
+and are stoped with <tt class="xref py py-meth docutils literal"><span class="pre">stopServing()</span></tt>.</p>
 <div class="section" id="networklistener">
 <h4>networkListener<a class="headerlink" href="#networklistener" title="Permalink to this headline">¶</a></h4>
-<p>Listener has a server socket that listens on port <strong>32151</strong> and accepts requests from the workers, for each new connection it starts a thread that receives the actual request and sends it through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> to the dispatcher process.</p>
+<p>Listener has a server socket that listens on port <strong>32151</strong> and accepts requests from the workers, for each new
+connection it starts a thread that receives the actual request and sends it through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> to
+the dispatcher process.</p>
 </div>
 <div class="section" id="dispatcher">
 <h4>dispatcher<a class="headerlink" href="#dispatcher" title="Permalink to this headline">¶</a></h4>
-<p>Dispatcher is one of the most important part of the workgroup, all IPC and concurrency control tools are handled by dispatcher. The dispatcher receives requests through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>.</p>
-<p>Requests begin with a 3 letter code that determines their handler function. The dispatcher looks for handler functions in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.handlers.handlerList</span></tt>, a dictionary that maps the 3 letter codes to their handlers, once the handle function is found the dispatcher runs it and gives it the request.</p>
+<p>Dispatcher is one of the most important part of the workgroup, all IPC and concurrency control tools are handled
+by dispatcher. The dispatcher receives requests through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>.</p>
+<p>Requests begin with a 3 letter code that determines their handler function. The dispatcher looks for handler
+functions in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.handlers.handlerList</span></tt>, a dictionary that maps the 3 letter codes to their handlers,
+once the handle function is found the dispatcher runs it and gives it the request.</p>
 </div>
 <div class="section" id="commqueue">
 <h4>commqueue<a class="headerlink" href="#commqueue" title="Permalink to this headline">¶</a></h4>
-<p>Commqueue is a queue created during <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt> and is used to pass commands to the dispatcher. All requests are passed through this queue, when tasks on workers use a tool it sends a message to <tt class="xref py py-attr docutils literal"><span class="pre">networkListener</span></tt> and it passes it via <tt class="xref py py-attr docutils literal"><span class="pre">commqueue</span></tt> to the dispatcher. Tools on the master put their requests directly to this queue.</p>
+<p>Commqueue is a queue created during <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt> and is used to pass commands to the dispatcher. All
+requests are passed through this queue, when tasks on workers use a tool it sends a message to
+<tt class="xref py py-attr docutils literal"><span class="pre">networkListener</span></tt> and it passes it via <tt class="xref py py-attr docutils literal"><span class="pre">commqueue</span></tt> to the dispatcher. Tools on the master put
+their requests directly to this queue using <tt class="xref py py-meth docutils literal"><span class="pre">sendRequest()</span></tt> method of the workgroup</p>
 </div>
-<div class="section" id="command">
-<h4>Command<a class="headerlink" href="#command" title="Permalink to this headline">¶</a></h4>
-<p>Command is a class used to pack requests that are passed to the dispatcher, in addition to the request itself the Command also has additional data:</p>
+<div class="section" id="request">
+<h4>Request<a class="headerlink" href="#request" title="Permalink to this headline">¶</a></h4>
+<p>Request is a class used to pack requests that are passed to the dispatcher, in addition to the request itself
+the Request also has additional data:</p>
 <blockquote>
 <div><ul class="simple">
 <li>ID number of the worker who sent the request, if the request was sent from the master the ID is -1</li>
-<li>if the request was sent from the worker a socket is also passed to the dispatcher and the handler, this way the handler can respond to the request if needed</li>
+<li>if the request was sent from the worker a socket is also passed to the dispatcher and the handler, this way</li>
 </ul>
+<p>the handler can respond to the request if needed</p>
 </div></blockquote>
 </div>
 </div>
 <div class="section" id="controlls">
 <h3>Controlls<a class="headerlink" href="#controlls" title="Permalink to this headline">¶</a></h3>
-<p>Controlls is a manager used internaly in the Workgroup, it contains various properties like list of workers, nubmer of registered queues etc. It is used because dispatcher and listener need to access this shared data.</p>
+<p>Controlls is a manager used by the Workgroup and multiprocessing tools to store various properties like list of
+workers, nubmer of registered queues etc. It is used because dispatcher and listener need to access this shared
+data.</p>
 </div>
 </div>
 <div class="section" id="communication-with-workers">
 <h2>Communication with workers<a class="headerlink" href="#communication-with-workers" title="Permalink to this headline">¶</a></h2>
-<p>Each worker in the workgroup is represented with an instance of <tt class="xref py py-class docutils literal"><span class="pre">NetWork.worker.Worker</span></tt> class, these objects are used to control the workers. Workes have methods that are used for controling tasks and using IPC and concurrency control tools, they also have generic <tt class="xref py py-meth docutils literal"><span class="pre">sendMessage()</span></tt> and <tt class="xref py py-meth docutils literal"><span class="pre">sendMessageWithResponse()</span></tt> methods used to pass messages to the workers.</p>
+<p>Each worker in the workgroup is represented with an instance of <tt class="xref py py-class docutils literal"><span class="pre">NetWork.worker.Worker</span></tt> class, these
+objects are used to control the workers. Workes have methods that are used for controling tasks and generic they
+also have generic <tt class="xref py py-meth docutils literal"><span class="pre">sendMessage()</span></tt> and <tt class="xref py py-meth docutils literal"><span class="pre">sendMessageWithResponse()</span></tt> methods used by other tools.</p>
 </div>
 <div class="section" id="passing-requests">
 <h2>Passing requests<a class="headerlink" href="#passing-requests" title="Permalink to this headline">¶</a></h2>
-<p>Most of the functionality of NetWork relies on passing requests, over the network and through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> to the dispatcher.</p>
-<p>These requests have to be identified and handled by a proper handler function. To identify them 3-letter codes are prepended to each request, the codes are defined in <tt class="xref py py-mod docutils literal"><span class="pre">NetWork.commcodes</span></tt>. Every code has its handler function.</p>
-<p>When a request is received (in dispatcher or on the worker server) a dictionary (<tt class="xref py py-data docutils literal"><span class="pre">NetWork.handlers.handlerList</span></tt> for dispatcher, <tt class="xref py py-data docutils literal"><span class="pre">server.handlers</span></tt> on worker) is searched for the appropriate handler function.</p>
+<p>Most of the functionality of NetWork relies on passing requests, over the network and through the
+<tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> to the dispatcher.</p>
+<p>These requests have to be identified and handled by a proper handler function. To identify them 3-letter codes
+are prepended to each request, the core codes are defined in <tt class="xref py py-mod docutils literal"><span class="pre">NetWork.commcodes</span></tt>, codes used by
+multiprocessing tools are in their respective modules. Every code has its handler function.</p>
+<p>When a request is received (in dispatcher or on the worker server) a dictionary
+(<tt class="xref py py-data docutils literal"><span class="pre">NetWork.handlers.handlerList</span></tt> for dispatcher, <tt class="xref py py-data docutils literal"><span class="pre">server.handlers</span></tt> on worker) is searched for
+the appropriate handler function.</p>
 </div>
 <div class="section" id="worker-server-relations">
 <h2>Worker server relations<a class="headerlink" href="#worker-server-relations" title="Permalink to this headline">¶</a></h2>
-<p>Each worker runs server.py program. When it starts it creates a server socket and listens for incomming connection, when the master connects and the checks are done it initializes all other module, just like Workgroup.__init__ on the master.</p>
-<p>After init it starts receiving requests from the master, just like the dispatcher on the master it also has a dictionary of handler functions linked to their 3-letter codes, when it receives a request it searches that dictionary and passes the request to an apropriate function.</p>
+<p>Each worker runs server.py program. When it starts it creates a server socket and listens for incomming connection,
+when the master connects and the checks are done it initializes all other module, just like Workgroup.__init__ on
+the master.</p>
+<p>After init it starts receiving requests from the master, just like the dispatcher on the master it also has a
+dictionary of handler functions linked to their 3-letter codes, when it receives a request it searches that
+dictionary and passes the request to an apropriate function.</p>
 <div class="section" id="task-handling">
 <h3>Task handling<a class="headerlink" href="#task-handling" title="Permalink to this headline">¶</a></h3>
 <div class="section" id="running">
 <h4>Running<a class="headerlink" href="#running" title="Permalink to this headline">¶</a></h4>
-<p>When <tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.submit()</span></tt> is called the target function and its arguments are packed in an instance of NetWork.task.Task class. <tt class="xref py py-class docutils literal"><span class="pre">Task</span></tt> is then pickled and sent over the network to the worker. Each task has its own ID, <tt class="xref py py-meth docutils literal"><span class="pre">submit()</span></tt> returns a <a class="reference internal" href="NetWork.task.html#NetWork.task.TaskHandler" title="NetWork.task.TaskHandler"><tt class="xref py py-class docutils literal"><span class="pre">NetWork.task.TaskHandler</span></tt></a> instance that contains that ID and the ID of the worker who&#8217;s running the task.</p>
-<p>When a worker receives a request to run a task it creates a new instance of <tt class="xref py py-class docutils literal"><span class="pre">NetWork.workerprocess.WorkerProcess</span></tt> and passes the task to the constructor. <tt class="xref py py-class docutils literal"><span class="pre">WorkerProcess</span></tt> has an internal manager used to save information about running function and it also has methods to control the running task. The <tt class="xref py py-class docutils literal"><span class="pre">Task</span></tt> is then pased to a separate process that unpickles it and runs it, the process also has additional code to detect exceptions and retreive the return value and then put it to the internal manager of the <tt class="xref py py-class docutils literal"><span class="pre">WorkerProcess</span></tt>.</p>
+<p>When <tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.submit()</span></tt> is called the target function and its arguments are packed in an instance of
+NetWork.task.Task class. <tt class="xref py py-class docutils literal"><span class="pre">Task</span></tt> is then pickled and sent over the network to the worker. Each task has
+its own ID, <tt class="xref py py-meth docutils literal"><span class="pre">submit()</span></tt> returns a <a class="reference internal" href="NetWork.task.html#NetWork.task.TaskHandler" title="NetWork.task.TaskHandler"><tt class="xref py py-class docutils literal"><span class="pre">NetWork.task.TaskHandler</span></tt></a> instance that contains that ID and the
+ID of the worker who&#8217;s running the task.</p>
+<p>When a worker receives a request to run a task it creates a new instance of
+<tt class="xref py py-class docutils literal"><span class="pre">NetWork.workerprocess.WorkerProcess</span></tt> and passes the task to the constructor. <tt class="xref py py-class docutils literal"><span class="pre">WorkerProcess</span></tt>
+has an internal manager used to save information about running function and it also has methods to control the
+running task. The <tt class="xref py py-class docutils literal"><span class="pre">Task</span></tt> is then pased to a separate process that unpickles it and runs it, the process
+also has additional code to detect exceptions and retreive the return value and then put it to the internal manager
+of the <tt class="xref py py-class docutils literal"><span class="pre">WorkerProcess</span></tt>.</p>
 </div>
 <div class="section" id="controling-and-getting-information">
 <h4>Controling and getting information<a class="headerlink" href="#controling-and-getting-information" title="Permalink to this headline">¶</a></h4>
-<p><tt class="xref py py-class docutils literal"><span class="pre">TaskHandler</span></tt> has multiple methods related to the running task, they all use <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> methods to pass requests to the <tt class="xref py py-attr docutils literal"><span class="pre">commqueue</span></tt> and then to the worker, the worker receives the request and runs the apropriate method in the <tt class="xref py py-class docutils literal"><span class="pre">WorkerProcess</span></tt>. If the user asks for information, the worker sends it back through the socket and handler passes it through a queue that is automaticaly created by <tt class="xref py py-class docutils literal"><span class="pre">TaskHandler</span> <span class="pre">methods</span></tt>.</p>
+<p><tt class="xref py py-class docutils literal"><span class="pre">TaskHandler</span></tt> has multiple methods related to the running task, they all use <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt>
+methods to pass requests to the <tt class="xref py py-attr docutils literal"><span class="pre">commqueue</span></tt> and then to the worker, the worker receives the request and
+runs the apropriate method in the <tt class="xref py py-class docutils literal"><span class="pre">WorkerProcess</span></tt>. If the user asks for information, the worker sends it
+back through the socket and handler passes it through a queue that is automaticaly created by <tt class="xref py py-class docutils literal"><span class="pre">TaskHandler</span></tt>
+methods.</p>
 </div>
 </div>
 </div>
 <div class="section" id="multiprocessing-tools">
 <h2>Multiprocessing tools<a class="headerlink" href="#multiprocessing-tools" title="Permalink to this headline">¶</a></h2>
 <p>Despite serving difrent purposes all multiprocessing tools have some common properties.
-Each instance of a tool has its own integer ID, every queue, lock, manager or event has its own ID. When requests are sent to the dispatcher an ID is also sent to identify which item is used.</p>
-<p>They are all created with <tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.register*()</span></tt> methods - <tt class="xref py py-meth docutils literal"><span class="pre">registerQueue()</span></tt>, <tt class="xref py py-meth docutils literal"><span class="pre">registerLock()</span></tt>...</p>
-<p>Most of them also have local dictionaries containing stuff that is used to handle them localy, for example - for every <tt class="xref py py-class docutils literal"><span class="pre">NWQueue</span></tt> an instance of <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Queue" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Queue</span></tt></a> is added to <tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.queues</span></tt> dictionary on every computer in the workgroup, and the position of those queues in the dictionary is determined by the ID of the particular <tt class="xref py py-class docutils literal"><span class="pre">NWQueue</span></tt>.</p>
+Each instance of a tool has its own integer ID, every queue, lock, manager or event has its own ID. When requests
+are sent to the dispatcher an ID is also sent to identify which item is used.</p>
+<p>Most of them also have local dictionaries containing stuff that is used to handle them localy, for example - for
+every <tt class="xref py py-class docutils literal"><span class="pre">NWQueue</span></tt> an instance of <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Queue" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Queue</span></tt></a> is added to
+<tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.queues</span></tt> dictionary on every computer in the workgroup, and the position of those queues
+in the dictionary is determined by the ID of the particular <tt class="xref py py-class docutils literal"><span class="pre">NWQueue</span></tt>.
+They use <tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.sendRequest()</span></tt> and <tt class="xref py py-meth docutils literal"><span class="pre">Worker.sendRequest()</span></tt> to communicate with workgroup and
+workers`</p>
+<div class="section" id="plugin-system">
+<h3>Plugin system<a class="headerlink" href="#plugin-system" title="Permalink to this headline">¶</a></h3>
+<p>Eaach of these multiprocessing tools is treated as a plugin. Plugins are modules that have special functions
+and variables which enable NetWork to use them.</p>
+<div class="section" id="functions-in-plugins">
+<h4>Functions in plugins<a class="headerlink" href="#functions-in-plugins" title="Permalink to this headline">¶</a></h4>
+<p>Each plugin has two functions that NetWork uses during initialization (in Workgroup.__init__ or in server.py) that
+are suposed to make that plugin ready for work. These functions are called masterInit and workerInit, they are
+called on startup and they usually add entries to Workgroup.CONTROLS, set up dictionaries etc.</p>
+</div>
+<div class="section" id="variables-in-plugins">
+<h4>Variables in plugins<a class="headerlink" href="#variables-in-plugins" title="Permalink to this headline">¶</a></h4>
+<p>Each plugin defines two dictionaries, masterHandlers and workerHandlers that contain functions used to handle
+requests. During startup, these dictionaries are added to handler dictionaries in NetWork.handlers and server.py.</p>
+</div>
+</div>
+<div class="section" id="creating-instances-of-multiprocessing-tools">
+<h3>Creating instances of multiprocessing tools<a class="headerlink" href="#creating-instances-of-multiprocessing-tools" title="Permalink to this headline">¶</a></h3>
+<p>Instances are usually created by calling the constructor of their classes. The constructor gets a parameter
+that points to their Workgroup, they can use it to send a registration request and other requests later.</p>
+</div>
 <div class="section" id="events">
 <h3>Events<a class="headerlink" href="#events" title="Permalink to this headline">¶</a></h3>
 <div class="section" id="registration">
 <h4>Registration<a class="headerlink" href="#registration" title="Permalink to this headline">¶</a></h4>
-<p>Events are created with <tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.registerEvent()</span></tt>, when it&#8217;s called a register event command is put on the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> and the handler sends a register event message to all workers, along with the message an event ID is passed. On the workers and on the master a new instance of <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Event" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Event</span></tt></a> is added to <tt class="xref py py-data docutils literal"><span class="pre">NetWork.event.events</span></tt> dictionary.</p>
+<p>On creation register event command is put on the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> and the handler sends a register event message
+to all workers, along with the message an
+event ID is passed. On the workers and on the master a new instance of <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Event" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Event</span></tt></a> is added
+to <tt class="xref py py-data docutils literal"><span class="pre">NetWork.event.events</span></tt> dictionary.</p>
 </div>
 <div class="section" id="waiting">
 <h4>Waiting<a class="headerlink" href="#waiting" title="Permalink to this headline">¶</a></h4>
-<p>The <tt class="xref py py-meth docutils literal"><span class="pre">NWEvent.wait()</span></tt> method looks the same on both the master and the worker, it simply runs wait method of the apropriate event in :py:data`NetWork.event.events` dictionary.</p>
+<p>The <tt class="xref py py-meth docutils literal"><span class="pre">NWEvent.wait()</span></tt> method looks the same on both the master and the worker, it simply runs wait method
+of the apropriate event in :py:data`NetWork.event.events` dictionary.</p>
 </div>
 <div class="section" id="set">
 <h4>Set<a class="headerlink" href="#set" title="Permalink to this headline">¶</a></h4>
-<p>Set is different depending on whether it&#8217;s run on master or the worker. On the master it passes set event mesage allong with the ID through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>, on the worker it connects to the listener on the master and send it the message.</p>
-<p>In both cases the dispatcher receives the message through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>, it sends set event message to all workers and sets the local event on the  master.</p>
+<p>Set is different depending on whether it&#8217;s run on master or the worker. On the master it passes set event mesage
+allong with the ID through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>, on the worker it connects to the listener on the master and
+send it the message.</p>
+<p>In both cases the dispatcher receives the message through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>, it sends set event message
+to all workers and sets the local event on the  master.</p>
 </div>
 </div>
 <div class="section" id="locks">
 <h3>Locks<a class="headerlink" href="#locks" title="Permalink to this headline">¶</a></h3>
 <div class="section" id="id1">
 <h4>Registration<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h4>
-<p>Locks are created with <tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.registerLock()</span></tt>, when it&#8217;s called a register lock command is put on the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> and the handler sends a register lock message to all workers. On the master a new instance of <tt class="xref py py-class docutils literal"><span class="pre">NetWork.lock.MasterLockHandler</span></tt> is added to :py:class`NetWork.lock.lockHandlers` dictionary. On the master and the workers, a new instance of <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Lock" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Lock</span></tt></a> is added <tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.locks</span></tt> dictionary, after that it&#8217;s acquired.</p>
+<p>On creation a register lock command is put on
+the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> and the handler sends a register lock message to all workers. On the master a new instance
+of <tt class="xref py py-class docutils literal"><span class="pre">NetWork.lock.MasterLockHandler</span></tt> is added to :py:class`NetWork.lock.lockHandlers` dictionary. On the
+master and the workers, a new instance of <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Lock" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Lock</span></tt></a> is added
+<tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.locks</span></tt> dictionary, after that it&#8217;s acquired.</p>
 </div>
 <div class="section" id="masterlockhandler">
 <h4><tt class="xref py py-class docutils literal"><span class="pre">MasterLockHandler</span></tt><a class="headerlink" href="#masterlockhandler" title="Permalink to this headline">¶</a></h4>
-<p>A class that is used on the master to hold information about locks, each lock has one. It has a boolean value telling whether the lock is locked and it has a list of waiters that tried to acquire the lock when it was locked.</p>
+<p>A class that is used on the master to hold information about locks, each lock has one. It has a boolean value
+telling whether the lock is locked and it has a list of waiters that tried to acquire the lock when it was locked.</p>
 </div>
 <div class="section" id="acquiring">
 <h4>Acquiring<a class="headerlink" href="#acquiring" title="Permalink to this headline">¶</a></h4>
-<p>When <tt class="xref py py-meth docutils literal"><span class="pre">NWLock.acquire()</span></tt> is called it sends a message to the dispacher (through the network if on worker or through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> if on master) that it wants to acquire the lock, after that it runs the acquire method on the apropriate lock in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.locks</span></tt>.</p>
-<p>When dispatcher receives the message it check apropriate <tt class="xref py py-class docutils literal"><span class="pre">MasterLockHandler</span></tt> in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.lockHandlers</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">MasterLockHandler</span></tt> has a boolean value telling whether its locked. If it is not locked, a release lock message is sent to the worker that tried to acquire the lock, when the message is received the appropriate lock in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.locks</span></tt> is released and the process that called acquire on it continues its work.</p>
-<p>If the master called acquire and the lock is unlocked then a lock in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.locks</span></tt> on the master is released.</p>
+<p>When <tt class="xref py py-meth docutils literal"><span class="pre">NWLock.acquire()</span></tt> is called it sends a message to the dispacher (through the network if on worker or
+through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> if on master) that it wants to acquire the lock, after that it runs the acquire
+method on the apropriate lock in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.locks</span></tt>.</p>
+<p>When dispatcher receives the message it check apropriate <tt class="xref py py-class docutils literal"><span class="pre">MasterLockHandler</span></tt> in
+<tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.lockHandlers</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">MasterLockHandler</span></tt> has a boolean value telling whether its locked.
+If it is not locked, a release lock message is sent to the worker that tried to acquire the lock, when the message
+is received the appropriate lock in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.locks</span></tt> is released and the process that called acquire on
+it continues its work.</p>
+<p>If the master called acquire and the lock is unlocked then a lock in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.locks</span></tt> on the master is
+released.</p>
 <p>If <tt class="xref py py-class docutils literal"><span class="pre">MasterLockHandler</span></tt> is locked the requester ID is added to the waiting list until the lock is released.</p>
 </div>
 <div class="section" id="releasing">
 <h4>Releasing<a class="headerlink" href="#releasing" title="Permalink to this headline">¶</a></h4>
-<p>A message is sent to the dispatcher (network or <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>) to release the lock. When releasing it checks the waiter list in <tt class="xref py py-class docutils literal"><span class="pre">MasterLockHandler</span></tt>, if there are waiters it gets the ID of the first one, if the ID is -1 (master ID) the local lock on <tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.locks</span></tt> is released, for other IDs a message is sent to the worker to release the lock, when the worker receives the message it releases the required lock.</p>
+<p>A message is sent to the dispatcher (network or <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>) to release the lock. When releasing it checks
+the waiter list in <tt class="xref py py-class docutils literal"><span class="pre">MasterLockHandler</span></tt>, if there are waiters it gets the ID of the first one, if the ID
+is -1 (master ID) the local lock on <tt class="xref py py-data docutils literal"><span class="pre">NetWork.lock.locks</span></tt> is released, for other IDs a message is sent to
+the worker to release the lock, when the worker receives the message it releases the required lock.</p>
 </div>
 </div>
 <div class="section" id="managers">
 <h3>Managers<a class="headerlink" href="#managers" title="Permalink to this headline">¶</a></h3>
 <div class="section" id="id2">
 <h4>Registration<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h4>
-<p>Managers are created with <tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.registerManager()</span></tt>. A message is sent through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> and a new   <tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.manager.dict</span></tt> is added to <tt class="xref py py-data docutils literal"><span class="pre">NetWork.mananager.managers</span></tt> on the master, no registration is performed on the workers.</p>
+<p>On creation a message is sent through the
+<tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> and a new   <tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.manager.dict</span></tt> is added to
+<tt class="xref py py-data docutils literal"><span class="pre">NetWork.mananager.managers</span></tt> on the master, no registration is performed on the workers.</p>
 </div>
 <div class="section" id="setting-items">
 <h4>Setting items<a class="headerlink" href="#setting-items" title="Permalink to this headline">¶</a></h4>
-<p>When <tt class="xref py py-meth docutils literal"><span class="pre">NWManager.setItem()</span></tt> is called a request is sent to the dispatcher (network or <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>) with the manager ID, item key and the new value, when the dispatcher receives the message it sets that item to a new value on the local manager in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.manager.managers</span></tt></p>
+<p>When <tt class="xref py py-meth docutils literal"><span class="pre">NWManager.setItem()</span></tt> is called a request is sent to the dispatcher
+(network or <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>) with the manager ID, item key and the new value, when the dispatcher receives
+the message it sets that item to a new value on the local manager in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.manager.managers</span></tt></p>
 </div>
 <div class="section" id="getting-items">
 <h4>Getting items<a class="headerlink" href="#getting-items" title="Permalink to this headline">¶</a></h4>
-<p>If <tt class="xref py py-meth docutils literal"><span class="pre">NWManager.getItem()</span></tt> is called on the master it simply reads it from <tt class="xref py py-data docutils literal"><span class="pre">NetWork.manager.managers</span></tt>. If it&#8217;s called on the worker it sends the request over the network and the dispatcher responds with the value of that item through the same socket.</p>
+<p>If <tt class="xref py py-meth docutils literal"><span class="pre">NWManager.getItem()</span></tt> is called on the master it simply reads it from
+<tt class="xref py py-data docutils literal"><span class="pre">NetWork.manager.managers</span></tt>. If it&#8217;s called on the worker it sends the request over the network and the
+dispatcher responds with the value of that item through the same socket.</p>
 </div>
 </div>
 <div class="section" id="queues">
 <h3>Queues<a class="headerlink" href="#queues" title="Permalink to this headline">¶</a></h3>
 <div class="section" id="id3">
 <h4>Registration<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
-<p>Queues are created with <tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.registerQueue()</span></tt>, a message is sent through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>. On the master and the workers a new instance of <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Queue" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Queue</span></tt></a> is added to <tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.queues</span></tt> dictionary. On the master a new instance of <tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.MasterQueue</span></tt> handler is added to <tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.queueHandlers</span></tt>.</p>
+<p>On creation a message is sent through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>.
+On the master and the workers a new instance of <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Queue" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Queue</span></tt></a> is added to
+<tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.queues</span></tt> dictionary. On the master a new instance of <tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.MasterQueue</span></tt>
+handler is added to <tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.queueHandlers</span></tt>.</p>
 </div>
 <div class="section" id="masterqueuehandler">
 <h4><tt class="xref py py-class docutils literal"><span class="pre">MasterQueueHandler</span></tt><a class="headerlink" href="#masterqueuehandler" title="Permalink to this headline">¶</a></h4>
-<p>A class that is used on the master to hold information about queues, each queue has one. It contains two lists, <tt class="xref py py-attr docutils literal"><span class="pre">items</span></tt> and <tt class="xref py py-attr docutils literal"><span class="pre">waiters</span></tt>. When an item is put on the queue it&#8217;s added to the items list, when <tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt> is called the requester is added to the waiters list. <tt class="xref py py-class docutils literal"><span class="pre">MasterQueueHandler</span></tt> has a distribute method that check these lists and if both items and waiters are available it sends the first available item to the first waiter.</p>
+<p>A class that is used on the master to hold information about queues, each queue has one. It contains two lists,
+<tt class="xref py py-attr docutils literal"><span class="pre">items</span></tt> and <tt class="xref py py-attr docutils literal"><span class="pre">waiters</span></tt>. When an item is put on the queue it&#8217;s added to the items list,
+when <tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt> is called the requester is added to the waiters list. <tt class="xref py py-class docutils literal"><span class="pre">MasterQueueHandler</span></tt> has a
+distribute method that check these lists and if both items and waiters are available it sends the first available
+item to the first waiter.</p>
 </div>
 <div class="section" id="id4">
 <h4>Getting items<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h4>
-<p>The worker (or master) sends a get request allong with the queue ID and calls <tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt> on the local queue. The dispatcher receives request, adds the worker to the waiter list and calls <tt class="xref py py-meth docutils literal"><span class="pre">distribute()</span></tt>.</p>
+<p>The worker (or master) sends a get request allong with the queue ID and calls <tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt> on the local queue.
+The dispatcher receives request, adds the worker to the waiter list and calls <tt class="xref py py-meth docutils literal"><span class="pre">distribute()</span></tt>.</p>
 </div>
 <div class="section" id="putting-items">
 <h4>Putting items<a class="headerlink" href="#putting-items" title="Permalink to this headline">¶</a></h4>
-<p>A put item request is sent to dispatcher (network or <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>), it adds that item to the item list on the appropriate <tt class="xref py py-class docutils literal"><span class="pre">MasterQueueHandler</span></tt>, after adding the item it calls its <tt class="xref py py-meth docutils literal"><span class="pre">distribute()</span></tt> method.</p>
+<p>A put item request is sent to dispatcher (network or <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>), it adds that item to the item list on
+the appropriate <tt class="xref py py-class docutils literal"><span class="pre">MasterQueueHandler</span></tt>, after adding the item it calls its <tt class="xref py py-meth docutils literal"><span class="pre">distribute()</span></tt> method.</p>
 </div>
 <div class="section" id="distribution">
 <h4>Distribution<a class="headerlink" href="#distribution" title="Permalink to this headline">¶</a></h4>
-<p>If the waiters and items list of <tt class="xref py py-class docutils literal"><span class="pre">MasterQueueHandler</span></tt> are not empty it sends the first item from the items list to the first worker on the waiters list, the worker receives the item and puts it to an aprropriate queue in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.queues</span></tt>, it the waiter is master dispatcher just puts the item on a local queue in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.queues</span></tt>.</p>
+<p>If the waiters and items list of <tt class="xref py py-class docutils literal"><span class="pre">MasterQueueHandler</span></tt> are not empty it sends the first item from the
+items list to the first worker on the waiters list, the worker receives the item and puts it to an aprropriate queue
+in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.queues</span></tt>, it the waiter is master dispatcher just puts the item on a local queue in
+<tt class="xref py py-data docutils literal"><span class="pre">NetWork.queue.queues</span></tt>.</p>
 </div>
 </div>
 <div class="section" id="semaphores">
 <h3>Semaphores<a class="headerlink" href="#semaphores" title="Permalink to this headline">¶</a></h3>
 <div class="section" id="id5">
 <h4>Registration<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h4>
-<p>Semaphores are created with <tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.registerSemaphore()</span></tt>, when it&#8217;s called a register semaphore command is put on the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> and the handler sends a register semaphore message to all workers. On the master a new instance of <tt class="xref py py-class docutils literal"><span class="pre">NetWork.semaphore.MasterSemaphoreHandler</span></tt> is added to :py:class`NetWork.semaphore.semaphoreHandlers` dictionary. On the master and the workers, a new instance of <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Semaphore" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Semaphore</span></tt></a> is added <tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphores</span></tt> dictionary. All created <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Semaphore" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Semaphore</span></tt></a> have the counter value given to
+<p>On creation a register semaphore command
+is put on the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> and the handler sends a register semaphore message to all workers. On the master
+a new instance of <tt class="xref py py-class docutils literal"><span class="pre">NetWork.semaphore.MasterSemaphoreHandler</span></tt> is
+added to :py:class`NetWork.semaphore.semaphoreHandlers` dictionary. On the master and the workers, a new
+instance of <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Semaphore" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Semaphore</span></tt></a> is added <tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphores</span></tt> dictionary.
+All created <a class="reference external" href="http://docs.python.org/library/multiprocessing.html#multiprocessing.Semaphore" title="(in Python v2.7)"><tt class="xref py py-class docutils literal"><span class="pre">multiprocessing.Semaphore</span></tt></a> have the counter value given to
 <tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.registerSemaphore()</span></tt>, and upong creation they a loop acquires them to set their counter to zero.</p>
 </div>
 <div class="section" id="mastersemaphorehandler">
 <h4><tt class="xref py py-class docutils literal"><span class="pre">MasterSemaphoreHandler</span></tt><a class="headerlink" href="#mastersemaphorehandler" title="Permalink to this headline">¶</a></h4>
-<p>A class that is used on the master to hold information about semaphores, each semaphore has one. It has a counter value, and it has a list of waiters that tried to acquire the semaphore when the counter was zero.</p>
+<p>A class that is used on the master to hold information about semaphores, each semaphore has one. It has a counter
+value, and it has a list of waiters that tried to acquire the semaphore when the counter was zero.</p>
 </div>
 <div class="section" id="id6">
 <h4>Acquiring<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h4>
-<p>When <tt class="xref py py-meth docutils literal"><span class="pre">NWSemaphore.acquire()</span></tt> is called it sends a message to the dispacher (through the network if on worker or through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> if on master) that it wants to acquire the semaphore, after that it runs the acquire method on the apropriate semaphore in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphores</span></tt>.</p>
-<p>When dispatcher receives the message it checks apropriate <tt class="xref py py-class docutils literal"><span class="pre">MasterSemaphoreHandler</span></tt> in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphoreHandlers</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">MasterSemaphoreHandler</span></tt> has a counter value telling whether the semaphore can be acquired. If it is greater than zero it gets decremented, a release semaphore message is sent to the worker that tried to acquire the semaphore, when the message is received the appropriate semaphore in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphores</span></tt> is released and the process that called acquire on it continues its work.</p>
-<p>If the master called acquire and the counter is greather than zero the counter gets decremented and then a semaphore in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphores</span></tt> on the master is released.</p>
+<p>When <tt class="xref py py-meth docutils literal"><span class="pre">NWSemaphore.acquire()</span></tt> is called it sends a message to the dispacher (through the network if on worker
+or through the <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt> if on master) that it wants to acquire the semaphore, after that it runs the
+acquire method on the apropriate semaphore in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphores</span></tt>.</p>
+<p>When dispatcher receives the message it checks apropriate <tt class="xref py py-class docutils literal"><span class="pre">MasterSemaphoreHandler</span></tt> in
+<tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphoreHandlers</span></tt>, <tt class="xref py py-class docutils literal"><span class="pre">MasterSemaphoreHandler</span></tt> has a counter value telling
+whether the semaphore can be acquired. If it is greater than zero it gets decremented, a release semaphore message
+is sent to the worker that tried to acquire the semaphore, when the message is received the appropriate semaphore
+in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphores</span></tt> is released and the process that called acquire on it continues its work.</p>
+<dl class="docutils">
+<dt>If the master called acquire and the counter is greather than zero the counter gets decremented and then a semaphore</dt>
+<dd>in <tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphores</span></tt> on the master is released.</dd>
+</dl>
 <p>If the counter is zero the requester ID is added to the waiting list until the semaphore is released.</p>
 </div>
 <div class="section" id="id7">
 <h4>Releasing<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h4>
-<p>A message is sent to the dispatcher (network or <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>) to release the semaphore. When releasing it checks the waiter list in <tt class="xref py py-class docutils literal"><span class="pre">MasterSemaphoreHandler</span></tt>, if there are waiters it gets the ID of the first one, if the ID is -1 (master ID) the local semaphore on <tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphores</span></tt> is released, for other IDs a message is sent to the worker to release the semaphore, when the worker receives the message it releases the required semaphore. If there are no waiter the counter gets increased.</p>
+<p>A message is sent to the dispatcher (network or <tt class="xref py py-data docutils literal"><span class="pre">commqueue</span></tt>) to release the semaphore. When releasing
+it checks the waiter list in <tt class="xref py py-class docutils literal"><span class="pre">MasterSemaphoreHandler</span></tt>, if there are waiters it gets the ID of the first
+one, if the ID is -1 (master ID) the local semaphore on <tt class="xref py py-data docutils literal"><span class="pre">NetWork.semaphore.semaphores</span></tt> is released, for
+other IDs a message is sent to the worker to release the semaphore, when the worker receives the message it releases
+the required semaphore. If there are no waiters the counter gets increased.</p>
 </div>
 </div>
 </div>
@@ -312,6 +491,7 @@ Each instance of a tool has its own integer ID, every queue, lock, manager or ev
 <li><a class="reference internal" href="#basic-structure-of-the-network">Basic structure of the network</a></li>
 <li><a class="reference internal" href="#low-level-networking">Low level networking</a><ul>
 <li><a class="reference internal" href="#network-security">Network security</a><ul>
+<li><a class="reference internal" href="#ssl-authentication-encryption">SSL Authentication/Encryption</a></li>
 <li><a class="reference internal" href="#hmac-authentication">HMAC authentication</a></li>
 <li><a class="reference internal" href="#aes-encryption-decryption">AES encryption/decryption</a></li>
 <li><a class="reference internal" href="#key-management">Key management</a></li>
@@ -325,7 +505,7 @@ Each instance of a tool has its own integer ID, every queue, lock, manager or ev
 <li><a class="reference internal" href="#networklistener">networkListener</a></li>
 <li><a class="reference internal" href="#dispatcher">dispatcher</a></li>
 <li><a class="reference internal" href="#commqueue">commqueue</a></li>
-<li><a class="reference internal" href="#command">Command</a></li>
+<li><a class="reference internal" href="#request">Request</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#controlls">Controlls</a></li>
@@ -342,6 +522,12 @@ Each instance of a tool has its own integer ID, every queue, lock, manager or ev
 </ul>
 </li>
 <li><a class="reference internal" href="#multiprocessing-tools">Multiprocessing tools</a><ul>
+<li><a class="reference internal" href="#plugin-system">Plugin system</a><ul>
+<li><a class="reference internal" href="#functions-in-plugins">Functions in plugins</a></li>
+<li><a class="reference internal" href="#variables-in-plugins">Variables in plugins</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#creating-instances-of-multiprocessing-tools">Creating instances of multiprocessing tools</a></li>
 <li><a class="reference internal" href="#events">Events</a><ul>
 <li><a class="reference internal" href="#registration">Registration</a></li>
 <li><a class="reference internal" href="#waiting">Waiting</a></li>

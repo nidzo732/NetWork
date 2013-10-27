@@ -56,33 +56,122 @@
             
   <div class="section" id="securing-network-communication-when-using-network-framework">
 <h1>Securing network communication when using NetWork framework<a class="headerlink" href="#securing-network-communication-when-using-network-framework" title="Permalink to this headline">¶</a></h1>
-<p>By default NetWork uses an unencrypted TCP communication, if that communication goes over insecure networks (like internet) anyone could see it and modify it, the worker computers happily accept any request which leaves them open to attacks.</p>
+<p>By default NetWork uses an unencrypted TCP communication, if that communication goes over insecure networks (like
+internet) anyone could see it and modify it, the worker computers happily accept any request which leaves them open
+to attacks.</p>
+<div class="section" id="warning">
+<h2>Warning<a class="headerlink" href="#warning" title="Permalink to this headline">¶</a></h2>
+<p><strong>USE SSL IF YOU NEED ABSOULTE SECURITY</strong></p>
+<p>The AES and HMAC security options are completely developed by me (author of NetWork). As far as I know
+these methods are secure but I am not a crypto wizard and I have absolutely no experience in network security.
+If SSL seems like an overkil to you use HMAC or AES, they are probably good enough in normal (non-military,
+non-financial...) clusters but I cant guarantee that they are secure.</p>
+<p>Homebrew cryptography is almost always insecure and a good cryptanalyst would probably find a flaw in my security
+systems.</p>
+<p>On the other hand SSL is a business proven security suite that stood the test of time for almost two decades.
+The people who made SSL standard and OpenSSL (NetWork uses OpenSSL) are way better cryptographers than me.
+If you need your cluster to be secure use the SSL option, it is a little harder to use but it is considered
+unbreakable.</p>
+</div>
 <div class="section" id="notes-on-key-safety">
 <h2>Notes on key safety<a class="headerlink" href="#notes-on-key-safety" title="Permalink to this headline">¶</a></h2>
-<p>Please be advised that currently available security methods - HMAC and AES (a symetric cipher) rely on pre shared keys, it is your responsibility to deliver the keys where needed.</p>
-<p>In the future NetWork will support public key cryptography and eliminate the need to share secret keys over insecure chanels.</p>
+<p>Please be advised that  HMAC and AES  rely on pre shared keys, it is your responsibility to securely deliver the
+keys where needed.</p>
+<p>SSL does not have this problem, you still need to deliver the certificates but you don&#8217;t need to wory about their
+secrecy.</p>
+</div>
+<div class="section" id="ssl-network-security">
+<h2>SSL network security<a class="headerlink" href="#ssl-network-security" title="Permalink to this headline">¶</a></h2>
+<p>SSL uses certificates to identify computers during communications, it also uses a public key encryption system
+for secure communication. In NetWork the verification is done both ways, the workers verify the master and
+the master verifies the workers, this prevents a third party from entering the cluster, either as a worker or
+as a master.</p>
+<div class="section" id="setup">
+<h3>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="creating-certificates">
+<h4>Creating certificates<a class="headerlink" href="#creating-certificates" title="Permalink to this headline">¶</a></h4>
+<p>The best way to create certificates for NetWork is to use the openssl command line tool. You can use self signed
+certificates or you can have them signed by certificate authority.</p>
+<p>For instructions on creating certificates see
+<a class="reference external" href="http://www.openssl.org/docs/HOWTO/certificates.txt">OpenSSL instructions</a></p>
+</div>
+<div class="section" id="setting-up-master">
+<h4>Setting up master<a class="headerlink" href="#setting-up-master" title="Permalink to this headline">¶</a></h4>
+<p>The master needs two parameters to use SSL. The first two are it&#8217;s own SSL certificate and Key, these will enable
+workers to verify the master and to secure the connection. The third parameter must point to a file or directory
+that contains certificates of all workers. For instructions on how those files and directories must look see
+<a class="reference external" href="http://www.openssl.org/docs/ssl/SSL_CTX_load_verify_locations.html#NOTES">OpenSSL documentation</a></p>
+<p>These parameters are set in the constructor of the Workgroup through socketParams argument. Valid parameters are:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">PeerCertFile</span></tt> A file that contains SSL certificates that will be used to
+verify workers, you must provide PeerCertFile or PeerCertDir</li>
+<li><tt class="docutils literal"><span class="pre">PeerCertDir</span></tt> A folder that contains SSL certificates that will be used to
+verify workers, you must provide either PeerCertFile or PeerCertDir or both</li>
+<li><tt class="docutils literal"><span class="pre">LocalCert</span></tt> SSL certificate used to let workers verify this master</li>
+<li><tt class="docutils literal"><span class="pre">LocalKey</span></tt> Private SSL key for this master)</li>
+<li><tt class="docutils literal"><span class="pre">LocalKeyPassword</span></tt> Password used to decrypt local key if it&#8217;s encrypted</li>
+</ul>
+<p>Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">NetWork</span> <span class="kn">import</span> <span class="n">Workgroup</span>
+
+<span class="c">#Create a workgroup that uses SSL secured network communication</span>
+<span class="n">w</span><span class="o">=</span><span class="n">Workgroup</span><span class="p">([</span><span class="o">...</span><span class="n">workers</span><span class="o">...</span><span class="p">],</span> <span class="n">socketType</span><span class="o">=</span><span class="s">&quot;SSL&quot;</span><span class="p">,</span>
+            <span class="n">socketParams</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;PeerCertFile&quot;</span><span class="p">:</span> <span class="s">&quot;workerCerts.crt&quot;</span><span class="p">,</span>
+                          <span class="s">&quot;LocalCert&quot;</span><span class="p">:</span> <span class="s">&quot;masterCert.crt&quot;</span><span class="p">,</span>
+                          <span class="s">&quot;LocalKey&quot;</span><span class="p">:</span> <span class="s">&quot;masterKey.key&quot;</span><span class="p">})</span>
+    <span class="c">#Do something with the workgroup</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="setting-up-workers">
+<h4>Setting up workers<a class="headerlink" href="#setting-up-workers" title="Permalink to this headline">¶</a></h4>
+<p>The worker also needs it&#8217;s own SSL certificate and key and it needs the certificates are passed through command
+line parameters. The parameters are:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">--master_ssl_cert</span> <span class="pre">MASTER_SSL_CERT</span></tt> Certificate file used to identify the master</li>
+<li><tt class="docutils literal"><span class="pre">--local_ssl_cert</span> <span class="pre">LOCAL_SSL_CERT</span></tt> Certificate used to verify this worker</li>
+<li><tt class="docutils literal"><span class="pre">--local_ssl_key</span> <span class="pre">LOCAL_SSL_KEY</span></tt> Private key used for SSL</li>
+<li><tt class="docutils literal"><span class="pre">--local_key_password</span> <span class="pre">LOCAL_KEY_PASSWORD</span></tt> Password used to decrypt private key</li>
+</ul>
+<p>An example:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>python3 server.py --master_ssl_cert masterCert.crt --local_ssl_cert worker1Cert.crt -local_ssl_key worker1Key.key
+</pre></div>
+</div>
+</div>
+</div>
 </div>
 <div class="section" id="hmac-message-authentication">
 <h2>HMAC message authentication<a class="headerlink" href="#hmac-message-authentication" title="Permalink to this headline">¶</a></h2>
-<p>If you just want to prevent unauthorized requests to worker and you don&#8217;t care if the network communication can be seen, you can enable HMAC. Basicaly, when receiving messages from the master the worker checks if the master and worker have the same key, if the key is valid the worker accepts the request and handles it. For more detailed info about HMAC see <a class="reference external" href="http://en.wikipedia.org/wiki/Hash-based_message_authentication_code">the wikipedia page</a></p>
+<p>If you just want to prevent unauthorized requests to worker and you don&#8217;t care if the network communication can be
+seen, you can enable HMAC. Basicaly, when receiving messages from the master the worker checks if the master and
+worker have the same key, if the key is valid the worker accepts the request and handles it. For more detailed info
+about HMAC see <a class="reference external" href="http://en.wikipedia.org/wiki/Hash-based_message_authentication_code">the wikipedia page</a></p>
 <div class="section" id="setting-up-hmac-on-master">
 <h3>Setting up HMAC on master<a class="headerlink" href="#setting-up-hmac-on-master" title="Permalink to this headline">¶</a></h3>
-<p>HMAC setup on master is done through the <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> constructor, the constructor needs to be told to use HMAC, it needs to have a key to verify incomming connections and it needs a key for each worker, here&#8217;s an example:</p>
+<p>HMAC setup on master is done through the <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> constructor, the constructor needs to be told to use
+HMAC, it needs to have a key to verify incomming connections and it needs a key for each worker, here&#8217;s an example:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="c">#Create a workgroup that has two workes and use HMAC when communicating</span>
 
 <span class="n">w</span><span class="o">=</span><span class="n">Workgroup</span><span class="p">([(</span><span class="s">&quot;192.168.1.105&quot;</span><span class="p">,</span> <span class="n">b</span><span class="s">&quot;Worker1HMACKey&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s">&quot;192.168.1.106&quot;</span><span class="p">,</span> <span class="n">b</span><span class="s">&quot;Worker2HMACKey&quot;</span><span class="p">)],</span>
-             <span class="n">socket_type</span><span class="o">=</span><span class="s">&quot;HMAC&quot;</span><span class="p">,</span> <span class="n">keys</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;ListenerHMAC&quot;</span><span class="p">:</span><span class="n">b</span><span class="s">&quot;MasterHMACKey&quot;</span><span class="p">})</span>
+             <span class="n">socket_type</span><span class="o">=</span><span class="s">&quot;HMAC&quot;</span><span class="p">,</span> <span class="n">socketParams</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;ListenerHMAC&quot;</span><span class="p">:</span><span class="n">b</span><span class="s">&quot;MasterHMACKey&quot;</span><span class="p">})</span>
 </pre></div>
 </div>
-<p>The first parameter would be a list of addresses when using an unprotected socket, but now it is a list of tuples that contain an address and a key used to send the messages, the <tt class="xref py py-data docutils literal"><span class="pre">socket_type</span></tt> parameter tells the workgroup to use HMAC sockets, the <tt class="xref py py-data docutils literal"><span class="pre">keys</span></tt> parameter is used to pass the listner key, that will be used to verify messages from the workers.</p>
+<p>The first parameter would be a list of addresses when using an unprotected socket, but now it is a list of tuples
+that contain an address and a key used to send the messages, the <tt class="xref py py-data docutils literal"><span class="pre">socket_type</span></tt> parameter tells the
+workgroup to use HMAC sockets, the <tt class="xref py py-data docutils literal"><span class="pre">socketParams</span></tt> parameter is used to pass the listner key, that will be used
+to verify messages from the workers.</p>
 </div>
 <div class="section" id="setting-up-hmac-on-worker">
 <h3>Setting up HMAC on worker<a class="headerlink" href="#setting-up-hmac-on-worker" title="Permalink to this headline">¶</a></h3>
-<p>HMAC setup on worker is done through command line parameters, the incomming key and the master key are given to server.py. The master key is used when sending messages to the master and the incomming key is used to verify messages from the master.</p>
+<p>HMAC setup on worker is done through command line parameters, the incomming key and the master key are given to
+server.py. The master key is used when sending messages to the master and the incomming key is used to verify
+messages from the master.</p>
 <div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>python3 server.py --socket_type HMAC --incomming_hmac_key Worker1HMACKey --master_hmac_key MasterHMACKey
 </pre></div>
 </div>
-<p>This would be the setup for the first worker in the parameter list above, note that the worker key in the parameter list for <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> must match <tt class="docutils literal"><span class="pre">--incomming_hmac_key</span></tt> in the command line parameters, and the master listener key must match <tt class="docutils literal"><span class="pre">--master_hmac_key</span></tt>. For the second worker the setup would look like this</p>
+<p>This would be the setup for the first worker in the parameter list above, note that the worker key in the parameter
+list for <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> must match <tt class="docutils literal"><span class="pre">--incomming_hmac_key</span></tt> in the command line parameters, and the master
+listener key must match <tt class="docutils literal"><span class="pre">--master_hmac_key</span></tt>. For the second worker the setup would look like this</p>
 <div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>python3 server.py --socket_type HMAC --incomming_hmac_key Worker2HMACKey --master_hmac_key MasterHMACKey
 </pre></div>
 </div>
@@ -91,25 +180,34 @@
 </div>
 <div class="section" id="aes-message-encryption">
 <h2>AES message encryption<a class="headerlink" href="#aes-message-encryption" title="Permalink to this headline">¶</a></h2>
-<p>If you don&#8217;t want anyone to see what the workgroup is doing you can set it to encrypt all network communication with the AES encryption algorithm.</p>
+<p>If you don&#8217;t want anyone to see what the workgroup is doing you can set it to encrypt all network communication
+with the AES encryption algorithm.</p>
 <div class="section" id="setting-up-aes-on-master">
 <h3>Setting up AES on master<a class="headerlink" href="#setting-up-aes-on-master" title="Permalink to this headline">¶</a></h3>
-<p>AES setup on master is done through the <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> constructor, the constructor needs to be told to use AES, it needs to have a key to decrypt incomming connections and it needs a key for each worker, here&#8217;s an example:</p>
+<p>AES setup on master is done through the <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> constructor, the constructor needs to be told to use
+AES, it needs to have a key to decrypt incomming connections and it needs a key for each worker, here&#8217;s an example:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="c">#Create a workgroup that has two workes and use HMAC when communicating</span>
 
 <span class="n">w</span><span class="o">=</span><span class="n">Workgroup</span><span class="p">([(</span><span class="s">&quot;192.168.1.105&quot;</span><span class="p">,</span> <span class="n">b</span><span class="s">&quot;Worker1AESKey&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s">&quot;192.168.1.106&quot;</span><span class="p">,</span> <span class="n">b</span><span class="s">&quot;Worker2AESKey&quot;</span><span class="p">)],</span>
-             <span class="n">socket_type</span><span class="o">=</span><span class="s">&quot;AES&quot;</span><span class="p">,</span> <span class="n">keys</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;ListenerAES&quot;</span><span class="p">:</span><span class="n">b</span><span class="s">&quot;MasterAESKey&quot;</span><span class="p">})</span>
+             <span class="n">socket_type</span><span class="o">=</span><span class="s">&quot;AES&quot;</span><span class="p">,</span> <span class="n">socketParams</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;ListenerAES&quot;</span><span class="p">:</span><span class="n">b</span><span class="s">&quot;MasterAESKey&quot;</span><span class="p">})</span>
 </pre></div>
 </div>
-<p>The first parameter would be a list of addresses when using an unprotected socket, but now it is a list of tuples that contain an address and a key used to encrypt the messages, the <tt class="xref py py-data docutils literal"><span class="pre">socket_type</span></tt> parameter tells the workgroup to use AES sockets, the <tt class="xref py py-data docutils literal"><span class="pre">keys</span></tt> parameter is used to pass the listner key, that will be used to decrypt messages from the workers.</p>
+<p>The first parameter would be a list of addresses when using an unprotected socket, but now it is a list of tuples
+that contain an address and a key used to encrypt the messages, the <tt class="xref py py-data docutils literal"><span class="pre">socket_type</span></tt> parameter tells the
+workgroup to use AES sockets, the <tt class="xref py py-data docutils literal"><span class="pre">socketParams</span></tt> parameter is used to pass the listner key, that will be
+used to decrypt messages from the workers.</p>
 </div>
 <div class="section" id="id1">
 <h3>Setting up HMAC on worker<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
-<p>AES setup on worker is done through command line parameters, the incomming key and the master key are given to server.py. The master key is used when encrypting messages for the master and the incomming key is used to decrypt messages from the master.</p>
+<p>AES setup on worker is done through command line parameters, the incomming key and the master key are given to
+server.py. The master key is used when encrypting messages for the master and the incomming key is used to decrypt
+messages from the master.</p>
 <div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>python3 server.py --socket_type AES --incomming_aes_key Worker1AESKey --master_hmac_key MasterAESKey
 </pre></div>
 </div>
-<p>This would be the setup for the first worker in the parameter list above, note that the worker key in the parameter list for <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> must match <tt class="docutils literal"><span class="pre">--incomming_aes_key</span></tt> in the command line parameters, and the master listener key must match <tt class="docutils literal"><span class="pre">--master_aes_key</span></tt>. For the second worker the setup would look like this</p>
+<p>This would be the setup for the first worker in the parameter list above, note that the worker key in the parameter
+list for <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> must match <tt class="docutils literal"><span class="pre">--incomming_aes_key</span></tt> in the command line parameters, and the master
+listener key must match <tt class="docutils literal"><span class="pre">--master_aes_key</span></tt>. For the second worker the setup would look like this</p>
 <div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>python3 server.py --socket_type AES --incomming_aes_key Worker2AESKey --master_aes_key MasterAESKey
 </pre></div>
 </div>
@@ -118,13 +216,15 @@
 </div>
 <div class="section" id="using-both-aes-and-hmac">
 <h2>Using both AES and HMAC<a class="headerlink" href="#using-both-aes-and-hmac" title="Permalink to this headline">¶</a></h2>
-<p>If you want private messages and you want to make sure they were not tampered with, you can enable bot AES and HMAC, you just need to give two sets of keys to the workgroup and to the worker, one for message verification and one for encryption/decryption.</p>
+<p>Although AES encryption adds a hash to the message to check for tampering, you can enable bot AES and HMAC, you
+just need to give two sets of keys to the workgroup and to the worker, one for message verification and one for
+encryption/decryption.</p>
 <div class="section" id="master-setup">
 <h3>Master setup<a class="headerlink" href="#master-setup" title="Permalink to this headline">¶</a></h3>
 <div class="highlight-python"><div class="highlight"><pre><span class="c">#Create a workgroup that has two workes and use HMAC when communicating</span>
 
 <span class="n">w</span><span class="o">=</span><span class="n">Workgroup</span><span class="p">([(</span><span class="s">&quot;192.168.1.105&quot;</span><span class="p">,</span> <span class="n">b</span><span class="s">&quot;Worker1HMACKey&quot;</span><span class="p">,</span> <span class="n">b</span><span class="s">&quot;Worker1AESKey&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s">&quot;192.168.1.106&quot;</span><span class="p">,</span> <span class="n">b</span><span class="s">&quot;Worker2HMACKey&quot;</span><span class="p">,</span> <span class="n">b</span><span class="s">&quot;Worker2AESKey&quot;</span><span class="p">)],</span>
-             <span class="n">socket_type</span><span class="o">=</span><span class="s">&quot;AES+HMAC&quot;</span><span class="p">,</span> <span class="n">keys</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;ListenerAES&quot;</span><span class="p">:</span><span class="n">b</span><span class="s">&quot;MasterAESKey&quot;</span><span class="p">,</span> <span class="s">&quot;ListenerHMAC&quot;</span><span class="p">:</span><span class="n">b</span><span class="s">&quot;MasterHMACKey&quot;</span><span class="p">})</span>
+             <span class="n">socket_type</span><span class="o">=</span><span class="s">&quot;AES+HMAC&quot;</span><span class="p">,</span> <span class="n">socketParams</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;ListenerAES&quot;</span><span class="p">:</span><span class="n">b</span><span class="s">&quot;MasterAESKey&quot;</span><span class="p">,</span> <span class="s">&quot;ListenerHMAC&quot;</span><span class="p">:</span><span class="n">b</span><span class="s">&quot;MasterHMACKey&quot;</span><span class="p">})</span>
 </pre></div>
 </div>
 <p>Each worker has a HMAC key and an AES key and master has HMAC and AES keys for incomming connections.</p>
@@ -148,7 +248,17 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Securing network communication when using NetWork framework</a><ul>
+<li><a class="reference internal" href="#warning">Warning</a></li>
 <li><a class="reference internal" href="#notes-on-key-safety">Notes on key safety</a></li>
+<li><a class="reference internal" href="#ssl-network-security">SSL network security</a><ul>
+<li><a class="reference internal" href="#setup">Setup</a><ul>
+<li><a class="reference internal" href="#creating-certificates">Creating certificates</a></li>
+<li><a class="reference internal" href="#setting-up-master">Setting up master</a></li>
+<li><a class="reference internal" href="#setting-up-workers">Setting up workers</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li><a class="reference internal" href="#hmac-message-authentication">HMAC message authentication</a><ul>
 <li><a class="reference internal" href="#setting-up-hmac-on-master">Setting up HMAC on master</a></li>
 <li><a class="reference internal" href="#setting-up-hmac-on-worker">Setting up HMAC on worker</a></li>

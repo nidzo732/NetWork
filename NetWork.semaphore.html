@@ -56,9 +56,9 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="network-semaphore">
-<h1>NetWork.semaphore<a class="headerlink" href="#network-semaphore" title="Permalink to this headline">¶</a></h1>
-<span class="target" id="module-NetWork.semaphore"></span><p>Semaphores are used to limit simultaneous execution of taks.</p>
+  <div class="section" id="module-NetWork.semaphore">
+<span id="network-semaphore"></span><h1>NetWork.semaphore<a class="headerlink" href="#module-NetWork.semaphore" title="Permalink to this headline">¶</a></h1>
+<p>Semaphores are used to limit simultaneous execution of taks.</p>
 <p>All semaphores have a counter value that determines how many paralel tasks
 can acquire the semaphore. When a task enters a critical section of code, 
 it calls <a class="reference internal" href="#NetWork.semaphore.NWSemaphore.acquire" title="NetWork.semaphore.NWSemaphore.acquire"><tt class="xref py py-meth docutils literal"><span class="pre">acquire</span></tt></a> method, if the counter
@@ -69,10 +69,21 @@ method.</p>
 <p>For more info about semaphores see <a class="reference external" href="http://docs.python.org/2/library/threading.html#semaphore-objects">Python documentation page</a></p>
 <dl class="class">
 <dt id="NetWork.semaphore.NWSemaphore">
-<em class="property">class </em><tt class="descclassname">NetWork.semaphore.</tt><tt class="descname">NWSemaphore</tt><big>(</big><em>id</em>, <em>workgroup</em>, <em>value</em><big>)</big><a class="reference internal" href="_modules/NetWork/semaphore.html#NWSemaphore"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.semaphore.NWSemaphore" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">NetWork.semaphore.</tt><tt class="descname">NWSemaphore</tt><big>(</big><em>workgroup</em>, <em>value=1</em><big>)</big><a class="reference internal" href="_modules/NetWork/semaphore.html#NWSemaphore"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.semaphore.NWSemaphore" title="Permalink to this definition">¶</a></dt>
 <dd><p>The semaphore class used to limit simultaneous execution.
-New instance is usually created with <a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerSemaphore" title="NetWork.workgroup.Workgroup.registerSemaphore"><tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.registerSemaphore</span></tt></a>.</p>
-<p>When entering critical section call <a class="reference internal" href="#NetWork.semaphore.NWSemaphore.acquire" title="NetWork.semaphore.NWSemaphore.acquire"><tt class="xref py py-meth docutils literal"><span class="pre">acquire()</span></tt></a> and when exiting <a class="reference internal" href="#NetWork.semaphore.NWSemaphore.release" title="NetWork.semaphore.NWSemaphore.release"><tt class="xref py py-meth docutils literal"><span class="pre">release()</span></tt></a>.</p>
+When entering critical section call <a class="reference internal" href="#NetWork.semaphore.NWSemaphore.acquire" title="NetWork.semaphore.NWSemaphore.acquire"><tt class="xref py py-meth docutils literal"><span class="pre">acquire()</span></tt></a> and when exiting <a class="reference internal" href="#NetWork.semaphore.NWSemaphore.release" title="NetWork.semaphore.NWSemaphore.release"><tt class="xref py py-meth docutils literal"><span class="pre">release()</span></tt></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>workgroup</strong> (<a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup" title="NetWork.workgroup.Workgroup"><em>NetWork.workgroup.Workgroup</em></a>) &#8211; workgroup that will be using this Event</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; initial value for the semaphore counter</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 <dl class="method">
 <dt id="NetWork.semaphore.NWSemaphore.acquire">
 <tt class="descname">acquire</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/semaphore.html#NWSemaphore.acquire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.semaphore.NWSemaphore.acquire" title="Permalink to this definition">¶</a></dt>

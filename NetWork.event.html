@@ -66,14 +66,14 @@ of the same event the first task is waken up and continues it&#8217;s work</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="c">#Usage example</span>
 <span class="c">#Prints &quot;Event has been raised&quot; after 5 seconds</span>
 <span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">from</span> <span class="nn">NetWork.workgroup</span> <span class="kn">import</span> <span class="n">Workgroup</span>
+<span class="kn">from</span> <span class="nn">NetWork</span> <span class="kn">import</span> <span class="n">Workgroup</span><span class="p">,</span> <span class="n">Event</span>
 
 <span class="k">def</span> <span class="nf">waiter</span><span class="p">(</span><span class="n">eventToWait</span><span class="p">):</span>
     <span class="n">eventToWait</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
     <span class="k">print</span><span class="p">(</span><span class="s">&quot;Event has been raised&quot;</span><span class="p">)</span>
 
 <span class="k">with</span> <span class="n">Workgroup</span><span class="p">(</span><span class="n">addresses</span><span class="p">)</span> <span class="k">as</span> <span class="n">w</span><span class="p">:</span>
-    <span class="n">myEvent</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">registerEvent</span><span class="p">()</span>
+    <span class="n">myEvent</span><span class="o">=</span><span class="n">Event</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
     <span class="n">myTask</span><span class="o">=</span><span class="n">w</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">waiter</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">myEvent</span><span class="p">,))</span>
     <span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
     <span class="n">myEvent</span><span class="o">.</span><span class="n">set</span><span class="p">()</span>
@@ -83,10 +83,17 @@ of the same event the first task is waken up and continues it&#8217;s work</p>
 <p>For more info about events see <a class="reference external" href="http://docs.python.org/3.3/library/threading.html#event-objects">Python documentation page</a></p>
 <dl class="class">
 <dt id="NetWork.event.NWEvent">
-<em class="property">class </em><tt class="descclassname">NetWork.event.</tt><tt class="descname">NWEvent</tt><big>(</big><em>id</em>, <em>workgroup=None</em><big>)</big><a class="reference internal" href="_modules/NetWork/event.html#NWEvent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.event.NWEvent" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">NetWork.event.</tt><tt class="descname">NWEvent</tt><big>(</big><em>workgroup=None</em><big>)</big><a class="reference internal" href="_modules/NetWork/event.html#NWEvent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.event.NWEvent" title="Permalink to this definition">¶</a></dt>
 <dd><p>Event class that is used to signal events between tasks.
-A new instance is usually created by calling <a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup.registerEvent" title="NetWork.workgroup.Workgroup.registerEvent"><tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.registerEvent</span></tt></a>.
 To wait for an event call it&#8217;s <a class="reference internal" href="#NetWork.event.NWEvent.wait" title="NetWork.event.NWEvent.wait"><tt class="xref py py-meth docutils literal"><span class="pre">wait()</span></tt></a> method and to signal the event use <a class="reference internal" href="#NetWork.event.NWEvent.set" title="NetWork.event.NWEvent.set"><tt class="xref py py-meth docutils literal"><span class="pre">set()</span></tt></a> method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>workgroup</strong> (<a class="reference internal" href="NetWork.workgroup.html#NetWork.workgroup.Workgroup" title="NetWork.workgroup.Workgroup"><em>NetWork.workgroup.Workgroup</em></a>) &#8211; workgroup that will be using this Event</td>
+</tr>
+</tbody>
+</table>
 <dl class="method">
 <dt id="NetWork.event.NWEvent.set">
 <tt class="descname">set</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/NetWork/event.html#NWEvent.set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#NetWork.event.NWEvent.set" title="Permalink to this definition">¶</a></dt>
