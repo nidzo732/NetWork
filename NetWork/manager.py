@@ -18,8 +18,9 @@ Here are the examples of all types
 
     #Set and get data from a NWManager
     #Prints '5'
+    from NetWork import Manager
     with Workgroup([...]) as w:
-        m=w.registerManager()
+        m=Manager(w)
         m.setItem("some_number", 5)
         print(m.getItem("some_number"))
 
@@ -27,8 +28,9 @@ Here are the examples of all types
 
     #Set and get data from a ManagerDict
     #Prints '5'
+    from NetWork import Manager
     with Workgroup([...]) as w:
-        m=w.registerManager()
+        m=Manager(w)
         d=m.dict()
         d["some_number"]=5
         print(d["some_number"])
@@ -37,8 +39,9 @@ Here are the examples of all types
     
     #Set and get data from a Manager
     #Prints '5'
+    from NetWork import Manager
     with Workgroup([...]) as w:
-        m=w.registerManager()
+        m=Manager(w)
         n=m.namespace()
         n.some_number=5
         print(n.some_number)

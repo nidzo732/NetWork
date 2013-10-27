@@ -63,21 +63,30 @@ class Workgroup:
             parameters must follow this format ``(IP, AESKey)``
           * ``"AES+HMAC"`` Encrypt messages with AES and verify them with HMAC.
             Worker connection parameters must follow this format ``(IP, HMACKey, AESKey)``
+          * ``SSL`` Use SSL (TLSv1) for encryption and authentication. Worker parameters
+            are given as IPs just like when using TCP, certificates are passed through socketParams.
 
-    :type keys: dict
-    :param keys: If you selected a protected socket type, you need to provide keys
-      for decrypting and/or verifying incomming messages from workers.
+    :type socketParams: dict
+    :param socketParams: Pass special parameters to networking system, such as crypto keys and
+      SSL certificates.
       Items to put in this dictionary:
         
           * ``"ListenerAES"`` AES key used to decrypt messages from workers,
             must be specified if AES is enabled
           * ``"ListenerHMAC"`` HMAC key used to verify messages from the workers,
             must be specified if HMAC is enabled
+          * ``PeerCertFile`` A file that contains SSL certificates that will be used to
+            verify workers, you must provide PeerCertFile or PeerCertDir
+          * ``PeerCertDir`` A folder that contains SSL certificates that will be used to
+            verify workers, you must provide either PeerCertFile or PeerCertDir or both
+          * ``LocalCert`` SSL certificate used to let workers verify this master (mandatory is SSL is enabled)
+          * ``LocalKey`` Private SSL key for this master (mandatory if SSL is enabled)
+          * ``LocalKeyPassword`` Password used to decrypt local key if it's encrypted (optional)
 
     """
 
     def __init__(self, workerAddresses, skipBadWorkers=False,
-                 socketType="TCP", keys={}):
+                 socketType="TCP", socketParams={}):
         self.controls = dict()
         self.controls[CNT_WORKER_COUNT] = 0
         self.controls[CNT_TASK_COUNT] = 0
@@ -86,7 +95,7 @@ class Workgroup:
         self.currentWorker = -1
         for plugin in plugins:
             plugin.masterInit(self)
-        NetWork.networking.setUp(socketType, keys)
+        NetWork.networking.setUp(socketType, socketParams)
         self.listenerSocket = NetWork.networking.NWSocket()
         self.workerList = []
         for workerAddress in workerAddresses:

@@ -16,18 +16,19 @@ For more info about queues see `Python documentation page <http://docs.python.or
     #Tasks are linked in a chain
     #Each task has inputQueue and outputQueue
     #A task gets a number from it's inputQueue increments it and puts it to outputQueue
-    
+
+    from NetWork import Workgroup, Queue
     def getIncrementPut(inputQueue, outputQueue):
         number=inputQueue.get()
         number+=1
         outputQueue.put(number)
     
     with Workgroup(addresses) as w:
-        queue1=w.registerQueue()
-        queue2=w.registerQueue()
-        queue3=w.registerQueue()
-        queue4=w.registerQueue()
-        queue5=w.registerQueue()
+        queue1=Queue(w)
+        queue2=Queue(w)
+        queue3=Queue(w)
+        queue4=Queue(w)
+        queue5=Queue(w)
         task1=w.submit(target=getIncrementPut, args=(queue1, queue2))
         task2=w.submit(target=getIncrementPut, args=(queue2, queue3))
         task3=w.submit(target=getIncrementPut, args=(queue3, queue4))

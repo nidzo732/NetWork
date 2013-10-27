@@ -7,7 +7,7 @@ be COMMCODE_CHECKALIVE and it responds with COMCODE_ISALIVE.
 Once the master is registered the mainloop starts receiving messages
 from the master. The messages start with a 3 letter code that determines
 their type, the mainloop reads that code and runs a handler function associated
-with that code. Message codes can be seen in NetWork.commcodes.
+with that code. Core message codes can be seen in NetWork.commcodes.
 """
 from threading import Thread
 import atexit

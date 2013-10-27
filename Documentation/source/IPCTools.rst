@@ -1,7 +1,9 @@
 IPC and concurrency control tools
 *********************************
-One of the main advantages of NetWork are IPC and concurrency control tools that behave just like their equivalents used for multiprocessing on single computer.
-The tools are simple to use, you don't have to wory about network communication and low level stuff, just use them like you're running on a single computer.
+One of the main advantages of NetWork are IPC and concurrency control tools that behave just like their
+equivalents used for multiprocessing on single computer.
+The tools are simple to use, you don't have to wory about network communication and low level stuff, just
+use them like you're running on a single computer.
 They are regular classes imported from NetWork
 
 ::

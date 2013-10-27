@@ -10,14 +10,14 @@ of the same event the first task is waken up and continues it's work
     #Usage example
     #Prints "Event has been raised" after 5 seconds
     import time
-    from NetWork.workgroup import Workgroup
+    from NetWork import Workgroup, Event
     
     def waiter(eventToWait):
         eventToWait.wait()
         print("Event has been raised")
     
     with Workgroup(addresses) as w:
-        myEvent=w.registerEvent()
+        myEvent=Event(w)
         myTask=w.submit(target=waiter, args=(myEvent,))
         sleep(5)
         myEvent.set()
