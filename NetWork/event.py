@@ -10,14 +10,14 @@ of the same event the first task is waken up and continues it's work
     #Usage example
     #Prints "Event has been raised" after 5 seconds
     import time
-    from NetWork.workgroup import Workgroup
+    from NetWork import Workgroup, Event
     
     def waiter(eventToWait):
         eventToWait.wait()
         print("Event has been raised")
     
     with Workgroup(addresses) as w:
-        myEvent=w.registerEvent()
+        myEvent=Event(w)
         myTask=w.submit(target=waiter, args=(myEvent,))
         sleep(5)
         myEvent.set()
@@ -60,14 +60,15 @@ def workerInit():
 class NWEvent:
     """
     Event class that is used to signal events between tasks.
-    A new instance is usually created by calling :py:meth:`Workgroup.registerEvent
-    <NetWork.workgroup.Workgroup.registerEvent>`.
     To wait for an event call it's :py:meth:`wait` method and to signal the event use :py:meth:`set` method.
+
+
+    :type workgroup: NetWork.workgroup.Workgroup
+    :param workgroup: workgroup that will be using this Event
+
     """
 
     def __init__(self, workgroup=None):
-        #self.id = id
-        #self.workgroup = workgroup
         self.workgroup = workgroup
         self.workgroup.controls[CNT_EVENT_COUNT] += 1
         self.id = self.workgroup.controls[CNT_EVENT_COUNT]

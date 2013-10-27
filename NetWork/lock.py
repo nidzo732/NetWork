@@ -21,7 +21,8 @@ For more info about locks see `Python documentation page
     #both increment number
     #Unless we use lock and put the acquire and release call around the
     #code that checks and increments number
-    
+
+    from NetWork import Workgroup, Lock, Manager
     def checkAndIncrement(manager, lock):
         lock.acquire()    #Make sure another tasks are not checking at the same time
         if manager.shouldIncrease:
@@ -30,8 +31,8 @@ For more info about locks see `Python documentation page
         lock.release()
     
     with Workgroup(addresses) as w:
-        lock=w.registerLock()
-        manager=w.registerManager()
+        lock=Lock(w)
+        manager=Manager(w)
         namespace=manager.namespace()
         namespace.shouldIncrement=True
         namespace.number=0
@@ -80,9 +81,10 @@ def workerInit():
 class NWLock:
     """
     The lock class used to prevent simultaneous execution.
-    New instance is usually created with :py:meth:`Workgroup.registerLock <NetWork.workgroup.Workgroup.registerLock>`.
-    
     When entering critical section call :py:meth:`acquire` and when exiting :py:meth:`release`.
+
+    :type workgroup: NetWork.workgroup.Workgroup
+    :param workgroup: workgroup that will be using this Lock
     """
 
     def __init__(self, workgroup):

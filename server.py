@@ -7,7 +7,7 @@ be COMMCODE_CHECKALIVE and it responds with COMCODE_ISALIVE.
 Once the master is registered the mainloop starts receiving messages
 from the master. The messages start with a 3 letter code that determines
 their type, the mainloop reads that code and runs a handler function associated
-with that code. Message codes can be seen in NetWork.commcodes.
+with that code. Core message codes can be seen in NetWork.commcodes.
 """
 from threading import Thread
 import atexit
@@ -154,7 +154,11 @@ if __name__ == "__main__":
     atexit.register(onExit, listenerSocket)
     try:
         while True:
-            requestSocket = listenerSocket.accept()
+            try:
+                requestSocket = listenerSocket.accept()
+            except OSError as error:
+                print("There was a connection attempt but a network error occured", error)
+                continue
             handlerThread = Thread(target=requestReceiver, args=(requestSocket,))
             handlerThread.start()
     except KeyboardInterrupt:
