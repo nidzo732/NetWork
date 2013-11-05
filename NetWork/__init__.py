@@ -4,4 +4,5 @@ from .queue import NWQueue as Queue
 from .lock import NWLock as Lock
 from .manager import NWManager as Manager
 from .semaphore import NWSemaphore as Semaphore
-__all__=[Workgroup, Event, Queue, Lock, Manager, Semaphore]
+from .netprint import netPrint
+__all__=[Workgroup, Event, Queue, Lock, Manager, Semaphore, netPrint]

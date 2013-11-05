@@ -4,14 +4,14 @@ Each function is associated with a 3 letter code from commcodes.py
 """
 import pickle
 
-from NetWork import event, lock, manager, queue, semaphore
+from NetWork import event, lock, manager, queue, semaphore, netprint
 from .commcodes import *
 from .cntcodes import *
 from .request import Request
 from .worker import DeadWorkerError
 
 
-plugins = [event, lock, manager, queue, semaphore]
+plugins = [event, lock, manager, queue, semaphore, netprint]
 
 
 class NoWorkersError(Exception): pass
