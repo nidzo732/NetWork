@@ -7,6 +7,13 @@ CMD_REGISTER_NETCLASS = b"NCR"
 classCount = 0
 classDescriptors = {}
 
+class MethodWrapper:
+    def __init__(self, method, owner):
+        self.method=method
+        self.owner=owner
+
+    def __call__(self, *args, **kwargs):
+        return self.method(self.owner, *args, **kwargs)
 
 class NetObjectInstance:
     attrs=None
@@ -17,9 +24,13 @@ class NetObjectInstance:
 
     def __getattr__(self, item):
         try:
-            return classDescriptors[self.id][item]
+            attribute = classDescriptors[self.id][item]
         except KeyError:
-            return self.attrs[item]
+            attribute = self.attrs[item]
+        if inspect.isfunction(attribute):
+            return MethodWrapper(attribute, self)
+        else:
+            return attribute
 
     def __setattr__(self, key, value):
         if key=="attrs":
