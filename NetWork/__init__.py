@@ -5,4 +5,5 @@ from .lock import NWLock as Lock
 from .manager import NWManager as Manager
 from .semaphore import NWSemaphore as Semaphore
 from .netprint import netPrint
-__all__=[Workgroup, Event, Queue, Lock, Manager, Semaphore, netPrint]
+from .netobject import NetObject
+__all__=[Workgroup, Event, Queue, Lock, Manager, Semaphore, netPrint, NetObject]
