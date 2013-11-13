@@ -7,7 +7,7 @@ of the same event the first task is waken up and continues it's work
 
 ::
 
-    #Usage example
+    #Usage examplu
     #Prints "Event has been raised" after 5 seconds
     import time
     from NetWork import Workgroup, Event

@@ -119,7 +119,7 @@ the :py:data:`workerAddresses` parameter of the :py:class:`Workgroup` constructo
 Every worker computer has two keys given via command line arguments, its own listener key used to
 decrypt/authenticate messages from the master and the master key that is used when sending messages to the master.
 
-Listener keys are set through setUp method.
+Listener keys are set through :py:meth:`setUp` method.
 
 
 	
@@ -174,7 +174,7 @@ the Request also has additional data:
   
   * ID number of the worker who sent the request, if the request was sent from the master the ID is -1
   * if the request was sent from the worker a socket is also passed to the dispatcher and the handler, this way
-  the handler can respond to the request if needed
+    the handler can respond to the request if needed
   
 
 Controlls
@@ -205,7 +205,8 @@ the appropriate handler function.
 Worker server relations
 #######################
 Each worker runs server.py program. When it starts it creates a server socket and listens for incomming connection,
-when the master connects and the checks are done it initializes all other module, just like Workgroup.__init__ on
+when the master connects and the checks are done it initializes all other module, just like
+:py:meth:`Workgroup.__init__ <NetWork.workgroup.Workgroup.__init__>` on
 the master.
 
 After init it starts receiving requests from the master, just like the dispatcher on the master it also has a
@@ -259,14 +260,18 @@ and variables which enable NetWork to use them.
 
 Functions in plugins
 ====================
-Each plugin has two functions that NetWork uses during initialization (in Workgroup.__init__ or in server.py) that
-are suposed to make that plugin ready for work. These functions are called masterInit and workerInit, they are
+Each plugin has two functions that NetWork uses during initialization (in :py:meth:`Workgroup.__init__` or in
+:py:mod:`server.py`) that
+are suposed to make that plugin ready for work. These functions are called :py:meth:`masterInit` and
+:py:meth:`workerInit`, they are
 called on startup and they usually add entries to Workgroup.CONTROLS, set up dictionaries etc.
 
 Variables in plugins
 ====================
-Each plugin defines two dictionaries, masterHandlers and workerHandlers that contain functions used to handle
-requests. During startup, these dictionaries are added to handler dictionaries in NetWork.handlers and server.py.
+Each plugin defines two dictionaries, :py:data:`masterHandlers` and :py:data`workerHandlers` that contain functions
+used to handle
+requests. During startup, these dictionaries are added to handler dictionaries in :py:mod:`NetWork.handlers` and
+:py:mod`server.py`.
 
 Creating instances of multiprocessing tools
 -------------------------------------------
@@ -430,3 +435,35 @@ it checks the waiter list in :py:class:`MasterSemaphoreHandler`, if there are wa
 one, if the ID is -1 (master ID) the local semaphore on :py:data:`NetWork.semaphore.semaphores` is released, for
 other IDs a message is sent to the worker to release the semaphore, when the worker receives the message it releases
 the required semaphore. If there are no waiters the counter gets increased.
+
+NetWork specific tools
+######################
+These tools don't mimic those from multiprocessing module but are somtimes needed because of the diferences between
+NetWork and a regular single-computer environment.
+
+netPrint
+--------
+By default a call to print function prints the output on the screen of the worker. The netPrint function solves this
+by sending a request to the master with the stuff that needs to be printed, a handler on the master does the actual
+printing.
+
+NetObject
+---------
+Instances of classes that don't belong to Python builtins or NetWork fail to unpickle on the workers because they are
+not defined there.
+To solve this, when a new instance of :py:class:`NetWork.netobject.NetObject` is created the methods of the wrapped
+class get sent to all workers,
+where they are put in :py:data:`classDescriptors` dictionary (each class has its own ID used to locate it in the dict).
+
+When a new instance of a wrapped object is created, the :py:meth:`__call__` method of NetObject is called, it searches for
+the :py:meth:`__init__` method of that class in :py:meth:`classDescriptors` and calls it.
+
+The instance of that object is then put in a container object, instance of NetObjectInstance. It has
+:py:meth:`__getattr__` and :py:meth:`__setattr__` methods that are used to access attributes and methods of that
+instance, it also has a dict called :py:data:`attrs`
+that holds the attributes.
+
+The methods get "unbound" during pickling and unpickling and because of that Python doesn't automatically pass the
+self parameter to them, to solve this the methods get wrapped in :py:class:`NetWork.netobject.MethodWrapper` before
+calling, this class holds the
+pointer to the actual instance that will be passed to the method when :py:meth:`__call__` is called.

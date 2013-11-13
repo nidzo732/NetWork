@@ -19,8 +19,8 @@ like locks and events. NetWork tries to mimic Python's multiprocessing and concu
 to port ordinary multithreaded program to run on a network.
 
 To learn how to use NetWork see the links below, if you are new start with the Tutorial, if you want to learn more
- about using the tools NetWork gives
-you see IPC and concurrency control tools.
+about using the tools NetWork gives
+you see IPC and concurrency control tools or NetWork specific tools.
 
 If you are curious or want to help with the development see the page about internal workings of NetWork.
 
@@ -32,7 +32,7 @@ If you are curious or want to help with the development see the page about inter
    Securing network communication <security>
    Internal workings <InnerWorkings>
    Limitaions of NetWork <Limitations>
-
+   Specific Tools <OtherTools>
 
 
 Indices and tables

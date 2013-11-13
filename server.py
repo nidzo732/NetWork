@@ -21,6 +21,7 @@ import NetWork.lock as lock
 import NetWork.manager as manager
 import NetWork.semaphore as semaphore
 import NetWork.netprint as netprint
+import NetWork.netobject as netobject
 from NetWork.commcodes import *
 from NetWork.request import Request
 from NetWork import networking
@@ -30,7 +31,7 @@ from NetWork.args import getArgs
 class BadRequestError(Exception): pass
 
 
-plugins = [event, queue, lock, manager, semaphore, netprint]
+plugins = [event, queue, lock, manager, semaphore, netprint, netobject]
 
 running = False
 tasks = {-1: None}
