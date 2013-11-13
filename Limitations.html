@@ -26,6 +26,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="NetWork 0.1-alpha documentation" href="index.html" />
+    <link rel="next" title="NetWork specific tools" href="OtherTools.html" />
     <link rel="prev" title="Inner workings of the NetWork framework" href="InnerWorkings.html" /> 
   </head>
   <body>
@@ -38,6 +39,9 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="OtherTools.html" title="NetWork specific tools"
+             accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="InnerWorkings.html" title="Inner workings of the NetWork framework"
              accesskey="P">previous</a> |</li>
@@ -60,15 +64,11 @@ by the networked architecture.</p>
 <li>No shared globals. On classic multiprocessing the child process gets a copy of all parrents&#8217; globals,
 this is not the case with NetWork, the child only gets standard Python globals, all other data must be passed
 manualy, for example with managers</li>
-<li>Custom objects limitation. If you plan to send instances of your own classes through the network those classes
-must be available on all worker computers and must be importable from standard Python path, the same applies
-for functions - all non standard functions must also be defined on the workers</li>
+<li>Custom objects created with <a class="reference internal" href="NetObject.html#NetWork.netobject.NetObject" title="NetWork.netobject.NetObject"><tt class="xref py py-class docutils literal"><span class="pre">NetWork.netobject.NetObject</span></tt></a> cant use static mthods or attributes</li>
 <li>No automatic exception handling. If an exception is raised in one of the tasks you won&#8217;t be notified
 automatically, you need to explicitly call
 <a class="reference internal" href="NetWork.task.html#NetWork.task.TaskHandler.exceptionRaised" title="NetWork.task.TaskHandler.exceptionRaised"><tt class="xref py py-meth docutils literal"><span class="pre">TaskHandler.exceptionRaised</span></tt></a>
 and  <a class="reference internal" href="NetWork.task.html#NetWork.task.TaskHandler.exception" title="NetWork.task.TaskHandler.exception"><tt class="xref py py-meth docutils literal"><span class="pre">TaskHandler.exception</span></tt></a> to check and get exceptions.</li>
-<li>No printing. When you call print, the text will be printed on the screen of the worker not on the master
-where you&#8217;d probably like to see it.</li>
 </ul>
 </div></blockquote>
 </div>
@@ -82,6 +82,9 @@ where you&#8217;d probably like to see it.</li>
   <h4>Previous topic</h4>
   <p class="topless"><a href="InnerWorkings.html"
                         title="previous chapter">Inner workings of the NetWork framework</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="OtherTools.html"
+                        title="next chapter">NetWork specific tools</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/Limitations.txt"
@@ -113,6 +116,9 @@ where you&#8217;d probably like to see it.</li>
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="OtherTools.html" title="NetWork specific tools"
+             >next</a> |</li>
         <li class="right" >
           <a href="InnerWorkings.html" title="Inner workings of the NetWork framework"
              >previous</a> |</li>

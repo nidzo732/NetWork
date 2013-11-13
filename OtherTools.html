@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Python Module Index &mdash; NetWork 0.1-alpha documentation</title>
+    <title>NetWork specific tools &mdash; NetWork 0.1-alpha documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -26,9 +26,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="NetWork 0.1-alpha documentation" href="index.html" />
- 
-
-
+    <link rel="prev" title="Limitations of NetWork framework" href="Limitations.html" /> 
   </head>
   <body>
     <div class="related">
@@ -38,8 +36,11 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="#" title="Python Module Index"
+          <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="Limitations.html" title="Limitations of NetWork framework"
+             accesskey="P">previous</a> |</li>
         <li><a href="index.html">NetWork 0.1-alpha documentation</a> &raquo;</li> 
       </ul>
     </div>  
@@ -49,69 +50,20 @@
         <div class="bodywrapper">
           <div class="body">
             
-
-   <h1>Python Module Index</h1>
-
-   <div class="modindex-jumpbox">
-   <a href="#cap-n"><strong>n</strong></a>
-   </div>
-
-   <table class="indextable modindextable" cellspacing="0" cellpadding="2">
-     <tr class="pcap"><td></td><td>&nbsp;</td><td></td></tr>
-     <tr class="cap" id="cap-n"><td></td><td>
-       <strong>n</strong></td><td></td></tr>
-     <tr>
-       <td><img src="_static/minus.png" class="toggler"
-              id="toggle-1" style="display: none" alt="-" /></td>
-       <td>
-       <tt class="xref">NetWork</tt></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&nbsp;&nbsp;&nbsp;
-       <a href="NetWork.event.html#module-NetWork.event"><tt class="xref">NetWork.event</tt></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&nbsp;&nbsp;&nbsp;
-       <a href="NetWork.lock.html#module-NetWork.lock"><tt class="xref">NetWork.lock</tt></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&nbsp;&nbsp;&nbsp;
-       <a href="NetWork.manager.html#module-NetWork.manager"><tt class="xref">NetWork.manager</tt></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&nbsp;&nbsp;&nbsp;
-       <a href="NetObject.html#module-NetWork.netobject"><tt class="xref">NetWork.netobject</tt></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&nbsp;&nbsp;&nbsp;
-       <a href="NetPrint.html#module-NetWork.netprint"><tt class="xref">NetWork.netprint</tt></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&nbsp;&nbsp;&nbsp;
-       <a href="NetWork.queue.html#module-NetWork.queue"><tt class="xref">NetWork.queue</tt></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&nbsp;&nbsp;&nbsp;
-       <a href="NetWork.semaphore.html#module-NetWork.semaphore"><tt class="xref">NetWork.semaphore</tt></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&nbsp;&nbsp;&nbsp;
-       <a href="NetWork.task.html#module-NetWork.task"><tt class="xref">NetWork.task</tt></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&nbsp;&nbsp;&nbsp;
-       <a href="NetWork.workgroup.html#module-NetWork.workgroup"><tt class="xref">NetWork.workgroup</tt></a></td><td>
-       <em></em></td></tr>
-   </table>
+  <div class="section" id="network-specific-tools">
+<h1>NetWork specific tools<a class="headerlink" href="#network-specific-tools" title="Permalink to this headline">¶</a></h1>
+<p>The networked architecture sometimes requires usage of specific tools that don&#8217;t represent those from
+multiprocessing module.</p>
+<div class="section" id="using-custom-objects">
+<h2>Using custom objects<a class="headerlink" href="#using-custom-objects" title="Permalink to this headline">¶</a></h2>
+<p>To use objects that do not belong to python bultins you need to wrap them with <a class="reference internal" href="NetObject.html"><em>NetObject</em></a></p>
+</div>
+<div class="section" id="printing">
+<h2>Printing<a class="headerlink" href="#printing" title="Permalink to this headline">¶</a></h2>
+<p>If you want the output from your tasks to show up on the master screen you need to use <a class="reference internal" href="NetPrint.html"><em>netPrint</em></a>
+instead of regular print call.</p>
+</div>
+</div>
 
 
           </div>
@@ -119,6 +71,23 @@
       </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">NetWork specific tools</a><ul>
+<li><a class="reference internal" href="#using-custom-objects">Using custom objects</a></li>
+<li><a class="reference internal" href="#printing">Printing</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Limitations.html"
+                        title="previous chapter">Limitations of NetWork framework</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/OtherTools.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
@@ -143,8 +112,11 @@
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="#" title="Python Module Index"
+          <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
+        <li class="right" >
+          <a href="Limitations.html" title="Limitations of NetWork framework"
+             >previous</a> |</li>
         <li><a href="index.html">NetWork 0.1-alpha documentation</a> &raquo;</li> 
       </ul>
     </div>

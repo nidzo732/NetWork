@@ -57,22 +57,17 @@
 
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">marshal</span>
-<span class="kn">import</span> <span class="nn">pickle</span>
 <span class="kn">from</span> <span class="nn">types</span> <span class="kn">import</span> <span class="n">FunctionType</span>
-<span class="c">#import .handlers</span>
+
 
 <span class="k">class</span> <span class="nc">Task</span><span class="p">:</span>
     <span class="c">#A class used to hold a task given to the workgroup</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">kwargs</span><span class="o">=</span><span class="p">{},</span> <span class="nb">id</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">marshaled</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                 <span class="n">globalVariables</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">marshaled</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">unmarshal</span><span class="p">(</span><span class="n">marshaled</span><span class="p">,</span> <span class="n">globalVariables</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="n">target</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">args</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">kwargs</span><span class="o">=</span><span class="p">{},</span> <span class="nb">id</span><span class="o">=</span><span class="bp">None</span><span class="p">,):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="n">target</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
 
     <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">state</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;args&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;kwargs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
@@ -102,8 +97,9 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get return value of the submited function that&#39;s running in</span>
 <span class="sd">        this task. </span>
-<span class="sd">        </span>
-<span class="sd">        :Return: return value of the function in the task, ``None`` if the task</span>
+
+<span class="sd">        :rtype: pickleable object or None</span>
+<span class="sd">        :return: return value of the function in the task, ``None`` if the task</span>
 <span class="sd">          hasn&#39;t returned.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">getResult</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
@@ -117,16 +113,18 @@
 <div class="viewcode-block" id="TaskHandler.running"><a class="viewcode-back" href="../../NetWork.task.html#NetWork.task.TaskHandler.running">[docs]</a>    <span class="k">def</span> <span class="nf">running</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Check if the task is still running.</span>
-<span class="sd">        </span>
-<span class="sd">        :Return: ``True`` or ``False`` depending on whether the task is running.</span>
+
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        :return: ``True`` or ``False`` depending on whether the task is running.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">taskRunning</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="TaskHandler.exception"><a class="viewcode-back" href="../../NetWork.task.html#NetWork.task.TaskHandler.exception">[docs]</a>    <span class="k">def</span> <span class="nf">exception</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the exception that the task has raised.</span>
-<span class="sd">        </span>
-<span class="sd">        :Return: exception that the task has raised, ``None`` if there was</span>
+
+<span class="sd">        :rtype: pickleable object or none</span>
+<span class="sd">        :return: exception that the task has raised, ``None`` if there was</span>
 <span class="sd">          no exception.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">getException</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
@@ -134,8 +132,9 @@
 <div class="viewcode-block" id="TaskHandler.exceptionRaised"><a class="viewcode-back" href="../../NetWork.task.html#NetWork.task.TaskHandler.exceptionRaised">[docs]</a>    <span class="k">def</span> <span class="nf">exceptionRaised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Check if the task has raised an exception.</span>
-<span class="sd">        </span>
-<span class="sd">        :Return: ``True`` or ``False`` depending on whether the task has raised an</span>
+
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        :return: ``True`` or ``False`` depending on whether the task has raised an</span>
 <span class="sd">          exception.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">exceptionRaised</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span></div></div>

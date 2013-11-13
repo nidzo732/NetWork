@@ -69,8 +69,9 @@
 
 <span class="sd">    #Set and get data from a NWManager</span>
 <span class="sd">    #Prints &#39;5&#39;</span>
+<span class="sd">    from NetWork import Manager</span>
 <span class="sd">    with Workgroup([...]) as w:</span>
-<span class="sd">        m=w.registerManager()</span>
+<span class="sd">        m=Manager(w)</span>
 <span class="sd">        m.setItem(&quot;some_number&quot;, 5)</span>
 <span class="sd">        print(m.getItem(&quot;some_number&quot;))</span>
 
@@ -78,8 +79,9 @@
 
 <span class="sd">    #Set and get data from a ManagerDict</span>
 <span class="sd">    #Prints &#39;5&#39;</span>
+<span class="sd">    from NetWork import Manager</span>
 <span class="sd">    with Workgroup([...]) as w:</span>
-<span class="sd">        m=w.registerManager()</span>
+<span class="sd">        m=Manager(w)</span>
 <span class="sd">        d=m.dict()</span>
 <span class="sd">        d[&quot;some_number&quot;]=5</span>
 <span class="sd">        print(d[&quot;some_number&quot;])</span>
@@ -88,26 +90,35 @@
 <span class="sd">    </span>
 <span class="sd">    #Set and get data from a Manager</span>
 <span class="sd">    #Prints &#39;5&#39;</span>
+<span class="sd">    from NetWork import Manager</span>
 <span class="sd">    with Workgroup([...]) as w:</span>
-<span class="sd">        m=w.registerManager()</span>
+<span class="sd">        m=Manager(w)</span>
 <span class="sd">        n=m.namespace()</span>
 <span class="sd">        n.some_number=5</span>
 <span class="sd">        print(n.some_number)</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">.networking</span> <span class="kn">import</span> <span class="n">sendRequest</span><span class="p">,</span> <span class="n">sendRequestWithResponse</span>
-<span class="kn">from</span> <span class="nn">.commcodes</span> <span class="kn">import</span> <span class="n">CMD_GET_MANAGER_ITEM</span><span class="p">,</span> <span class="n">CMD_SET_MANAGER_ITEM</span><span class="p">,</span> <span class="n">MANAGER_KEYERROR</span>
 <span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Manager</span>
+
+<span class="kn">from</span> <span class="nn">.networking</span> <span class="kn">import</span> <span class="n">sendRequest</span><span class="p">,</span> <span class="n">sendRequestWithResponse</span>
+
+
+<span class="n">CMD_REGISTER_MANAGER</span> <span class="o">=</span> <span class="n">b</span><span class="s">&quot;MNR&quot;</span>
+<span class="n">CMD_SET_MANAGER_ITEM</span> <span class="o">=</span> <span class="n">b</span><span class="s">&quot;MNS&quot;</span>
+<span class="n">CMD_GET_MANAGER_ITEM</span> <span class="o">=</span> <span class="n">b</span><span class="s">&quot;MNG&quot;</span>
+<span class="n">MANAGER_KEYERROR</span> <span class="o">=</span> <span class="n">b</span><span class="s">&quot;KERR&quot;</span>
+<span class="n">CNT_MANAGER_COUNT</span> <span class="o">=</span> <span class="s">&quot;MANAGER_COUNT&quot;</span>
 
 <span class="n">runningOnMaster</span> <span class="o">=</span> <span class="bp">None</span>
 <span class="n">masterAddress</span> <span class="o">=</span> <span class="bp">None</span>
 <span class="n">managers</span> <span class="o">=</span> <span class="bp">None</span>
 
 
-<span class="k">def</span> <span class="nf">masterInit</span><span class="p">():</span>
+<span class="k">def</span> <span class="nf">masterInit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">):</span>
     <span class="k">global</span> <span class="n">runningOnMaster</span><span class="p">,</span> <span class="n">managers</span>
     <span class="n">runningOnMaster</span> <span class="o">=</span> <span class="bp">True</span>
     <span class="n">managers</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
+    <span class="n">workgroup</span><span class="o">.</span><span class="n">controls</span><span class="p">[</span><span class="n">CNT_MANAGER_COUNT</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
 
 <span class="k">def</span> <span class="nf">workerInit</span><span class="p">():</span>
@@ -119,15 +130,17 @@
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    The main manager class that manages a collection of shared data between </span>
 <span class="sd">    processes on multiple computers. </span>
-<span class="sd">    A new instance is usually created by calling :py:meth:`Workgroup.registerManager</span>
-<span class="sd">    &lt;NetWork.workgroup.Workgroup.registerManager&gt;`.</span>
-<span class="sd">    The data is managed by using :py:meth:`setItem` and :py:meth:`getItem` methods. </span>
+<span class="sd">    The data is managed by using :py:meth:`setItem` and :py:meth:`getItem` methods.</span>
 <span class="sd">    To get other types of managers use :py:meth:`dict` and :py:meth:`namespace` methods of :py:class:`NWManager`</span>
+
+<span class="sd">    :type workgroup: NetWork.workgroup.Workgroup</span>
+<span class="sd">    :param workgroup: workgroup that will be using this Manager</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">workgroup</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workgroup</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span> <span class="o">=</span> <span class="n">workgroup</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">controls</span><span class="p">[</span><span class="n">CNT_MANAGER_COUNT</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">controls</span><span class="p">[</span><span class="n">CNT_MANAGER_COUNT</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
             <span class="n">managers</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">Manager</span><span class="p">()</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span>
 
@@ -166,10 +179,11 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get one of the shared data items in the manager. If the item doesn&#39;t </span>
 <span class="sd">        exist a ``KeyError`` will be raised.</span>
-<span class="sd">        </span>
-<span class="sd">        :Parameters:</span>
-<span class="sd">          item : any variable that can be used as dict key</span>
-<span class="sd">            a key identifying the desired item</span>
+
+<span class="sd">        :type item: any pickleable object that can be used as dict key</span>
+<span class="sd">        :param item: a key identifying the desired item</span>
+
+<span class="sd">        :return: item in the manager that has the given key</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">getItemOnMaster</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
@@ -181,12 +195,11 @@
 <span class="sd">        Set one of the shared data items in the manager. If the item doesn&#39;t </span>
 <span class="sd">        exist it will be created.</span>
 <span class="sd">        </span>
-<span class="sd">        :Parameters:</span>
-<span class="sd">          item : any variable that can be used as dict key</span>
-<span class="sd">            a key identifying the desired item</span>
-<span class="sd">          </span>
-<span class="sd">          value : any pickleable variable</span>
-<span class="sd">            new value for the item</span>
+<span class="sd">        :type item: any pickleable object that can be used as dict key</span>
+<span class="sd">        :param item:    a key identifying the desired item</span>
+
+<span class="sd">        :type value: any pickleable object</span>
+<span class="sd">        :param value: new value for the item</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">setItemOnMaster</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
@@ -197,11 +210,11 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get a manager that behaves like a dictionary as described above</span>
 <span class="sd">        </span>
-<span class="sd">        :Parameters:</span>
-<span class="sd">          initial : dict</span>
-<span class="sd">            optional initial values and names for items in the manager</span>
-<span class="sd">        </span>
-<span class="sd">        :Return: an instance of :py:class:`ManagerDict`</span>
+<span class="sd">        :type initial: dict</span>
+<span class="sd">        :param initial: optional initial values and names for items in the manager</span>
+
+<span class="sd">        :rtype: :py:class:`ManagerDict &lt;NetWork.manager.ManagerDict&gt;`</span>
+<span class="sd">        :return: a manager that behaves like a dictionary</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">return</span> <span class="n">ManagerDict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="p">,</span> <span class="n">initial</span><span class="p">)</span>
@@ -209,8 +222,9 @@
 <div class="viewcode-block" id="NWManager.namespace"><a class="viewcode-back" href="../../NetWork.manager.html#NetWork.manager.NWManager.namespace">[docs]</a>    <span class="k">def</span> <span class="nf">namespace</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get a manager that behaves like a namespace as described above</span>
-<span class="sd">                </span>
-<span class="sd">        :Return: an instance of :py:class:`ManagerNamespace`</span>
+
+<span class="sd">        :rtype: :py:class:`ManagerNamespace &lt;NetWork.manager.ManagerNamespace&gt;`</span>
+<span class="sd">        :return: a manager that behaves like a namespace</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">ManagerNamespace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="p">)</span>
 </div>
@@ -266,18 +280,21 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">setItem</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
 
 </div>
-<span class="k">def</span> <span class="nf">setManagerItem</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">setManagerItemMaster</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
     <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="n">managers</span><span class="p">[</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]][</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;ITEM&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;VALUE&quot;</span><span class="p">]</span>
 
 
-<span class="k">def</span> <span class="nf">getManagerItem</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">getManagerItemMaster</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
     <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">value</span> <span class="o">=</span> <span class="n">managers</span><span class="p">[</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]][</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;ITEM&quot;</span><span class="p">]]</span>
     <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
         <span class="n">value</span> <span class="o">=</span> <span class="n">MANAGER_KEYERROR</span>
     <span class="n">request</span><span class="o">.</span><span class="n">respond</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+<span class="n">masterHandlers</span> <span class="o">=</span> <span class="p">{</span><span class="n">CMD_SET_MANAGER_ITEM</span><span class="p">:</span> <span class="n">setManagerItemMaster</span><span class="p">,</span> <span class="n">CMD_GET_MANAGER_ITEM</span><span class="p">:</span> <span class="n">getManagerItemMaster</span><span class="p">}</span>
+<span class="n">workerHandlers</span> <span class="o">=</span> <span class="p">{}</span>
 </pre></div>
 
           </div>

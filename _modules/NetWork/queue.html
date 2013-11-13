@@ -67,18 +67,19 @@
 <span class="sd">    #Tasks are linked in a chain</span>
 <span class="sd">    #Each task has inputQueue and outputQueue</span>
 <span class="sd">    #A task gets a number from it&#39;s inputQueue increments it and puts it to outputQueue</span>
-<span class="sd">    </span>
+
+<span class="sd">    from NetWork import Workgroup, Queue</span>
 <span class="sd">    def getIncrementPut(inputQueue, outputQueue):</span>
 <span class="sd">        number=inputQueue.get()</span>
 <span class="sd">        number+=1</span>
 <span class="sd">        outputQueue.put(number)</span>
 <span class="sd">    </span>
 <span class="sd">    with Workgroup(addresses) as w:</span>
-<span class="sd">        queue1=w.registerQueue()</span>
-<span class="sd">        queue2=w.registerQueue()</span>
-<span class="sd">        queue3=w.registerQueue()</span>
-<span class="sd">        queue4=w.registerQueue()</span>
-<span class="sd">        queue5=w.registerQueue()</span>
+<span class="sd">        queue1=Queue(w)</span>
+<span class="sd">        queue2=Queue(w)</span>
+<span class="sd">        queue3=Queue(w)</span>
+<span class="sd">        queue4=Queue(w)</span>
+<span class="sd">        queue5=Queue(w)</span>
 <span class="sd">        task1=w.submit(target=getIncrementPut, args=(queue1, queue2))</span>
 <span class="sd">        task2=w.submit(target=getIncrementPut, args=(queue2, queue3))</span>
 <span class="sd">        task3=w.submit(target=getIncrementPut, args=(queue3, queue4))</span>
@@ -87,12 +88,19 @@
 <span class="sd">        print(queue5.get())    #Prints &#39;5&#39;</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Lock</span><span class="p">,</span> <span class="n">Queue</span>
+
 <span class="kn">from</span> <span class="nn">.networking</span> <span class="kn">import</span> <span class="n">sendRequest</span>
-<span class="kn">from</span> <span class="nn">.commcodes</span> <span class="kn">import</span> <span class="n">CMD_PUT_ON_QUEUE</span><span class="p">,</span> <span class="n">CMD_GET_FROM_QUEUE</span><span class="p">,</span> <span class="n">CMD_REGISTER_QUEUE</span><span class="p">,</span> <span class="n">CMD_WORKER_DIED</span>
+<span class="kn">from</span> <span class="nn">.commcodes</span> <span class="kn">import</span> <span class="n">CMD_WORKER_DIED</span>
 <span class="kn">from</span> <span class="nn">.cntcodes</span> <span class="kn">import</span> <span class="n">CNT_WORKERS</span>
 <span class="kn">from</span> <span class="nn">.request</span> <span class="kn">import</span> <span class="n">Request</span>
-<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Lock</span><span class="p">,</span> <span class="n">Queue</span>
 <span class="kn">from</span> <span class="nn">.worker</span> <span class="kn">import</span> <span class="n">DeadWorkerError</span>
+
+
+<span class="n">CMD_REGISTER_QUEUE</span> <span class="o">=</span> <span class="n">b</span><span class="s">&quot;QUR&quot;</span>
+<span class="n">CMD_PUT_ON_QUEUE</span> <span class="o">=</span> <span class="n">b</span><span class="s">&quot;QUP&quot;</span>
+<span class="n">CMD_GET_FROM_QUEUE</span> <span class="o">=</span> <span class="n">b</span><span class="s">&quot;QUG&quot;</span>
+<span class="n">CNT_QUEUE_COUNT</span> <span class="o">=</span> <span class="s">&quot;QUEUE_COUNT&quot;</span>
 
 <span class="n">queues</span> <span class="o">=</span> <span class="bp">None</span>
 <span class="n">queueHandlers</span> <span class="o">=</span> <span class="bp">None</span>
@@ -101,12 +109,13 @@
 <span class="n">masterAddress</span> <span class="o">=</span> <span class="bp">None</span>
 
 
-<span class="k">def</span> <span class="nf">masterInit</span><span class="p">():</span>
+<span class="k">def</span> <span class="nf">masterInit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">):</span>
     <span class="k">global</span> <span class="n">queues</span><span class="p">,</span> <span class="n">queueHandlers</span><span class="p">,</span> <span class="n">queueLocks</span><span class="p">,</span> <span class="n">runningOnMaster</span>
     <span class="n">queues</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
     <span class="n">queueHandlers</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
     <span class="n">queueLocks</span> <span class="o">=</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
     <span class="n">runningOnMaster</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">workgroup</span><span class="o">.</span><span class="n">controls</span><span class="p">[</span><span class="n">CNT_QUEUE_COUNT</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
 
 <span class="k">def</span> <span class="nf">workerInit</span><span class="p">():</span>
@@ -118,18 +127,24 @@
 <div class="viewcode-block" id="NWQueue"><a class="viewcode-back" href="../../NetWork.queue.html#NetWork.queue.NWQueue">[docs]</a><span class="k">class</span> <span class="nc">NWQueue</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    The queue class used for inter-process communication.</span>
-<span class="sd">    New instance is usually created with :py:meth:`Workgroup.registerQueue &lt;NetWork.workgroup.Workgroup.registerQueue&gt;`.</span>
-<span class="sd">    </span>
 <span class="sd">    To put data on the queue call :py:meth:`put` and call :py:meth:`get` to get it.</span>
+
+<span class="sd">    :type workgroup: NetWork.workgroup.Workgroup</span>
+<span class="sd">    :param workgroup: workgroup that will be using this Queue</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">workgroup</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workgroup</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span> <span class="o">=</span> <span class="n">workgroup</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">controls</span><span class="p">[</span><span class="n">CNT_QUEUE_COUNT</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">controls</span><span class="p">[</span><span class="n">CNT_QUEUE_COUNT</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
-            <span class="n">queueHandlers</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">MasterQueueHandler</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
-            <span class="n">queueLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
-        <span class="n">queues</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
+            <span class="n">queueHandlers</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">MasterQueueHandler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+            <span class="n">queueLocks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+        <span class="n">queues</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_REGISTER_QUEUE</span><span class="p">,</span>
+                                   <span class="p">{</span>
+                                       <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                                   <span class="p">})</span>
 
     <span class="k">def</span> <span class="nf">putOnWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_PUT_ON_QUEUE</span><span class="p">,</span>
@@ -163,9 +178,8 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Put data on the queue. A task that calls get will get that data</span>
 <span class="sd">        </span>
-<span class="sd">        :Parameters:</span>
-<span class="sd">          data : any pickleable object</span>
-<span class="sd">            item to be put on the queue</span>
+<span class="sd">        :type data: any pickleable object</span>
+<span class="sd">        :param  data: item to be put on the queue</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">putOnMaster</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
@@ -177,7 +191,7 @@
 <span class="sd">        Get next item off the queue. If queue is emtpy sleep until something</span>
 <span class="sd">        gets put on it</span>
 <span class="sd">        </span>
-<span class="sd">        :Return: next item in the queue</span>
+<span class="sd">        :return: next item in the queue</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">getOnMaster</span><span class="p">()</span>
@@ -241,7 +255,7 @@
                                                            <span class="p">})</span>
 
 
-<span class="k">def</span> <span class="nf">registerQueue</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">registerQueueMaster</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
     <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="nb">id</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">]:</span>
@@ -252,7 +266,7 @@
                                   <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span> <span class="n">worker</span><span class="p">}))</span>
 
 
-<span class="k">def</span> <span class="nf">getFromQueue</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">getFromQueueMaster</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
     <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="nb">id</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]</span>
     <span class="n">queueLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
@@ -266,7 +280,7 @@
     <span class="n">queueLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
 
 
-<span class="k">def</span> <span class="nf">putOnQueue</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">putOnQueueMaster</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
     <span class="c">#A handler used by Workgroup.dispatcher</span>
     <span class="nb">id</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;DATA&quot;</span><span class="p">]</span>
@@ -278,6 +292,19 @@
         <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span>
                               <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span> <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">][</span><span class="n">error</span><span class="o">.</span><span class="n">id</span><span class="p">]}))</span>
     <span class="n">queueLocks</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">putOnQueueWorker</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]</span>
+    <span class="n">queues</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;DATA&quot;</span><span class="p">])</span>
+
+
+<span class="k">def</span> <span class="nf">registerQueueWorker</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">queues</span><span class="p">[</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
+
+<span class="n">masterHandlers</span> <span class="o">=</span> <span class="p">{</span><span class="n">CMD_GET_FROM_QUEUE</span><span class="p">:</span> <span class="n">getFromQueueMaster</span><span class="p">,</span> <span class="n">CMD_PUT_ON_QUEUE</span><span class="p">:</span> <span class="n">putOnQueueMaster</span><span class="p">,</span>
+                  <span class="n">CMD_REGISTER_QUEUE</span><span class="p">:</span> <span class="n">registerQueueMaster</span><span class="p">}</span>
+<span class="n">workerHandlers</span> <span class="o">=</span> <span class="p">{</span><span class="n">CMD_REGISTER_QUEUE</span><span class="p">:</span> <span class="n">registerQueueWorker</span><span class="p">,</span> <span class="n">CMD_PUT_ON_QUEUE</span><span class="p">:</span> <span class="n">putOnQueueWorker</span><span class="p">}</span>
 </pre></div>
 
           </div>

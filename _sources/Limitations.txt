@@ -10,14 +10,9 @@ Here are known limitations, bugs and problems in NetWork:
      this is not the case with NetWork, the child only gets standard Python globals, all other data must be passed
      manualy, for example with managers
   
-  *  Custom objects limitation. If you plan to send instances of your own classes through the network those classes
-     must be available on all worker computers and must be importable from standard Python path, the same applies
-     for functions - all non standard functions must also be defined on the workers
+  *  Custom objects created with :py:class:`NetWork.netobject.NetObject` cant use static mthods or attributes
   
   *  No automatic exception handling. If an exception is raised in one of the tasks you won't be notified
      automatically, you need to explicitly call
      :py:meth:`TaskHandler.exceptionRaised <NetWork.task.TaskHandler.exceptionRaised>`
      and  :py:meth:`TaskHandler.exception <NetWork.task.TaskHandler.exception>` to check and get exceptions.
-  
-  *  No printing. When you call print, the text will be printed on the screen of the worker not on the master
-     where you'd probably like to see it.

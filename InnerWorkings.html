@@ -171,7 +171,7 @@ parameter of the <tt class="xref py py-class docutils literal"><span class="pre"
 the <tt class="xref py py-data docutils literal"><span class="pre">workerAddresses</span></tt> parameter of the <tt class="xref py py-class docutils literal"><span class="pre">Workgroup</span></tt> constructor.</p>
 <p>Every worker computer has two keys given via command line arguments, its own listener key used to
 decrypt/authenticate messages from the master and the master key that is used when sending messages to the master.</p>
-<p>Listener keys are set through setUp method.</p>
+<p>Listener keys are set through <tt class="xref py py-meth docutils literal"><span class="pre">setUp()</span></tt> method.</p>
 </div>
 </div>
 </div>
@@ -223,9 +223,9 @@ the Request also has additional data:</p>
 <blockquote>
 <div><ul class="simple">
 <li>ID number of the worker who sent the request, if the request was sent from the master the ID is -1</li>
-<li>if the request was sent from the worker a socket is also passed to the dispatcher and the handler, this way</li>
+<li>if the request was sent from the worker a socket is also passed to the dispatcher and the handler, this way
+the handler can respond to the request if needed</li>
 </ul>
-<p>the handler can respond to the request if needed</p>
 </div></blockquote>
 </div>
 </div>
@@ -256,7 +256,8 @@ the appropriate handler function.</p>
 <div class="section" id="worker-server-relations">
 <h2>Worker server relations<a class="headerlink" href="#worker-server-relations" title="Permalink to this headline">¶</a></h2>
 <p>Each worker runs server.py program. When it starts it creates a server socket and listens for incomming connection,
-when the master connects and the checks are done it initializes all other module, just like Workgroup.__init__ on
+when the master connects and the checks are done it initializes all other module, just like
+<tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.__init__</span></tt> on
 the master.</p>
 <p>After init it starts receiving requests from the master, just like the dispatcher on the master it also has a
 dictionary of handler functions linked to their 3-letter codes, when it receives a request it searches that
@@ -303,14 +304,18 @@ workers`</p>
 and variables which enable NetWork to use them.</p>
 <div class="section" id="functions-in-plugins">
 <h4>Functions in plugins<a class="headerlink" href="#functions-in-plugins" title="Permalink to this headline">¶</a></h4>
-<p>Each plugin has two functions that NetWork uses during initialization (in Workgroup.__init__ or in server.py) that
-are suposed to make that plugin ready for work. These functions are called masterInit and workerInit, they are
+<p>Each plugin has two functions that NetWork uses during initialization (in <tt class="xref py py-meth docutils literal"><span class="pre">Workgroup.__init__()</span></tt> or in
+<tt class="xref py py-mod docutils literal"><span class="pre">server.py</span></tt>) that
+are suposed to make that plugin ready for work. These functions are called <tt class="xref py py-meth docutils literal"><span class="pre">masterInit()</span></tt> and
+<tt class="xref py py-meth docutils literal"><span class="pre">workerInit()</span></tt>, they are
 called on startup and they usually add entries to Workgroup.CONTROLS, set up dictionaries etc.</p>
 </div>
 <div class="section" id="variables-in-plugins">
 <h4>Variables in plugins<a class="headerlink" href="#variables-in-plugins" title="Permalink to this headline">¶</a></h4>
-<p>Each plugin defines two dictionaries, masterHandlers and workerHandlers that contain functions used to handle
-requests. During startup, these dictionaries are added to handler dictionaries in NetWork.handlers and server.py.</p>
+<p>Each plugin defines two dictionaries, <tt class="xref py py-data docutils literal"><span class="pre">masterHandlers</span></tt> and :py:data`workerHandlers` that contain functions
+used to handle
+requests. During startup, these dictionaries are added to handler dictionaries in <tt class="xref py py-mod docutils literal"><span class="pre">NetWork.handlers</span></tt> and
+:py:mod`server.py`.</p>
 </div>
 </div>
 <div class="section" id="creating-instances-of-multiprocessing-tools">
@@ -477,6 +482,35 @@ the required semaphore. If there are no waiters the counter gets increased.</p>
 </div>
 </div>
 </div>
+<div class="section" id="network-specific-tools">
+<h2>NetWork specific tools<a class="headerlink" href="#network-specific-tools" title="Permalink to this headline">¶</a></h2>
+<p>These tools don&#8217;t mimic those from multiprocessing module but are somtimes needed because of the diferences between
+NetWork and a regular single-computer environment.</p>
+<div class="section" id="netprint">
+<h3>netPrint<a class="headerlink" href="#netprint" title="Permalink to this headline">¶</a></h3>
+<p>By default a call to print function prints the output on the screen of the worker. The netPrint function solves this
+by sending a request to the master with the stuff that needs to be printed, a handler on the master does the actual
+printing.</p>
+</div>
+<div class="section" id="netobject">
+<h3>NetObject<a class="headerlink" href="#netobject" title="Permalink to this headline">¶</a></h3>
+<p>Instances of classes that don&#8217;t belong to Python builtins or NetWork fail to unpickle on the workers because they are
+not defined there.
+To solve this, when a new instance of <a class="reference internal" href="NetObject.html#NetWork.netobject.NetObject" title="NetWork.netobject.NetObject"><tt class="xref py py-class docutils literal"><span class="pre">NetWork.netobject.NetObject</span></tt></a> is created the methods of the wrapped
+class get sent to all workers,
+where they are put in <tt class="xref py py-data docutils literal"><span class="pre">classDescriptors</span></tt> dictionary (each class has its own ID used to locate it in the dict).</p>
+<p>When a new instance of a wrapped object is created, the <tt class="xref py py-meth docutils literal"><span class="pre">__call__()</span></tt> method of NetObject is called, it searches for
+the <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt> method of that class in <tt class="xref py py-meth docutils literal"><span class="pre">classDescriptors()</span></tt> and calls it.</p>
+<p>The instance of that object is then put in a container object, instance of NetObjectInstance. It has
+<tt class="xref py py-meth docutils literal"><span class="pre">__getattr__()</span></tt> and <tt class="xref py py-meth docutils literal"><span class="pre">__setattr__()</span></tt> methods that are used to access attributes and methods of that
+instance, it also has a dict called <tt class="xref py py-data docutils literal"><span class="pre">attrs</span></tt>
+that holds the attributes.</p>
+<p>The methods get &#8220;unbound&#8221; during pickling and unpickling and because of that Python doesn&#8217;t automatically pass the
+self parameter to them, to solve this the methods get wrapped in <tt class="xref py py-class docutils literal"><span class="pre">NetWork.netobject.MethodWrapper</span></tt> before
+calling, this class holds the
+pointer to the actual instance that will be passed to the method when <tt class="xref py py-meth docutils literal"><span class="pre">__call__()</span></tt> is called.</p>
+</div>
+</div>
 </div>
 
 
@@ -562,6 +596,11 @@ the required semaphore. If there are no waiters the counter gets increased.</p>
 <li><a class="reference internal" href="#id7">Releasing</a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li><a class="reference internal" href="#network-specific-tools">NetWork specific tools</a><ul>
+<li><a class="reference internal" href="#netprint">netPrint</a></li>
+<li><a class="reference internal" href="#netobject">NetObject</a></li>
 </ul>
 </li>
 </ul>
