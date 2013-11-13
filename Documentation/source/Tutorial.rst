@@ -114,6 +114,7 @@ This program gives the workgroup 3 tasks and checks if they're done every 0.5 se
 What next
 ---------
 
-You've learned the basics of using NetWork, but it's real advantage is in the tools it offers. for more information
-see the pages on :doc:`IPC and concurrency control tools <IPCTools>` and :ref:`Modules index <modindex>`.
-You can also learn about the Inner workings of the framework.
+You've learned the basics of using NetWork, but it's real advantage is in the tools it offers. for more
+information see the pages on :doc:`IPC and concurrency control tools <IPCTools>`,
+:doc:`NetWork specific tools <OtherTools>` and :ref:`Modules index <modindex>`.
+You can also learn about the :doc:`Inner workings of the framework <InnerWorkings>`.
