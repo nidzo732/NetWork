@@ -40,7 +40,12 @@ from .cntcodes import CNT_WORKERS
 
 CMD_REGISTER_NETCLASS = b"NCR"
 classCount = 0
-classDescriptors = {}
+classMethods = {}
+staticMethods = {}
+
+
+def isStaticMethod(attr):
+    return isinstance(attr, staticmethod)
 
 
 class MethodWrapper:
@@ -58,7 +63,7 @@ class MethodWrapper:
 
 class NetObjectInstance:
     #This class is created as an instance of any registered NetObject
-    #It has an id that points to an apropriate descriptor in classDescriptors
+    #It has an id that points to an apropriate descriptor in classMethods
     #and a dict called attrs that holds values of instance attributes
     attrs = None
     classId = None
@@ -69,13 +74,15 @@ class NetObjectInstance:
 
     def __getattr__(self, item):
         try:
-            attribute = classDescriptors[self.classId][item]
-        except KeyError:
-            attribute = self.attrs[item]
-        if inspect.isfunction(attribute):
+            attribute = classMethods[self.classId][item]
             return MethodWrapper(attribute, self)
-        else:
-            return attribute
+        except KeyError:
+            try:
+                attribute = staticMethods[self.classId][item]
+                return attribute
+            except KeyError:
+                attribute = self.attrs[item]
+                return attribute
 
     def __setattr__(self, key, value):
         if key == "attrs":
@@ -108,13 +115,18 @@ class NetObject:
 
     def __init__(self, base, workgroup):
         methodList = inspect.getmembers(base, inspect.isfunction)
+        staticMethodList = inspect.getmembers(base, isStaticMethod)
         self.methodDict = {}
+        self.staticMethodDict = {}
         for method in methodList:
             self.methodDict[method[0]] = method[1]
+        for staticMethod in staticMethodList:
+            self.staticMethodDict[staticMethod[0]] = staticMethod[1]
         global classCount
         classCount += 1
         self.id = classCount
-        classDescriptors[classCount] = self.methodDict
+        classMethods[classCount] = self.methodDict
+        staticMethods[classCount] = self.staticMethodDict
         self.workgroup = workgroup
         self.workgroup.sendRequest(CMD_REGISTER_NETCLASS,
                                    {"CLS": self})
@@ -127,24 +139,33 @@ class NetObject:
         :return: instance of the wrapped class
         """
         newObject = NetObjectInstance(self.id)
-        classDescriptors[self.id]["__init__"](newObject, *args, **kwargs)
+        classMethods[self.id]["__init__"](newObject, *args, **kwargs)
         return newObject
 
     def __getstate__(self):
         pickledMethods = {}
+        pickledStaticMethods = {}
         for method in self.methodDict:
             pickledMethods[method] = marshal.dumps(self.methodDict[method].__code__)
+        for staticMethod in self.staticMethodDict:
+            pickledStaticMethods[staticMethod] = marshal.dumps(self.staticMethodDict[staticMethod].__code__)
         pickledMethods["ID"] = self.id
-        return pickledMethods
+        return {"ID": self.id, "METHODS":pickledMethods, "STATIC":pickledStaticMethods}
 
     def __setstate__(self, state):
         self.id = state["ID"]
         state.pop("ID")
         self.methodDict = {}
-        for method in state:
-            self.methodDict[method] = FunctionType(code=marshal.loads(state[method]), globals=globals())
-        if not self.id in classDescriptors:
-            classDescriptors[self.id] = self.methodDict
+        self.staticMethodDict = {}
+        for method in state["METHODS"]:
+            self.methodDict[method] = FunctionType(code=marshal.loads(state["METHODS"][method]),
+                                                   globals=globals())
+        for staticMethod in state["STATIC"]:
+            self.staticMethodDict[staticMethod] = FunctionType(code=marshal.loads(state["STATIC"][staticMethod]),
+                                                               globals=globals())
+        if not self.id in classMethods:
+            classMethods[self.id] = self.methodDict
+            staticMethods[self.id] = self.staticMethodDict
 
 
 def masterInit(workgroup):
@@ -161,7 +182,8 @@ def registerClassMaster(request, controlls, commqueue):
 
 
 def registerClassWorker(request):
-    classDescriptors[request["CLS"].id] = request["CLS"].methodDict
+    classMethods[request["CLS"].id] = request["CLS"].methodDict
+    staticMethods[request["CLS"].id] = request["CLS"].methodDict
 
 
 masterHandlers = {CMD_REGISTER_NETCLASS: registerClassMaster}
