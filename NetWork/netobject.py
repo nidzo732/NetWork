@@ -142,15 +142,24 @@ class NetObject:
         classMethods[self.id]["__init__"](newObject, *args, **kwargs)
         return newObject
 
+    def __getattr__(self, item):
+        try:
+            return classMethods[self.id][item]
+        except KeyError:
+            return staticMethods[self.id][item]
+
     def __getstate__(self):
         pickledMethods = {}
         pickledStaticMethods = {}
         for method in self.methodDict:
             pickledMethods[method] = marshal.dumps(self.methodDict[method].__code__)
         for staticMethod in self.staticMethodDict:
-            pickledStaticMethods[staticMethod] = marshal.dumps(self.staticMethodDict[staticMethod].__code__)
-        pickledMethods["ID"] = self.id
-        return {"ID": self.id, "METHODS":pickledMethods, "STATIC":pickledStaticMethods}
+            if isStaticMethod(self.staticMethodDict[staticMethod]):
+                pickledStaticMethods[staticMethod] = \
+                    marshal.dumps(self.staticMethodDict[staticMethod].__func__.__code__)
+            else:
+                pickledStaticMethods[staticMethod] = marshal.dumps(self.staticMethodDict[staticMethod].__code__)
+        return {"ID": self.id, "METHODS": pickledMethods, "STATIC": pickledStaticMethods}
 
     def __setstate__(self, state):
         self.id = state["ID"]
@@ -183,8 +192,7 @@ def registerClassMaster(request, controlls, commqueue):
 
 def registerClassWorker(request):
     classMethods[request["CLS"].id] = request["CLS"].methodDict
-    staticMethods[request["CLS"].id] = request["CLS"].methodDict
-
+    staticMethods[request["CLS"].id] = request["CLS"].staticMethodDict
 
 masterHandlers = {CMD_REGISTER_NETCLASS: registerClassMaster}
 workerHandlers = {CMD_REGISTER_NETCLASS: registerClassWorker}
