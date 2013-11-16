@@ -509,6 +509,7 @@ that holds the attributes.</p>
 self parameter to them, to solve this the methods get wrapped in <tt class="xref py py-class docutils literal"><span class="pre">NetWork.netobject.MethodWrapper</span></tt> before
 calling, this class holds the
 pointer to the actual instance that will be passed to the method when <tt class="xref py py-meth docutils literal"><span class="pre">__call__()</span></tt> is called.</p>
+<p>Static methods don&#8217;t need the self argument and they get passed to the user without wrapping.</p>
 </div>
 </div>
 </div>

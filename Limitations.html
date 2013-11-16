@@ -64,7 +64,7 @@ by the networked architecture.</p>
 <li>No shared globals. On classic multiprocessing the child process gets a copy of all parrents&#8217; globals,
 this is not the case with NetWork, the child only gets standard Python globals, all other data must be passed
 manualy, for example with managers</li>
-<li>Custom objects created with <a class="reference internal" href="NetObject.html#NetWork.netobject.NetObject" title="NetWork.netobject.NetObject"><tt class="xref py py-class docutils literal"><span class="pre">NetWork.netobject.NetObject</span></tt></a> cant use static mthods or attributes</li>
+<li>Custom objects created with <a class="reference internal" href="NetObject.html#NetWork.netobject.NetObject" title="NetWork.netobject.NetObject"><tt class="xref py py-class docutils literal"><span class="pre">NetWork.netobject.NetObject</span></tt></a> cant use static attributes</li>
 <li>No automatic exception handling. If an exception is raised in one of the tasks you won&#8217;t be notified
 automatically, you need to explicitly call
 <a class="reference internal" href="NetWork.task.html#NetWork.task.TaskHandler.exceptionRaised" title="NetWork.task.TaskHandler.exceptionRaised"><tt class="xref py py-meth docutils literal"><span class="pre">TaskHandler.exceptionRaised</span></tt></a>
