@@ -10,7 +10,7 @@ Here are known limitations, bugs and problems in NetWork:
      this is not the case with NetWork, the child only gets standard Python globals, all other data must be passed
      manualy, for example with managers
   
-  *  Custom objects created with :py:class:`NetWork.netobject.NetObject` cant use static mthods or attributes
+  *  Custom objects created with :py:class:`NetWork.netobject.NetObject` cant use static attributes
   
   *  No automatic exception handling. If an exception is raised in one of the tasks you won't be notified
      automatically, you need to explicitly call

@@ -467,3 +467,5 @@ The methods get "unbound" during pickling and unpickling and because of that Pyt
 self parameter to them, to solve this the methods get wrapped in :py:class:`NetWork.netobject.MethodWrapper` before
 calling, this class holds the
 pointer to the actual instance that will be passed to the method when :py:meth:`__call__` is called.
+
+Static methods don't need the self argument and they get passed to the user without wrapping.

@@ -7,8 +7,8 @@ getting results and states of running tasks.
 Notes:
 
   * In this tutorial and in the documentation, the term 'user' is often mentioned, it does not stand for the human
-  user of your program, it stands for the program that uses the NetWork framework and its tools (the program that you
-  write)
+    user of your program, it stands for the program that uses the NetWork framework and its tools (the program that you
+    write)
   
   * English is not my native language, I've tried to make this tutorial gramatically correct but errors can hapen.
 
@@ -106,10 +106,10 @@ Here is a program that gives three tasks to the workgroup, waits for them to fin
 
 This program gives the workgroup 3 tasks and checks if they're done every 0.5 seconds, when
 :py:meth:`running <NetWork.task.TaskHandler.running>` method returns ``False`` the tasks are done and their results
- are obtained with the :py:meth:`result <NetWork.task.TaskHandler.result>` medod. Because we have 3 computers the
- execution time should theoretically be up to 3 times shorter than running these on a single computer. This method
- of waiting is used just for demonstration, the proper way would be to use :doc:`events <NetWork.event>` but that is
- beyond the scope of this beginner tutorial.
+are obtained with the :py:meth:`result <NetWork.task.TaskHandler.result>` medod. Because we have 3 computers the
+execution time should theoretically be up to 3 times shorter than running these on a single computer. This method
+of waiting is used just for demonstration, the proper way would be to use :doc:`events <NetWork.event>` but that is
+beyond the scope of this beginner tutorial.
 
 What next
 ---------
