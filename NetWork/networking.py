@@ -37,6 +37,8 @@ DEFAULT_SOCKET_TIMEOUT = 5.0
 AES_KEY_LENGTH = 16
 AES_IV_LENGTH = 16
 MAX_MESSAGELENGTH_LENGTH += len(MESSAGE_LENGTH_DELIMITER)
+workgroup = None
+runningOnMaster = None
 
 
 class InvalidMessageFormatError(OSError): pass
@@ -426,7 +428,14 @@ sockets.update({"AES": NWSocketAES, "AES+HMAC": NWSocketHMACandAES,
                 "SSL": NWSocketSSL})
 
 
-def setUp(socketType, params):
+def setUp(socketType, params, ownerWorkgroup=None):
+    global runningOnMaster, workgroup
+    if ownerWorkgroup:
+        runningOnMaster = True
+        workgroup = ownerWorkgroup
+    else:
+        runningOnMaster = False
+
     if socketType:
         try:
             sockets[socketType].setUp(params)
@@ -438,18 +447,24 @@ def setUp(socketType, params):
 
 
 def sendRequest(requestType, contents):
-    request = Request(requestType, contents)
-    masterSocket = NWSocket()
-    masterSocket.connect(masterAddress)
-    masterSocket.send(request.getType() + pickle.dumps(request.getContents()))
-    masterSocket.close()
+    if runningOnMaster:
+        workgroup.sendRequest(requestType, contents)
+    else:
+        request = Request(requestType, contents)
+        masterSocket = NWSocket()
+        masterSocket.connect(masterAddress)
+        masterSocket.send(request.getType() + pickle.dumps(request.getContents()))
+        masterSocket.close()
 
 
 def sendRequestWithResponse(requestType, contents):
-    request = Request(requestType, contents)
-    masterSocket = NWSocket()
-    masterSocket.connect(masterAddress)
-    masterSocket.send(request.getType() + pickle.dumps(request.getContents()))
-    receivedData = masterSocket.recv()
-    masterSocket.close()
-    return pickle.loads(receivedData)
+    if runningOnMaster:
+        workgroup.sendRequestWithResponse(requestType, contents)
+    else:
+        request = Request(requestType, contents)
+        masterSocket = NWSocket()
+        masterSocket.connect(masterAddress)
+        masterSocket.send(request.getType() + pickle.dumps(request.getContents()))
+        receivedData = masterSocket.recv()
+        masterSocket.close()
+        return pickle.loads(receivedData)

@@ -109,7 +109,7 @@ class NWManager:
             return value
 
     def setItemOnMaster(self, item, value):
-        self.workgroup.sendRequest(CMD_SET_MANAGER_ITEM,
+        sendRequest(CMD_SET_MANAGER_ITEM,
                                    {
                                        "ID": self.id,
                                        "ITEM": item,

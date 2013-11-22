@@ -90,7 +90,7 @@ class NWQueue:
             queueHandlers[self.id] = MasterQueueHandler(self.id)
             queueLocks[self.id] = Lock()
         queues[self.id] = Queue()
-        self.workgroup.sendRequest(CMD_REGISTER_QUEUE,
+        sendRequest(CMD_REGISTER_QUEUE,
                                    {
                                        "ID": self.id
                                    })
@@ -103,7 +103,7 @@ class NWQueue:
                     })
 
     def putOnMaster(self, data):
-        self.workgroup.sendRequest(CMD_PUT_ON_QUEUE,
+        sendRequest(CMD_PUT_ON_QUEUE,
                                    {
                                        "ID": self.id,
                                        "DATA": data
@@ -117,7 +117,7 @@ class NWQueue:
         return queues[self.id].get()
 
     def getOnMaster(self):
-        self.workgroup.sendRequest(CMD_GET_FROM_QUEUE,
+        sendRequest(CMD_GET_FROM_QUEUE,
                                    {
                                        "ID": self.id
                                    })

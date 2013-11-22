@@ -73,7 +73,7 @@ class NWEvent:
         self.workgroup.controls[CNT_EVENT_COUNT] += 1
         self.id = self.workgroup.controls[CNT_EVENT_COUNT]
         events[self.id] = Event()
-        self.workgroup.sendRequest(CMD_REGISTER_EVENT,
+        sendRequest(CMD_REGISTER_EVENT,
                                    {
                                        "ID": self.id
                                    })
@@ -91,7 +91,7 @@ class NWEvent:
         return events[self.id].wait()
 
     def setOnMaster(self):
-        self.workgroup.sendRequest(CMD_SET_EVENT,
+        sendRequest(CMD_SET_EVENT,
                                    {
                                        "ID": self.id
                                    })

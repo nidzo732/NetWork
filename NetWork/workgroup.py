@@ -4,6 +4,7 @@ and functions.
 """
 
 from multiprocessing import Queue
+import pickle
 from threading import Thread
 
 import NetWork.networking
@@ -95,7 +96,7 @@ class Workgroup:
         self.currentWorker = -1
         for plugin in plugins:
             plugin.masterInit(self)
-        NetWork.networking.setUp(socketType, socketParams)
+        NetWork.networking.setUp(socketType, socketParams, self)
         self.listenerSocket = NetWork.networking.NWSocket()
         self.workerList = []
         for workerAddress in workerAddresses:
@@ -182,14 +183,11 @@ class Workgroup:
 
     def getResult(self, id):
         resultQueue = NWQueue(self)
-        self.sendRequest(CMD_GET_RESULT,
-                         {
-                             "ID": id,
-                             "QUEUE": resultQueue.id
-                         })
-
-        result = resultQueue.get()
-        return result
+        return self.sendRequestWithResponse(CMD_GET_RESULT,
+                                            {
+                                                "ID": id,
+                                                "QUEUE": resultQueue.id
+                                            })
 
 
     def cancelTask(self, id):
@@ -201,36 +199,37 @@ class Workgroup:
 
     def taskRunning(self, id):
         resultQueue = NWQueue(self)
-        self.sendRequest(CMD_TASK_RUNNING,
-                         {
-                             "ID": id,
-                             "QUEUE": resultQueue.id
-                         })
-        result = resultQueue.get()
-        return result
+        return self.sendRequestWithResponse(CMD_TASK_RUNNING,
+                                            {
+                                                "ID": id,
+                                                "QUEUE": resultQueue.id
+                                            })
+
 
     def getException(self, id):
         resultQueue = NWQueue(self)
-        self.sendRequest(CMD_GET_EXCEPTION,
-                         {
-                             "ID": id,
-                             "QUEUE": resultQueue.id
-                         })
-        result = resultQueue.get()
-        return result
+        return self.sendRequestWithResponse(CMD_GET_EXCEPTION,
+                                            {
+                                                "ID": id,
+                                                "QUEUE": resultQueue.id
+                                            })
 
     def exceptionRaised(self, id):
         resultQueue = NWQueue(self)
-        self.sendRequest(CMD_CHECK_EXCEPTION,
-                         {
-                             "ID": id,
-                             "QUEUE": resultQueue.id
-                         })
-        result = resultQueue.get()
-        return result
+        return self.sendRequestWithResponse(CMD_CHECK_EXCEPTION,
+                                            {
+                                                "ID": id,
+                                                "QUEUE": resultQueue.id
+                                            })
 
     def sendRequest(self, type, contents):
-        self.commqueue.put(Request(type, contents))
+        self.commqueue.put(Request(type, contents, overNetwork=False))
+
+    def sendRequestWithResponse(self, type, contents):
+        responseQueue = NWQueue(self)
+        request = Request(type, contents, overNetwork=False, commqueue=responseQueue)
+        self.commqueue.put(request)
+        return request.getResponse()
 
     def stopServing(self):
         """

@@ -37,6 +37,7 @@ from types import FunctionType
 import inspect
 import marshal
 from .cntcodes import CNT_WORKERS
+from .networking import sendRequest
 
 CMD_REGISTER_NETCLASS = b"NCR"
 classCount = 0
@@ -128,7 +129,7 @@ class NetObject:
         classMethods[classCount] = self.methodDict
         staticMethods[classCount] = self.staticMethodDict
         self.workgroup = workgroup
-        self.workgroup.sendRequest(CMD_REGISTER_NETCLASS,
+        sendRequest(CMD_REGISTER_NETCLASS,
                                    {"CLS": self})
 
     def __call__(self, *args, **kwargs):

@@ -97,20 +97,20 @@ class NWLock:
         locks[self.id] = Lock()
         locks[self.id].acquire()
 
-        self.workgroup.sendRequest(CMD_REGISTER_LOCK,
+        sendRequest(CMD_REGISTER_LOCK,
                                    {
                                        "ID": self.id
                                    })
 
     def acquireOnMaster(self):
-        self.workgroup.sendRequest(CMD_ACQUIRE_LOCK,
+        sendRequest(CMD_ACQUIRE_LOCK,
                                    {
                                        "ID": self.id
                                    })
         locks[self.id].acquire()
 
     def releaseOnMaster(self):
-        self.workgroup.sendRequest(CMD_RELEASE_LOCK,
+        sendRequest(CMD_RELEASE_LOCK,
                                    {
                                        "ID": self.id
                                    })

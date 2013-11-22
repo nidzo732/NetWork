@@ -68,21 +68,21 @@ class NWSemaphore:
         semaphores[self.id] = Semaphore(self.value)
         for i in range(self.value):
             semaphores[self.id].acquire()
-        self.workgroup.sendRequest(CMD_REGISTER_SEMAPHORE,
+        sendRequest(CMD_REGISTER_SEMAPHORE,
                                    {
                                        "ID": self.id,
                                        "VALUE": self.value
                                    })
 
     def acquireOnMaster(self):
-        self.workgroup.sendRequest(CMD_ACQUIRE_SEMAPHORE,
+        sendRequest(CMD_ACQUIRE_SEMAPHORE,
                                    {
                                        "ID": self.id
                                    })
         semaphores[self.id].acquire()
 
     def releaseOnMaster(self):
-        self.workgroup.sendRequest(CMD_RELEASE_SEMAPHORE,
+        sendRequest(CMD_RELEASE_SEMAPHORE,
                                    {
                                        "ID": self.id
                                    })

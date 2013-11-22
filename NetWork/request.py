@@ -4,12 +4,14 @@ import pickle
 class Request:
     #A class used to send commands to the Workgroup.dispatcher thread
     #Used internaly by workgroup, not by user
-    def __init__(self, type, contents, requester=-1, socket=None):
+    def __init__(self, type, contents, requester=-1, socket=None, commqueue=None, overNetwork=True):
         self.contents = contents
         self.requester = requester
         self.socket = socket
         self.type = type
         self.responseSent = False
+        self.overNetwork=overNetwork
+        self.commqueue=commqueue
 
     def getContents(self):
         return self.contents
@@ -43,9 +45,18 @@ class Request:
                 self.respond(b"DEFAULT_RESPONSE")
             self.socket.close()
 
+    def getResponse(self):
+        if self.overNetwork:
+            return pickle.loads(self.socket.recv())
+        else:
+            return self.commqueue.get()
+
     def respond(self, response):
-        self.responseSent = True
-        try:
-            self.socket.send(pickle.dumps(response))
-        except OSError as error:
-            print("Failed to send response to", self.socket.address, error)
+        if self.overNetwork:
+            self.responseSent = True
+            try:
+                self.socket.send(pickle.dumps(response))
+            except OSError as error:
+                print("Failed to send response to", self.socket.address, error)
+        else:
+            self.commqueue.put(response)

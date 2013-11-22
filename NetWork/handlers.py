@@ -51,7 +51,7 @@ def taskRunning(request, controls, commqueue):
     queueId = request["QUEUE"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
     try:
-        queue.queues[queueId].put(controls[CNT_WORKERS][workerId].taskRunning(taskId))
+        request.respond(controls[CNT_WORKERS][workerId].taskRunning(taskId))
     except DeadWorkerError:
         commqueue.put(Request(CMD_WORKER_DIED,
                               {"WORKER": controls[CNT_WORKERS][workerId]}))
@@ -72,7 +72,7 @@ def getException(request, controls, commqueue):
     queueId = request["QUEUE"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
     try:
-        queue.queues[queueId].put(controls[CNT_WORKERS][workerId].getException(taskId))
+        request.respond(controls[CNT_WORKERS][workerId].getException(taskId))
     except DeadWorkerError:
         commqueue.put(Request(CMD_WORKER_DIED,
                               {"WORKER": controls[CNT_WORKERS][workerId]}))
@@ -83,7 +83,7 @@ def checkException(request, controls, commqueue):
     queueId = request["QUEUE"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
     try:
-        queue.queues[queueId].put(controls[CNT_WORKERS][workerId].exceptionRaised(taskId))
+        request.respond(controls[CNT_WORKERS][workerId].exceptionRaised(taskId))
     except DeadWorkerError:
         commqueue.put(Request(CMD_WORKER_DIED,
                               {"WORKER": controls[CNT_WORKERS][workerId]}))
@@ -94,7 +94,7 @@ def getResult(request, controls, commqueue):
     queueId = request["QUEUE"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
     try:
-        queue.queues[queueId].put(controls[CNT_WORKERS][workerId].getResult(taskId))
+        request.respond(controls[CNT_WORKERS][workerId].getResult(taskId))
     except DeadWorkerError:
         commqueue.put(Request(CMD_WORKER_DIED,
                               {"WORKER": controls[CNT_WORKERS][workerId]}))
