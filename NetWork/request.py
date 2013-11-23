@@ -88,7 +88,7 @@ def sendRequest(requestType, contents):
 
 def sendRequestWithResponse(requestType, contents):
     if runningOnMaster:
-        workgroup.sendRequestWithResponse(requestType, contents)
+        return workgroup.sendRequestWithResponse(requestType, contents)
     else:
         request = Request(requestType, contents)
         masterSocket = networking.NWSocket()

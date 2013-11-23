@@ -183,13 +183,10 @@ class Workgroup:
         return TaskHandler(newTask.id, self)
 
     def getResult(self, id):
-        resultQueue = NWQueue(self)
         return self.sendRequestWithResponse(CMD_GET_RESULT,
                                             {
                                                 "ID": id,
-                                                "QUEUE": resultQueue.id
                                             })
-
 
     def cancelTask(self, id):
         self.sendRequest(CMD_TERMINATE_TASK,
@@ -197,30 +194,22 @@ class Workgroup:
                              "ID": id
                          })
 
-
     def taskRunning(self, id):
-        resultQueue = NWQueue(self)
         return self.sendRequestWithResponse(CMD_TASK_RUNNING,
                                             {
                                                 "ID": id,
-                                                "QUEUE": resultQueue.id
                                             })
 
-
     def getException(self, id):
-        resultQueue = NWQueue(self)
         return self.sendRequestWithResponse(CMD_GET_EXCEPTION,
                                             {
                                                 "ID": id,
-                                                "QUEUE": resultQueue.id
                                             })
 
     def exceptionRaised(self, id):
-        resultQueue = NWQueue(self)
         return self.sendRequestWithResponse(CMD_CHECK_EXCEPTION,
                                             {
                                                 "ID": id,
-                                                "QUEUE": resultQueue.id
                                             })
 
     def sendRequest(self, type, contents):
