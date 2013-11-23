@@ -37,7 +37,7 @@ from types import FunctionType
 import inspect
 import marshal
 from .cntcodes import CNT_WORKERS
-from .networking import sendRequest
+from .request import sendRequest
 
 CMD_REGISTER_NETCLASS = b"NCR"
 classCount = 0

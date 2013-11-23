@@ -13,11 +13,8 @@ For more info about semaphores see `Python documentation page
 <http://docs.python.org/2/library/threading.html#semaphore-objects>`_
 """
 from multiprocessing import Semaphore, Lock
-from .networking import sendRequest
-from .commcodes import CMD_WORKER_DIED
+from .request import sendRequest
 from .cntcodes import CNT_WORKERS
-from .request import Request
-from .worker import DeadWorkerError
 
 CMD_REGISTER_SEMAPHORE = b"SER"
 CMD_ACQUIRE_SEMAPHORE = b"SEA"
@@ -69,35 +66,9 @@ class NWSemaphore:
         for i in range(self.value):
             semaphores[self.id].acquire()
         sendRequest(CMD_REGISTER_SEMAPHORE,
-                                   {
-                                       "ID": self.id,
-                                       "VALUE": self.value
-                                   })
-
-    def acquireOnMaster(self):
-        sendRequest(CMD_ACQUIRE_SEMAPHORE,
-                                   {
-                                       "ID": self.id
-                                   })
-        semaphores[self.id].acquire()
-
-    def releaseOnMaster(self):
-        sendRequest(CMD_RELEASE_SEMAPHORE,
-                                   {
-                                       "ID": self.id
-                                   })
-
-    def acquireOnWorker(self):
-        sendRequest(CMD_ACQUIRE_SEMAPHORE,
                     {
-                        "ID": self.id
-                    })
-        semaphores[self.id].acquire()
-
-    def releaseOnWorker(self):
-        sendRequest(CMD_RELEASE_SEMAPHORE,
-                    {
-                        "ID": self.id
+                        "ID": self.id,
+                        "VALUE": self.value
                     })
 
     def acquire(self):
@@ -106,20 +77,21 @@ class NWSemaphore:
         If the counter is zero sleep until some other task
         releases the semaphore
         """
-        if runningOnMaster:
-            self.acquireOnMaster()
-        else:
-            self.acquireOnWorker()
+        sendRequest(CMD_ACQUIRE_SEMAPHORE,
+                    {
+                        "ID": self.id
+                    })
+        semaphores[self.id].acquire()
 
     def release(self):
         """
         Release the semaphore, increment the counter value,
         wake firs task from waiter list.
         """
-        if runningOnMaster:
-            self.releaseOnMaster()
-        else:
-            self.releaseOnWorker()
+        sendRequest(CMD_RELEASE_SEMAPHORE,
+                    {
+                        "ID": self.id
+                    })
 
     def __setstate__(self, state):
         self.id = state["id"]
@@ -179,29 +151,17 @@ def registerSemaphoreMaster(request, controlls, commqueue):
     id = request["ID"]
     value = request["VALUE"]
     for worker in controlls[CNT_WORKERS]:
-        try:
-            worker.sendRequest(CMD_REGISTER_SEMAPHORE, {"ID": id, "VALUE": value})
-        except DeadWorkerError:
-            commqueue.put(Request(CMD_WORKER_DIED,
-                                  {"WORKER": worker}))
+        worker.sendRequest(CMD_REGISTER_SEMAPHORE, {"ID": id, "VALUE": value})
 
 
 def acquireSemaphoreMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    try:
-        semaphoreHandlers[request["ID"]].acquire(request.requester, controlls)
-    except DeadWorkerError as error:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controlls[CNT_WORKERS][error.id]}))
+    semaphoreHandlers[request["ID"]].acquire(request.requester, controlls)
 
 
 def releaseSemaphoreMaster(request, controlls, commqueue):
     #A handler used by Workgroup.dispatcher
-    try:
-        semaphoreHandlers[request["ID"]].release(controlls)
-    except DeadWorkerError as error:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controlls[CNT_WORKERS][error.id]}))
+    semaphoreHandlers[request["ID"]].release(controlls)
 
 
 def registerSemaphoreWorker(request):
@@ -214,6 +174,7 @@ def registerSemaphoreWorker(request):
 
 def releaseSemaphoreWorker(request):
     semaphores[request["ID"]].release()
+
 
 masterHandlers = {CMD_REGISTER_SEMAPHORE: registerSemaphoreMaster, CMD_ACQUIRE_SEMAPHORE: acquireSemaphoreMaster,
                   CMD_RELEASE_SEMAPHORE: releaseSemaphoreMaster}

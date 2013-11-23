@@ -49,7 +49,7 @@ Here are the examples of all types
 
 from multiprocessing import Manager
 
-from .networking import sendRequest, sendRequestWithResponse
+from .request import sendRequest, sendRequestWithResponse
 
 
 CMD_REGISTER_MANAGER = b"MNR"
@@ -108,21 +108,6 @@ class NWManager:
         else:
             return value
 
-    def setItemOnMaster(self, item, value):
-        sendRequest(CMD_SET_MANAGER_ITEM,
-                                   {
-                                       "ID": self.id,
-                                       "ITEM": item,
-                                       "VALUE": value
-                                   })
-
-    def setItemOnWorker(self, item, value):
-        sendRequest(CMD_SET_MANAGER_ITEM,
-                    {
-                        "ID": self.id,
-                        "ITEM": item,
-                        "VALUE": value
-                    })
 
     def getItem(self, item):
         """
@@ -150,10 +135,12 @@ class NWManager:
         :type value: any pickleable object
         :param value: new value for the item
         """
-        if runningOnMaster:
-            self.setItemOnMaster(item, value)
-        else:
-            self.setItemOnWorker(item, value)
+        sendRequest(CMD_SET_MANAGER_ITEM,
+                    {
+                        "ID": self.id,
+                        "ITEM": item,
+                        "VALUE": value
+                    })
 
     def dict(self, initial=None):
         """

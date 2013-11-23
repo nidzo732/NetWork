@@ -2,7 +2,7 @@
 The netPrint functionality enables tasks to print
 their output on the masters screen.
 """
-from .networking import sendRequestWithResponse
+from .request import sendRequestWithResponse
 
 CMD_NETPRINT = b"NPR"
 

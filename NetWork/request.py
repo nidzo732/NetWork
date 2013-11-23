@@ -1,4 +1,8 @@
 import pickle
+from NetWork import networking
+
+runningOnMaster = False
+workgroup = None
 
 
 class Request:
@@ -10,8 +14,8 @@ class Request:
         self.socket = socket
         self.type = type
         self.responseSent = False
-        self.overNetwork=overNetwork
-        self.commqueue=commqueue
+        self.overNetwork = overNetwork
+        self.commqueue = commqueue
 
     def getContents(self):
         return self.contents
@@ -60,3 +64,36 @@ class Request:
                 print("Failed to send response to", self.socket.address, error)
         else:
             self.commqueue.put(response)
+
+
+def setUp(workGroup=None):
+    global runningOnMaster, workgroup
+    if workGroup:
+        workgroup = workGroup
+        runningOnMaster = True
+    else:
+        runningOnMaster = False
+
+
+def sendRequest(requestType, contents):
+    if runningOnMaster:
+        workgroup.sendRequest(requestType, contents)
+    else:
+        request = Request(requestType, contents)
+        masterSocket = networking.NWSocket()
+        masterSocket.connect(networking.masterAddress)
+        masterSocket.send(request.getType() + pickle.dumps(request.getContents()))
+        masterSocket.close()
+
+
+def sendRequestWithResponse(requestType, contents):
+    if runningOnMaster:
+        workgroup.sendRequestWithResponse(requestType, contents)
+    else:
+        request = Request(requestType, contents)
+        masterSocket = networking.NWSocket()
+        masterSocket.connect(networking.masterAddress)
+        masterSocket.send(request.getType() + pickle.dumps(request.getContents()))
+        receivedData = masterSocket.recv()
+        masterSocket.close()
+        return pickle.loads(receivedData)

@@ -4,17 +4,17 @@ and functions.
 """
 
 from multiprocessing import Queue
-import pickle
 from threading import Thread
 
 import NetWork.networking
 from .handlers import receiveSocketData, handlerList, plugins
-from .worker import Worker, WorkerUnavailableError
+from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
 from .commcodes import *
 from .cntcodes import *
 from NetWork.queue import NWQueue
 from .request import Request
+import NetWork.request
 
 
 class NoWorkersError(Exception): pass
@@ -96,7 +96,8 @@ class Workgroup:
         self.currentWorker = -1
         for plugin in plugins:
             plugin.masterInit(self)
-        NetWork.networking.setUp(socketType, socketParams, self)
+        NetWork.networking.setUp(socketType, socketParams)
+        NetWork.request.setUp(workGroup=self)
         self.listenerSocket = NetWork.networking.NWSocket()
         self.workerList = []
         for workerAddress in workerAddresses:
@@ -257,7 +258,10 @@ class Workgroup:
         request = commqueue.get()
         while not request == CMD_HALT:
             #print(request)
-            handlerList[request.getType()](request, controls, commqueue)
+            try:
+                handlerList[request.getType()](request, controls, commqueue)
+            except DeadWorkerError as error:
+                commqueue.put(Request(CMD_WORKER_DIED, {"WORKER": error.id}))
             request.close()
             request = commqueue.get()
 
