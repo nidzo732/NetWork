@@ -108,7 +108,6 @@ class NWManager:
         else:
             return value
 
-
     def getItem(self, item):
         """
         Get one of the shared data items in the manager. If the item doesn't 

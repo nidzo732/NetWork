@@ -113,6 +113,12 @@ class Workgroup:
             raise NoWorkersError("No workers were successfully added to workgroup")
         self.controls[CNT_WORKERS] = self.workerList
         self.commqueue = Queue()
+        self.networkListener = Thread(target=self.listenerProcess,
+                                      args=(self.listenerSocket, self.commqueue,
+                                            self.controls))
+        self.networkListener.daemon = True
+        self.dispatcher = Thread(target=self.dispatcherProcess,
+                                 args=(self.commqueue, self.controls))
         self.running = False
 
     def __enter__(self):
@@ -132,13 +138,6 @@ class Workgroup:
         Instead of running this method manually it is recomened to use
         the ``with`` statement
         """
-        #self.listenerSocket.listen()
-        self.networkListener = Thread(target=self.listenerProcess,
-                                      args=(self.listenerSocket, self.commqueue,
-                                            self.controls))
-        self.networkListener.daemon = True
-        self.dispatcher = Thread(target=self.dispatcherProcess,
-                                 args=(self.commqueue, self.controls))
         self.dispatcher.start()
         self.networkListener.start()
         self.running = True

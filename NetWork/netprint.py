@@ -37,4 +37,3 @@ def netPrintHandlerMaster(request, controls):
 
 masterHandlers = {CMD_NETPRINT: netPrintHandlerMaster}
 workerHandlers = {}
-

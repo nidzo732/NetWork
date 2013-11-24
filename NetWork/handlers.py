@@ -8,7 +8,6 @@ from NetWork import event, lock, manager, queue, semaphore, netprint, netobject
 from .commcodes import *
 from .cntcodes import *
 from .request import Request
-from .worker import DeadWorkerError
 
 
 plugins = [event, lock, manager, queue, semaphore, netprint, netobject]

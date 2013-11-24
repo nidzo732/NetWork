@@ -40,11 +40,7 @@ For more info about queues see `Python documentation page <http://docs.python.or
 from multiprocessing import Lock, Queue
 
 from .request import sendRequest
-from .commcodes import CMD_WORKER_DIED
 from .cntcodes import CNT_WORKERS
-from .request import Request
-from .worker import DeadWorkerError
-
 
 CMD_REGISTER_QUEUE = b"QUR"
 CMD_PUT_ON_QUEUE = b"QUP"
@@ -91,10 +87,9 @@ class NWQueue:
             queueLocks[self.id] = Lock()
         queues[self.id] = Queue()
         sendRequest(CMD_REGISTER_QUEUE,
-                                   {
-                                       "ID": self.id
-                                   })
-
+                    {
+                        "ID": self.id
+                    })
 
     def put(self, data):
         """
@@ -104,10 +99,10 @@ class NWQueue:
         :param  data: item to be put on the queue
         """
         sendRequest(CMD_PUT_ON_QUEUE,
-                                   {
-                                       "ID": self.id,
-                                       "DATA": data
-                                   })
+                    {
+                        "ID": self.id,
+                        "DATA": data
+                    })
 
     def get(self):
         """
@@ -213,6 +208,7 @@ def putOnQueueWorker(request):
 
 def registerQueueWorker(request):
     queues[request["ID"]] = Queue()
+
 
 masterHandlers = {CMD_GET_FROM_QUEUE: getFromQueueMaster, CMD_PUT_ON_QUEUE: putOnQueueMaster,
                   CMD_REGISTER_QUEUE: registerQueueMaster}

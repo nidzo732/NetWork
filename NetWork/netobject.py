@@ -129,8 +129,7 @@ class NetObject:
         classMethods[classCount] = self.methodDict
         staticMethods[classCount] = self.staticMethodDict
         self.workgroup = workgroup
-        sendRequest(CMD_REGISTER_NETCLASS,
-                                   {"CLS": self})
+        sendRequest(CMD_REGISTER_NETCLASS, {"CLS": self})
 
     def __call__(self, *args, **kwargs):
         """
