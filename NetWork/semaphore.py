@@ -146,7 +146,7 @@ class MasterSemaphoreHandler:
         semaphoreLocks[self.id].release()
 
 
-def registerSemaphoreMaster(request, controlls, commqueue):
+def registerSemaphoreMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     value = request["VALUE"]
@@ -154,12 +154,12 @@ def registerSemaphoreMaster(request, controlls, commqueue):
         worker.sendRequest(CMD_REGISTER_SEMAPHORE, {"ID": id, "VALUE": value})
 
 
-def acquireSemaphoreMaster(request, controlls, commqueue):
+def acquireSemaphoreMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     semaphoreHandlers[request["ID"]].acquire(request.requester, controlls)
 
 
-def releaseSemaphoreMaster(request, controlls, commqueue):
+def releaseSemaphoreMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     semaphoreHandlers[request["ID"]].release(controlls)
 

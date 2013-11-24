@@ -216,12 +216,12 @@ class ManagerNamespace(NWManager):
             self.setItem(key, value)
 
 
-def setManagerItemMaster(request, controlls, commqueue):
+def setManagerItemMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     managers[request["ID"]][request["ITEM"]] = request["VALUE"]
 
 
-def getManagerItemMaster(request, controlls, commqueue):
+def getManagerItemMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     try:
         value = managers[request["ID"]][request["ITEM"]]

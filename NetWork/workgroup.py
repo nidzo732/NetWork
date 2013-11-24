@@ -248,7 +248,7 @@ class Workgroup:
         while not request == CMD_HALT:
             #print(request)
             try:
-                handlerList[request.getType()](request, controls, commqueue)
+                handlerList[request.getType()](request, controls)
             except DeadWorkerError as error:
                 commqueue.put(Request(CMD_WORKER_DIED, {"WORKER": error.id}))
             request.close()

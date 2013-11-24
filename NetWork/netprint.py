@@ -27,7 +27,7 @@ def netPrint(*args, **kwargs):
         raise status
 
 
-def netPrintHandlerMaster(request, controls, commqueue):
+def netPrintHandlerMaster(request, controls):
     try:
         print(*request["ARGS"], **request["KWARGS"])
         request.respond("OK")

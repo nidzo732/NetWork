@@ -174,19 +174,19 @@ class MasterLockHandler:
         lockLocks[self.id].release()
 
 
-def registerLockMaster(request, controlls, commqueue):
+def registerLockMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controlls[CNT_WORKERS]:
         worker.sendRequest(CMD_REGISTER_LOCK, {"ID": id})
 
 
-def acquireLockMaster(request, controlls, commqueue):
+def acquireLockMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     lockHandlers[request["ID"]].acquire(request.requester, controlls)
 
 
-def releaseLockMaster(request, controlls, commqueue):
+def releaseLockMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     lockHandlers[request["ID"]].release(controlls)
 

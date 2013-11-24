@@ -98,7 +98,7 @@ class NWEvent:
         return {"id": self.id, "workgroup": None}
 
 
-def setEventMaster(request, controls, commqueue):
+def setEventMaster(request, controls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controls[CNT_WORKERS]:
@@ -106,7 +106,7 @@ def setEventMaster(request, controls, commqueue):
     events[id].set()
 
 
-def registerEventMaster(request, controls, commqueue):
+def registerEventMaster(request, controls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controls[CNT_WORKERS]:

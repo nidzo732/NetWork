@@ -36,43 +36,43 @@ def receiveSocketData(socket, commqueue, controls):
                           pickle.loads(receivedData[3:]), workerId, socket))
 
 
-def submitTask(request, controls, commqueue):
+def submitTask(request, controls):
     workerId = request["WORKER"]
     task = request["TASK"]
     controls[CNT_WORKERS][workerId].executeTask(task)
 
 
-def taskRunning(request, controls, commqueue):
+def taskRunning(request, controls):
     taskId = request["ID"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
     request.respond(controls[CNT_WORKERS][workerId].taskRunning(taskId))
 
 
-def terminateTask(request, controls, commqueue):
+def terminateTask(request, controls):
     taskId = request["ID"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
     controls[CNT_WORKERS][workerId].terminateTask(taskId)
 
 
-def getException(request, controls, commqueue):
+def getException(request, controls):
     taskId = request["ID"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
     request.respond(controls[CNT_WORKERS][workerId].getException(taskId))
 
 
-def checkException(request, controls, commqueue):
+def checkException(request, controls):
     taskId = request["ID"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
     request.respond(controls[CNT_WORKERS][workerId].exceptionRaised(taskId))
 
 
-def getResult(request, controls, commqueue):
+def getResult(request, controls):
     taskId = request["ID"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
     request.respond(controls[CNT_WORKERS][workerId].getResult(taskId))
 
 
-def deathHandler(request, controls, commqueue):
+def deathHandler(request, controls):
     deadWorkerSet = controls[CNT_DEAD_WORKERS]
     for worker in deadWorkerSet:
         if worker.id == request["WORKER"].id:

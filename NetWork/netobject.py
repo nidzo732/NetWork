@@ -186,7 +186,7 @@ def workerInit():
     pass
 
 
-def registerClassMaster(request, controlls, commqueue):
+def registerClassMaster(request, controlls):
     for worker in controlls[CNT_WORKERS]:
         worker.sendRequest(CMD_REGISTER_NETCLASS, {"CLS": request["CLS"]})
 

@@ -179,14 +179,14 @@ class MasterQueueHandler:
                                                            })
 
 
-def registerQueueMaster(request, controlls, commqueue):
+def registerQueueMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controlls[CNT_WORKERS]:
         worker.sendRequest(CMD_REGISTER_QUEUE, {"ID": id})
 
 
-def getFromQueueMaster(request, controlls, commqueue):
+def getFromQueueMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     queueLocks[id].acquire()
@@ -196,7 +196,7 @@ def getFromQueueMaster(request, controlls, commqueue):
     queueLocks[id].release()
 
 
-def putOnQueueMaster(request, controlls, commqueue):
+def putOnQueueMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     data = request["DATA"]
