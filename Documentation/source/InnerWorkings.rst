@@ -112,7 +112,7 @@ ries to decrypt the message with its own key and if the key is valid the message
 Key management
 ==============
 For every protection type (AES or HMAC) the master has a listener key and a key for each worker, the listner
-key is used to decrypt and/or authenticate messages from workers and it is set up using the :py:data:`keys`
+key is used to decrypt and/or authenticate messages from workers and it is set up using the :py:data:`socketParams`
 parameter of the :py:class:`Workgroup` constructor. The worker keys are passed allong with addresses in
 the :py:data:`workerAddresses` parameter of the :py:class:`Workgroup` constructor.
 
@@ -130,9 +130,9 @@ Listener keys are set through :py:meth:`setUp` method.
 :py:meth:`__init__`
 -------------------
 When a new instance is created the constructor goes through the given list of IPs, for each of thos IPs it tries
- to create an instance of :py:class:`NetWork.worker.Worker` class, the worker uses
- :py:func:`NetWork.networking.NWSocket.checkAvailability` to test if the IP is valid, if all goes well without
- exception the worker is added to the workgroup.
+to create an instance of :py:class:`NetWork.worker.Worker` class, the worker uses
+:py:func:`NetWork.networking.NWSocket.checkAvailability` to test if the IP is valid, if all goes well without
+exception the worker is added to the workgroup.
 
 After the workers are added initialization is done on other modules
 (:py:mod:`NetWork.event`, :py:mod:`NetWork.manager`...) their internal variables
@@ -140,16 +140,16 @@ After the workers are added initialization is done on other modules
 
 Dispatcher, Listener, :py:data:`commqueue` and commands
 -------------------------------------------------------
-The workgroup has two internal threads (or processes, this can change) that run in the background to receive
+The workgroup has two internal threads that run in the background to receive
 requests from workers and from the main program that runs on the master computer and uses this Workgroup. These
-processes don't start during :py:meth:`__init__`, they are run manualy using the :py:meth:`startServing` method
+threads don't start during :py:meth:`__init__`, they are run manualy using the :py:meth:`startServing` method
 and are stoped with :py:meth:`stopServing`.
 
 networkListener
 ===============
 Listener has a server socket that listens on port **32151** and accepts requests from the workers, for each new
 connection it starts a thread that receives the actual request and sends it through the :py:data:`commqueue` to
-the dispatcher process.
+the dispatcher thread.
 
 dispatcher
 ==========
@@ -165,23 +165,27 @@ commqueue
 Commqueue is a queue created during :py:meth:`__init__` and is used to pass commands to the dispatcher. All
 requests are passed through this queue, when tasks on workers use a tool it sends a message to
 :py:attr:`networkListener` and it passes it via :py:attr:`commqueue` to the dispatcher. Tools on the master put
-their requests directly to this queue using :py:meth:`sendRequest` method of the workgroup
+their requests directly to this queue using :py:meth:`NetWork.request.sendRequest`.
 
 Request
 =======
-Request is a class used to pack requests that are passed to the dispatcher, in addition to the request itself
+:py:class:`NetWork.request.Request` is a class used to pack requests that are passed to the dispatcher, 
+in addition to the request itself. All handlers get their :py:data:`request` parameter that can be used to get the 
+contents of that request and to send response to the sender of that request.
+
+:py:func:`NetWork.request.sendRequest` is used as a unified way to send requests, regardles of whether the
+sender is on the worker or on the master.
 the Request also has additional data:
   
   * ID number of the worker who sent the request, if the request was sent from the master the ID is -1
-  * if the request was sent from the worker a socket is also passed to the dispatcher and the handler, this way
-    the handler can respond to the request if needed
+  * if the request was sent over the network a socket is also passed to the dispatcher and the handler, this way
+    the handler can respond to the request if needed, if the request is a local, a queue is used to pass the response
   
 
-Controlls
+controls
 ---------
-Controlls is a manager used by the Workgroup and multiprocessing tools to store various properties like list of
-workers, nubmer of registered queues etc. It is used because dispatcher and listener need to access this shared
-data.
+controls is a dictionary used by the Workgroup and multiprocessing tools to store various properties like list of
+workers, nubmer of registered queues etc.
 
 Communication with workers
 ##############################
@@ -235,9 +239,7 @@ Controling and getting information
 :py:class:`TaskHandler` has multiple methods related to the running task, they all use :py:class:`Workgroup`
 methods to pass requests to the :py:attr:`commqueue` and then to the worker, the worker receives the request and
 runs the apropriate method in the :py:class:`WorkerProcess`. If the user asks for information, the worker sends it
-back through the socket and handler passes it through a queue that is automaticaly created by :py:class:`TaskHandler`
-methods.
-
+back through the socket and handler passes it back with :py:meth:`respond` method of the Request.
 
 
 Multiprocessing tools
@@ -264,14 +266,14 @@ Each plugin has two functions that NetWork uses during initialization (in :py:me
 :py:mod:`server.py`) that
 are suposed to make that plugin ready for work. These functions are called :py:meth:`masterInit` and
 :py:meth:`workerInit`, they are
-called on startup and they usually add entries to Workgroup.CONTROLS, set up dictionaries etc.
+called on startup and they usually add entries to Workgroup.controls, set up dictionaries etc.
 
 Variables in plugins
 ====================
-Each plugin defines two dictionaries, :py:data:`masterHandlers` and :py:data`workerHandlers` that contain functions
+Each plugin defines two dictionaries, :py:data:`masterHandlers` and :py:data:`workerHandlers` that contain functions
 used to handle
 requests. During startup, these dictionaries are added to handler dictionaries in :py:mod:`NetWork.handlers` and
-:py:mod`server.py`.
+:py:mod:`server.py`.
 
 Creating instances of multiprocessing tools
 -------------------------------------------
@@ -282,7 +284,7 @@ Events
 ------
 Registration
 ============
-On creation register event command is put on the :py:data:`commqueue` and the handler sends a register event message
+On creation register event command is sent to the dispatcher and the handler sends a register event message
 to all workers, along with the message an
 event ID is passed. On the workers and on the master a new instance of :py:class:`multiprocessing.Event` is added
 to :py:data:`NetWork.event.events` dictionary.
@@ -290,24 +292,23 @@ to :py:data:`NetWork.event.events` dictionary.
 Waiting
 =======
 The :py:meth:`NWEvent.wait` method looks the same on both the master and the worker, it simply runs wait method
-of the apropriate event in :py:data`NetWork.event.events` dictionary.
+of the apropriate event in :py:data:`NetWork.event.events` dictionary.
 
 Set
 ===
 Set is different depending on whether it's run on master or the worker. On the master it passes set event mesage
-allong with the ID through the :py:data:`commqueue`, on the worker it connects to the listener on the master and
-send it the message.
+allong with the ID to the dispatcher, on the worker it connects to the listener on the master and
 
-In both cases the dispatcher receives the message through the :py:data:`commqueue`, it sends set event message
+In both cases the dispatcher receives the request and sends set event message
 to all workers and sets the local event on the  master.
 
 Locks
 -----
 Registration
 ============
-On creation a register lock command is put on
-the :py:data:`commqueue` and the handler sends a register lock message to all workers. On the master a new instance
-of :py:class:`NetWork.lock.MasterLockHandler` is added to :py:class`NetWork.lock.lockHandlers` dictionary. On the
+On creation a register lock command is sent to the dispatcher
+and the handler sends a register lock message to all workers. On the master a new instance
+of :py:class:`NetWork.lock.MasterLockHandler` is added to :py:class:`NetWork.lock.lockHandlers` dictionary. On the
 master and the workers, a new instance of :py:class:`multiprocessing.Lock` is added
 :py:data:`NetWork.lock.locks` dictionary, after that it's acquired.
 
@@ -318,8 +319,8 @@ telling whether the lock is locked and it has a list of waiters that tried to ac
 
 Acquiring
 =========
-When :py:meth:`NWLock.acquire` is called it sends a message to the dispacher (through the network if on worker or
-through the :py:data:`commqueue` if on master) that it wants to acquire the lock, after that it runs the acquire
+When :py:meth:`NWLock.acquire` is called it sends a message to the dispacher
+that it wants to acquire the lock, after that it runs the acquire
 method on the apropriate lock in :py:data:`NetWork.lock.locks`.
 
 When dispatcher receives the message it check apropriate :py:class:`MasterLockHandler` in
@@ -335,7 +336,7 @@ If :py:class:`MasterLockHandler` is locked the requester ID is added to the wait
 
 Releasing
 =========
-A message is sent to the dispatcher (network or :py:data:`commqueue`) to release the lock. When releasing it checks
+A message is sent to the dispatcher to release the lock. When releasing it checks
 the waiter list in :py:class:`MasterLockHandler`, if there are waiters it gets the ID of the first one, if the ID
 is -1 (master ID) the local lock on :py:data:`NetWork.lock.locks` is released, for other IDs a message is sent to
 the worker to release the lock, when the worker receives the message it releases the required lock.
@@ -344,14 +345,14 @@ Managers
 --------
 Registration
 ============
-On creation a message is sent through the
-:py:data:`commqueue` and a new   :py:class:`multiprocessing.manager.dict` is added to
+On creation a message is sent to the dispatcher
+and a new :py:class:`multiprocessing.manager.dict` is added to
 :py:data:`NetWork.mananager.managers` on the master, no registration is performed on the workers.
 
 Setting items
 =============
 When :py:meth:`NWManager.setItem` is called a request is sent to the dispatcher
-(network or :py:data:`commqueue`) with the manager ID, item key and the new value, when the dispatcher receives
+with the manager ID, item key and the new value, when the dispatcher receives
 the message it sets that item to a new value on the local manager in :py:data:`NetWork.manager.managers`
 
 Getting items
@@ -364,7 +365,7 @@ Queues
 ------
 Registration
 ============
-On creation a message is sent through the :py:data:`commqueue`.
+On creation a message is sent through the dispatcher
 On the master and the workers a new instance of :py:class:`multiprocessing.Queue` is added to
 :py:data:`NetWork.queue.queues` dictionary. On the master a new instance of :py:data:`NetWork.queue.MasterQueue`
 handler is added to :py:data:`NetWork.queue.queueHandlers`.
@@ -384,7 +385,7 @@ The dispatcher receives request, adds the worker to the waiter list and calls :p
 
 Putting items
 =============
-A put item request is sent to dispatcher (network or :py:data:`commqueue`), it adds that item to the item list on
+A put item request is sent to dispatcher, handler adds that item to the item list on
 the appropriate :py:class:`MasterQueueHandler`, after adding the item it calls its :py:meth:`distribute` method.
 
 Distribution
@@ -398,10 +399,10 @@ Semaphores
 ----------
 Registration
 ============
-On creation a register semaphore command
-is put on the :py:data:`commqueue` and the handler sends a register semaphore message to all workers. On the master
+On creation a register semaphore command is sent to the dispatcher
+and the handler sends a register semaphore message to all workers. On the master
 a new instance of :py:class:`NetWork.semaphore.MasterSemaphoreHandler` is
-added to :py:class`NetWork.semaphore.semaphoreHandlers` dictionary. On the master and the workers, a new
+added to :py:class:`NetWork.semaphore.semaphoreHandlers` dictionary. On the master and the workers, a new
 instance of :py:class:`multiprocessing.Semaphore` is added :py:data:`NetWork.semaphore.semaphores` dictionary.
 All created :py:class:`multiprocessing.Semaphore` have the counter value given to
 :py:meth:`Workgroup.registerSemaphore`, and upong creation they a loop acquires them to set their counter to zero. 
@@ -413,8 +414,8 @@ value, and it has a list of waiters that tried to acquire the semaphore when the
 
 Acquiring
 =========
-When :py:meth:`NWSemaphore.acquire` is called it sends a message to the dispacher (through the network if on worker
-or through the :py:data:`commqueue` if on master) that it wants to acquire the semaphore, after that it runs the
+When :py:meth:`NWSemaphore.acquire` is called it sends a message to the dispacher
+that it wants to acquire the semaphore, after that it runs the
 acquire method on the apropriate semaphore in :py:data:`NetWork.semaphore.semaphores`.
 
 When dispatcher receives the message it checks apropriate :py:class:`MasterSemaphoreHandler` in
@@ -430,7 +431,7 @@ If the counter is zero the requester ID is added to the waiting list until the s
 
 Releasing
 =========
-A message is sent to the dispatcher (network or :py:data:`commqueue`) to release the semaphore. When releasing
+A message is sent to the dispatcher to release the semaphore. When releasing
 it checks the waiter list in :py:class:`MasterSemaphoreHandler`, if there are waiters it gets the ID of the first
 one, if the ID is -1 (master ID) the local semaphore on :py:data:`NetWork.semaphore.semaphores` is released, for
 other IDs a message is sent to the worker to release the semaphore, when the worker receives the message it releases
