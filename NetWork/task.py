@@ -12,7 +12,7 @@ from types import FunctionType
 class Task:
     #A class used to hold a task given to the workgroup
 
-    def __init__(self, target=None, args=(), kwargs={}, id=None,):
+    def __init__(self, target=None, args=(), kwargs={}, id=None):
         self.target = target
         self.args = args
         self.kwargs = kwargs

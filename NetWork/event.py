@@ -28,11 +28,8 @@ For more info about events see `Python documentation page
 """
 from multiprocessing import Event
 
-from .networking import sendRequest
-from .commcodes import CMD_WORKER_DIED
+from .request import sendRequest
 from .cntcodes import CNT_WORKERS
-from .request import Request
-from .worker import DeadWorkerError
 
 
 CMD_SET_EVENT = b"EVS"
@@ -73,46 +70,25 @@ class NWEvent:
         self.workgroup.controls[CNT_EVENT_COUNT] += 1
         self.id = self.workgroup.controls[CNT_EVENT_COUNT]
         events[self.id] = Event()
-        self.workgroup.sendRequest(CMD_REGISTER_EVENT,
-                                   {
-                                       "ID": self.id
-                                   })
-
-    def waitOnWorker(self):
-        events[self.id].wait()
-
-    def setOnWorker(self):
-        sendRequest(CMD_SET_EVENT,
+        sendRequest(CMD_REGISTER_EVENT,
                     {
                         "ID": self.id
                     })
-
-    def waitOnMaster(self):
-        return events[self.id].wait()
-
-    def setOnMaster(self):
-        self.workgroup.sendRequest(CMD_SET_EVENT,
-                                   {
-                                       "ID": self.id
-                                   })
 
     def set(self):
         """
         Set the event, any task that called the :py:meth:`wait` method will be waken up
         """
-        if runningOnMaster:
-            self.setOnMaster()
-        else:
-            self.setOnWorker()
+        sendRequest(CMD_SET_EVENT,
+                    {
+                        "ID": self.id
+                    })
 
     def wait(self):
         """
         Sleep until some task calls the :py:meth:`set` method
         """
-        if runningOnMaster:
-            self.waitOnMaster()
-        else:
-            self.waitOnWorker()
+        return events[self.id].wait()
 
     def __setstate__(self, state):
         self.id = state["id"]
@@ -122,27 +98,19 @@ class NWEvent:
         return {"id": self.id, "workgroup": None}
 
 
-def setEventMaster(request, controls, commqueue):
+def setEventMaster(request, controls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controls[CNT_WORKERS]:
-        try:
-            worker.sendRequest(CMD_SET_EVENT, {"ID": id})
-        except DeadWorkerError:
-            commqueue.put(Request(CMD_WORKER_DIED,
-                                  {"WORKER": worker}))
+        worker.sendRequest(CMD_SET_EVENT, {"ID": id})
     events[id].set()
 
 
-def registerEventMaster(request, controls, commqueue):
+def registerEventMaster(request, controls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controls[CNT_WORKERS]:
-        try:
-            worker.sendRequest(CMD_REGISTER_EVENT, {"ID": id})
-        except DeadWorkerError:
-            commqueue.put(Request(CMD_WORKER_DIED,
-                                  {"WORKER": worker}))
+        worker.sendRequest(CMD_REGISTER_EVENT, {"ID": id})
 
 
 def setEventWorker(request):
@@ -152,6 +120,7 @@ def setEventWorker(request):
 def registerEventWorker(request):
     id = request["ID"]
     events[id] = Event()
+
 
 masterHandlers = {CMD_SET_EVENT: setEventMaster, CMD_REGISTER_EVENT: registerEventMaster}
 workerHandlers = {CMD_SET_EVENT: setEventWorker, CMD_REGISTER_EVENT: registerEventWorker}

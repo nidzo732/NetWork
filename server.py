@@ -26,6 +26,7 @@ from NetWork.commcodes import *
 from NetWork.request import Request
 from NetWork import networking
 from NetWork.args import getArgs
+import NetWork.request
 
 
 class BadRequestError(Exception): pass
@@ -137,6 +138,7 @@ if __name__ == "__main__":
                 else:
                     networking.masterAddress = masterAddress
                 requestSocket.close()
+                NetWork.request.setUp()
                 print("MASTER REGISTERED with address", masterAddress)
                 masterRegistered = True
             else:

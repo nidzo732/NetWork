@@ -8,12 +8,13 @@ from threading import Thread
 
 import NetWork.networking
 from .handlers import receiveSocketData, handlerList, plugins
-from .worker import Worker, WorkerUnavailableError
+from .worker import Worker, WorkerUnavailableError, DeadWorkerError
 from .task import Task, TaskHandler
 from .commcodes import *
 from .cntcodes import *
 from NetWork.queue import NWQueue
 from .request import Request
+import NetWork.request
 
 
 class NoWorkersError(Exception): pass
@@ -96,6 +97,7 @@ class Workgroup:
         for plugin in plugins:
             plugin.masterInit(self)
         NetWork.networking.setUp(socketType, socketParams)
+        NetWork.request.setUp(workGroup=self)
         self.listenerSocket = NetWork.networking.NWSocket()
         self.workerList = []
         for workerAddress in workerAddresses:
@@ -111,6 +113,12 @@ class Workgroup:
             raise NoWorkersError("No workers were successfully added to workgroup")
         self.controls[CNT_WORKERS] = self.workerList
         self.commqueue = Queue()
+        self.networkListener = Thread(target=self.listenerProcess,
+                                      args=(self.listenerSocket, self.commqueue,
+                                            self.controls))
+        self.networkListener.daemon = True
+        self.dispatcher = Thread(target=self.dispatcherProcess,
+                                 args=(self.commqueue, self.controls))
         self.running = False
 
     def __enter__(self):
@@ -130,13 +138,6 @@ class Workgroup:
         Instead of running this method manually it is recomened to use
         the ``with`` statement
         """
-        #self.listenerSocket.listen()
-        self.networkListener = Thread(target=self.listenerProcess,
-                                      args=(self.listenerSocket, self.commqueue,
-                                            self.controls))
-        self.networkListener.daemon = True
-        self.dispatcher = Thread(target=self.dispatcherProcess,
-                                 args=(self.commqueue, self.controls))
         self.dispatcher.start()
         self.networkListener.start()
         self.running = True
@@ -181,16 +182,10 @@ class Workgroup:
         return TaskHandler(newTask.id, self)
 
     def getResult(self, id):
-        resultQueue = NWQueue(self)
-        self.sendRequest(CMD_GET_RESULT,
-                         {
-                             "ID": id,
-                             "QUEUE": resultQueue.id
-                         })
-
-        result = resultQueue.get()
-        return result
-
+        return self.sendRequestWithResponse(CMD_GET_RESULT,
+                                            {
+                                                "ID": id,
+                                            })
 
     def cancelTask(self, id):
         self.sendRequest(CMD_TERMINATE_TASK,
@@ -198,39 +193,32 @@ class Workgroup:
                              "ID": id
                          })
 
-
     def taskRunning(self, id):
-        resultQueue = NWQueue(self)
-        self.sendRequest(CMD_TASK_RUNNING,
-                         {
-                             "ID": id,
-                             "QUEUE": resultQueue.id
-                         })
-        result = resultQueue.get()
-        return result
+        return self.sendRequestWithResponse(CMD_TASK_RUNNING,
+                                            {
+                                                "ID": id,
+                                            })
 
     def getException(self, id):
-        resultQueue = NWQueue(self)
-        self.sendRequest(CMD_GET_EXCEPTION,
-                         {
-                             "ID": id,
-                             "QUEUE": resultQueue.id
-                         })
-        result = resultQueue.get()
-        return result
+        return self.sendRequestWithResponse(CMD_GET_EXCEPTION,
+                                            {
+                                                "ID": id,
+                                            })
 
     def exceptionRaised(self, id):
-        resultQueue = NWQueue(self)
-        self.sendRequest(CMD_CHECK_EXCEPTION,
-                         {
-                             "ID": id,
-                             "QUEUE": resultQueue.id
-                         })
-        result = resultQueue.get()
-        return result
+        return self.sendRequestWithResponse(CMD_CHECK_EXCEPTION,
+                                            {
+                                                "ID": id,
+                                            })
 
     def sendRequest(self, type, contents):
-        self.commqueue.put(Request(type, contents))
+        self.commqueue.put(Request(type, contents, overNetwork=False))
+
+    def sendRequestWithResponse(self, type, contents):
+        responseQueue = NWQueue(self)
+        request = Request(type, contents, overNetwork=False, commqueue=responseQueue)
+        self.commqueue.put(request)
+        return request.getResponse()
 
     def stopServing(self):
         """
@@ -258,7 +246,10 @@ class Workgroup:
         request = commqueue.get()
         while not request == CMD_HALT:
             #print(request)
-            handlerList[request.getType()](request, controls, commqueue)
+            try:
+                handlerList[request.getType()](request, controls)
+            except DeadWorkerError as error:
+                commqueue.put(Request(CMD_WORKER_DIED, {"WORKER": error.id}))
             request.close()
             request = commqueue.get()
 

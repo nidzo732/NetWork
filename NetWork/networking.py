@@ -3,10 +3,8 @@ This module implements a socket classes used to safely handle
 network messaging, message length and security.
 """
 import socket
-import pickle
 import hmac
 import hashlib
-from .request import Request
 from multiprocessing import Lock
 
 try:
@@ -37,6 +35,8 @@ DEFAULT_SOCKET_TIMEOUT = 5.0
 AES_KEY_LENGTH = 16
 AES_IV_LENGTH = 16
 MAX_MESSAGELENGTH_LENGTH += len(MESSAGE_LENGTH_DELIMITER)
+workgroup = None
+masterAddress = None
 
 
 class InvalidMessageFormatError(OSError): pass
@@ -54,7 +54,8 @@ class LengthIndicatorTooLong(OSError): pass
 class KeyNotSet(OSError): pass
 
 
-class SSLProblem(OSError): pass
+class SSLProblem(OSError):
+    pass
 
 
 masterAddress = None
@@ -435,21 +436,3 @@ def setUp(socketType, params):
                             + str(socketType) + " could not find " + str(error))
         global NWSocket
         NWSocket = sockets[socketType]
-
-
-def sendRequest(requestType, contents):
-    request = Request(requestType, contents)
-    masterSocket = NWSocket()
-    masterSocket.connect(masterAddress)
-    masterSocket.send(request.getType() + pickle.dumps(request.getContents()))
-    masterSocket.close()
-
-
-def sendRequestWithResponse(requestType, contents):
-    request = Request(requestType, contents)
-    masterSocket = NWSocket()
-    masterSocket.connect(masterAddress)
-    masterSocket.send(request.getType() + pickle.dumps(request.getContents()))
-    receivedData = masterSocket.recv()
-    masterSocket.close()
-    return pickle.loads(receivedData)

@@ -8,7 +8,6 @@ from NetWork import event, lock, manager, queue, semaphore, netprint, netobject
 from .commcodes import *
 from .cntcodes import *
 from .request import Request
-from .worker import DeadWorkerError
 
 
 plugins = [event, lock, manager, queue, semaphore, netprint, netobject]
@@ -36,71 +35,43 @@ def receiveSocketData(socket, commqueue, controls):
                           pickle.loads(receivedData[3:]), workerId, socket))
 
 
-def submitTask(request, controls, commqueue):
+def submitTask(request, controls):
     workerId = request["WORKER"]
     task = request["TASK"]
-    try:
-        controls[CNT_WORKERS][workerId].executeTask(task)
-    except DeadWorkerError:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controls[CNT_WORKERS][workerId]}))
+    controls[CNT_WORKERS][workerId].executeTask(task)
 
 
-def taskRunning(request, controls, commqueue):
-    taskId = request["ID"]
-    queueId = request["QUEUE"]
-    workerId = controls[CNT_TASK_EXECUTORS][taskId]
-    try:
-        queue.queues[queueId].put(controls[CNT_WORKERS][workerId].taskRunning(taskId))
-    except DeadWorkerError:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controls[CNT_WORKERS][workerId]}))
-
-
-def terminateTask(request, controls, commqueue):
+def taskRunning(request, controls):
     taskId = request["ID"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
-    try:
-        controls[CNT_WORKERS][workerId].terminateTask(taskId)
-    except DeadWorkerError:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controls[CNT_WORKERS][workerId]}))
+    request.respond(controls[CNT_WORKERS][workerId].taskRunning(taskId))
 
 
-def getException(request, controls, commqueue):
+def terminateTask(request, controls):
     taskId = request["ID"]
-    queueId = request["QUEUE"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
-    try:
-        queue.queues[queueId].put(controls[CNT_WORKERS][workerId].getException(taskId))
-    except DeadWorkerError:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controls[CNT_WORKERS][workerId]}))
+    controls[CNT_WORKERS][workerId].terminateTask(taskId)
 
 
-def checkException(request, controls, commqueue):
+def getException(request, controls):
     taskId = request["ID"]
-    queueId = request["QUEUE"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
-    try:
-        queue.queues[queueId].put(controls[CNT_WORKERS][workerId].exceptionRaised(taskId))
-    except DeadWorkerError:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controls[CNT_WORKERS][workerId]}))
+    request.respond(controls[CNT_WORKERS][workerId].getException(taskId))
 
 
-def getResult(request, controls, commqueue):
+def checkException(request, controls):
     taskId = request["ID"]
-    queueId = request["QUEUE"]
     workerId = controls[CNT_TASK_EXECUTORS][taskId]
-    try:
-        queue.queues[queueId].put(controls[CNT_WORKERS][workerId].getResult(taskId))
-    except DeadWorkerError:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controls[CNT_WORKERS][workerId]}))
+    request.respond(controls[CNT_WORKERS][workerId].exceptionRaised(taskId))
 
 
-def deathHandler(request, controls, commqueue):
+def getResult(request, controls):
+    taskId = request["ID"]
+    workerId = controls[CNT_TASK_EXECUTORS][taskId]
+    request.respond(controls[CNT_WORKERS][workerId].getResult(taskId))
+
+
+def deathHandler(request, controls):
     deadWorkerSet = controls[CNT_DEAD_WORKERS]
     for worker in deadWorkerSet:
         if worker.id == request["WORKER"].id:

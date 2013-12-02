@@ -45,11 +45,8 @@ For more info about locks see `Python documentation page
 """
 
 from multiprocessing import Lock
-from .networking import sendRequest
-from .commcodes import CMD_WORKER_DIED
+from .request import sendRequest
 from .cntcodes import CNT_WORKERS
-from .request import Request
-from .worker import DeadWorkerError
 
 CMD_REGISTER_LOCK = b"LCR"
 CMD_ACQUIRE_LOCK = b"LCA"
@@ -97,33 +94,7 @@ class NWLock:
         locks[self.id] = Lock()
         locks[self.id].acquire()
 
-        self.workgroup.sendRequest(CMD_REGISTER_LOCK,
-                                   {
-                                       "ID": self.id
-                                   })
-
-    def acquireOnMaster(self):
-        self.workgroup.sendRequest(CMD_ACQUIRE_LOCK,
-                                   {
-                                       "ID": self.id
-                                   })
-        locks[self.id].acquire()
-
-    def releaseOnMaster(self):
-        self.workgroup.sendRequest(CMD_RELEASE_LOCK,
-                                   {
-                                       "ID": self.id
-                                   })
-
-    def acquireOnWorker(self):
-        sendRequest(CMD_ACQUIRE_LOCK,
-                    {
-                        "ID": self.id
-                    })
-        locks[self.id].acquire()
-
-    def releaseOnWorker(self):
-        sendRequest(CMD_RELEASE_LOCK,
+        sendRequest(CMD_REGISTER_LOCK,
                     {
                         "ID": self.id
                     })
@@ -134,20 +105,21 @@ class NWLock:
         :py:meth:`acquire` on this lock will be put to sleep until :py:meth:`release`
         is called.
         """
-        if runningOnMaster:
-            self.acquireOnMaster()
-        else:
-            self.acquireOnWorker()
+        sendRequest(CMD_ACQUIRE_LOCK,
+                    {
+                        "ID": self.id
+                    })
+        locks[self.id].acquire()
 
     def release(self):
         """
         Call this when exiting critical section. Wake a task that was trying to
         acquire this lock.
         """
-        if runningOnMaster:
-            self.releaseOnMaster()
-        else:
-            self.releaseOnWorker()
+        sendRequest(CMD_RELEASE_LOCK,
+                    {
+                        "ID": self.id
+                    })
 
     def __setstate__(self, state):
         self.id = state["id"]
@@ -202,33 +174,21 @@ class MasterLockHandler:
         lockLocks[self.id].release()
 
 
-def registerLockMaster(request, controlls, commqueue):
+def registerLockMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controlls[CNT_WORKERS]:
-        try:
-            worker.sendRequest(CMD_REGISTER_LOCK, {"ID": id})
-        except DeadWorkerError:
-            commqueue.put(Request(CMD_WORKER_DIED,
-                                  {"WORKER": worker}))
+        worker.sendRequest(CMD_REGISTER_LOCK, {"ID": id})
 
 
-def acquireLockMaster(request, controlls, commqueue):
+def acquireLockMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
-    try:
-        lockHandlers[request["ID"]].acquire(request.requester, controlls)
-    except DeadWorkerError as error:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controlls[CNT_WORKERS][error.id]}))
+    lockHandlers[request["ID"]].acquire(request.requester, controlls)
 
 
-def releaseLockMaster(request, controlls, commqueue):
+def releaseLockMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
-    try:
-        lockHandlers[request["ID"]].release(controlls)
-    except DeadWorkerError as error:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controlls[CNT_WORKERS][error.id]}))
+    lockHandlers[request["ID"]].release(controlls)
 
 
 def registerLockWorker(request):
@@ -238,6 +198,7 @@ def registerLockWorker(request):
 
 def releaseLockWorker(request):
     locks[request["ID"]].release()
+
 
 masterHandlers = {CMD_REGISTER_LOCK: registerLockMaster, CMD_ACQUIRE_LOCK: acquireLockMaster,
                   CMD_RELEASE_LOCK: releaseLockMaster}

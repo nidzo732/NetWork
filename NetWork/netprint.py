@@ -2,7 +2,7 @@
 The netPrint functionality enables tasks to print
 their output on the masters screen.
 """
-from .networking import sendRequestWithResponse
+from .request import sendRequestWithResponse
 
 CMD_NETPRINT = b"NPR"
 
@@ -27,7 +27,7 @@ def netPrint(*args, **kwargs):
         raise status
 
 
-def netPrintHandlerMaster(request, controls, commqueue):
+def netPrintHandlerMaster(request, controls):
     try:
         print(*request["ARGS"], **request["KWARGS"])
         request.respond("OK")
@@ -37,4 +37,3 @@ def netPrintHandlerMaster(request, controls, commqueue):
 
 masterHandlers = {CMD_NETPRINT: netPrintHandlerMaster}
 workerHandlers = {}
-

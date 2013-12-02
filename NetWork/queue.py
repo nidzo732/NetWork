@@ -39,12 +39,8 @@ For more info about queues see `Python documentation page <http://docs.python.or
 """
 from multiprocessing import Lock, Queue
 
-from .networking import sendRequest
-from .commcodes import CMD_WORKER_DIED
+from .request import sendRequest
 from .cntcodes import CNT_WORKERS
-from .request import Request
-from .worker import DeadWorkerError
-
 
 CMD_REGISTER_QUEUE = b"QUR"
 CMD_PUT_ON_QUEUE = b"QUP"
@@ -90,38 +86,10 @@ class NWQueue:
             queueHandlers[self.id] = MasterQueueHandler(self.id)
             queueLocks[self.id] = Lock()
         queues[self.id] = Queue()
-        self.workgroup.sendRequest(CMD_REGISTER_QUEUE,
-                                   {
-                                       "ID": self.id
-                                   })
-
-    def putOnWorker(self, data):
-        sendRequest(CMD_PUT_ON_QUEUE,
-                    {
-                        "ID": self.id,
-                        "DATA": data
-                    })
-
-    def putOnMaster(self, data):
-        self.workgroup.sendRequest(CMD_PUT_ON_QUEUE,
-                                   {
-                                       "ID": self.id,
-                                       "DATA": data
-                                   })
-
-    def getOnWorker(self):
-        sendRequest(CMD_GET_FROM_QUEUE,
+        sendRequest(CMD_REGISTER_QUEUE,
                     {
                         "ID": self.id
                     })
-        return queues[self.id].get()
-
-    def getOnMaster(self):
-        self.workgroup.sendRequest(CMD_GET_FROM_QUEUE,
-                                   {
-                                       "ID": self.id
-                                   })
-        return queues[self.id].get()
 
     def put(self, data):
         """
@@ -130,10 +98,11 @@ class NWQueue:
         :type data: any pickleable object
         :param  data: item to be put on the queue
         """
-        if runningOnMaster:
-            self.putOnMaster(data)
-        else:
-            self.putOnWorker(data)
+        sendRequest(CMD_PUT_ON_QUEUE,
+                    {
+                        "ID": self.id,
+                        "DATA": data
+                    })
 
     def get(self):
         """
@@ -142,10 +111,11 @@ class NWQueue:
         
         :return: next item in the queue
         """
-        if runningOnMaster:
-            return self.getOnMaster()
-        else:
-            return self.getOnWorker()
+        sendRequest(CMD_GET_FROM_QUEUE,
+                    {
+                        "ID": self.id
+                    })
+        return queues[self.id].get()
 
     def __setstate__(self, state):
         self.id = state["id"]
@@ -204,42 +174,30 @@ class MasterQueueHandler:
                                                            })
 
 
-def registerQueueMaster(request, controlls, commqueue):
+def registerQueueMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controlls[CNT_WORKERS]:
-        try:
-            worker.sendRequest(CMD_REGISTER_QUEUE, {"ID": id})
-        except DeadWorkerError:
-            commqueue.put(Request(CMD_WORKER_DIED,
-                                  {"WORKER": worker}))
+        worker.sendRequest(CMD_REGISTER_QUEUE, {"ID": id})
 
 
-def getFromQueueMaster(request, controlls, commqueue):
+def getFromQueueMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     queueLocks[id].acquire()
     workerId = request.requester
     queueHandlers[id].putWaiter(workerId)
-    try:
-        queueHandlers[id].distributeContents(controlls)
-    except DeadWorkerError as error:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controlls[CNT_WORKERS][error.id]}))
+    queueHandlers[id].distributeContents(controlls)
     queueLocks[id].release()
 
 
-def putOnQueueMaster(request, controlls, commqueue):
+def putOnQueueMaster(request, controlls):
     #A handler used by Workgroup.dispatcher
     id = request["ID"]
     data = request["DATA"]
     queueLocks[id].acquire()
     queueHandlers[id].putItem(data)
-    try:
-        queueHandlers[id].distributeContents(controlls)
-    except DeadWorkerError as error:
-        commqueue.put(Request(CMD_WORKER_DIED,
-                              {"WORKER": controlls[CNT_WORKERS][error.id]}))
+    queueHandlers[id].distributeContents(controlls)
     queueLocks[id].release()
 
 
@@ -250,6 +208,7 @@ def putOnQueueWorker(request):
 
 def registerQueueWorker(request):
     queues[request["ID"]] = Queue()
+
 
 masterHandlers = {CMD_GET_FROM_QUEUE: getFromQueueMaster, CMD_PUT_ON_QUEUE: putOnQueueMaster,
                   CMD_REGISTER_QUEUE: registerQueueMaster}
