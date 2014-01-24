@@ -14,7 +14,6 @@ import atexit
 import pickle
 
 from NetWork.networking import COMCODE_CHECKALIVE, COMCODE_ISALIVE
-from NetWork.workerprocess import WorkerProcess
 import NetWork.queue as queue
 import NetWork.event as event
 import NetWork.lock as lock
@@ -22,7 +21,7 @@ import NetWork.manager as manager
 import NetWork.semaphore as semaphore
 import NetWork.netprint as netprint
 import NetWork.netobject as netobject
-from NetWork.commcodes import *
+import NetWork.task as task
 from NetWork.request import Request
 from NetWork import networking
 from NetWork.args import getArgs
@@ -32,57 +31,16 @@ import NetWork.request
 class BadRequestError(Exception): pass
 
 
-plugins = [event, queue, lock, manager, semaphore, netprint, netobject]
+plugins = [event, queue, lock, manager, semaphore, netprint, netobject, task]
 
 running = False
-tasks = {-1: None}
-
-
-def executeTask(request):
-    newTask = request["TASK"]
-    newProcess = WorkerProcess(newTask)
-    tasks[newTask.id] = newProcess
-    tasks[newTask.id].start()
-
-
-def getResult(request):
-    id = request["ID"]
-    result = tasks[id].getResult()
-    request.respond(result)
-
-
-def exceptionRaised(request):
-    id = request["ID"]
-    exceptionTest = tasks[id].exceptionRaised()
-    request.respond(exceptionTest)
-
-
-def terminateTask(request):
-    id = request["ID"]
-    tasks[id].terminate()
-
-
-def taskRunning(request):
-    id = request["ID"]
-    status = tasks[id].running()
-    request.respond(status)
-
-
-def getException(request):
-    id = request["ID"]
-    exception = tasks[id].getException()
-    request.respond(exception)
 
 
 def checkAlive(request):
     if requestSocket.address == masterAddress:
         request.respond(COMCODE_ISALIVE)
 
-handlers = {CMD_SUBMIT_TASK: executeTask, CMD_GET_RESULT: getResult,
-            CMD_CHECK_EXCEPTION: exceptionRaised,
-            CMD_TERMINATE_TASK: terminateTask,
-            CMD_TASK_RUNNING: taskRunning, CMD_GET_EXCEPTION: getException,
-            b"ALV": checkAlive}
+handlers = {b"ALV": checkAlive}
 
 
 def requestHandler(request):

@@ -1,5 +1,5 @@
 """
-Indexes used for various stuff in Workgroup.controlls
+Keys used for various stuff in Workgroup.controlls
 """
 CNT_WORKERS = "WORKERS"
 CNT_LISTEN_SOCKET = "LISTEN_SOCKET"

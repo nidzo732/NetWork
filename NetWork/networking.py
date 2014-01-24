@@ -198,7 +198,7 @@ class NWSocketHMAC(NWSocketTCP):
         try:
             messageValid = hmac.compare_digest(messageHash.digest(), receivedHash)
         except AttributeError:
-        #Python version<3.3 doesn't have compare_digest
+            #Python version<3.3 doesn't have compare_digest
             #so I had to rely on a less secure comparison with ==
             messageValid = (messageHash.digest() == receivedHash)
 

@@ -9,7 +9,7 @@ from threading import Thread
 import NetWork.networking
 from .handlers import receiveSocketData, handlerList, plugins
 from .worker import Worker, WorkerUnavailableError, DeadWorkerError
-from .task import Task, TaskHandler
+from .task import Task, TaskHandler, CMD_SUBMIT_TASK
 from .commcodes import *
 from .cntcodes import *
 from NetWork.queue import NWQueue
@@ -179,37 +179,7 @@ class Workgroup:
         executors = self.controls[CNT_TASK_EXECUTORS]
         executors[newTask.id] = self.currentWorker
         self.controls[CNT_TASK_EXECUTORS] = executors
-        return TaskHandler(newTask.id, self)
-
-    def getResult(self, id):
-        return self.sendRequestWithResponse(CMD_GET_RESULT,
-                                            {
-                                                "ID": id,
-                                            })
-
-    def cancelTask(self, id):
-        self.sendRequest(CMD_TERMINATE_TASK,
-                         {
-                             "ID": id
-                         })
-
-    def taskRunning(self, id):
-        return self.sendRequestWithResponse(CMD_TASK_RUNNING,
-                                            {
-                                                "ID": id,
-                                            })
-
-    def getException(self, id):
-        return self.sendRequestWithResponse(CMD_GET_EXCEPTION,
-                                            {
-                                                "ID": id,
-                                            })
-
-    def exceptionRaised(self, id):
-        return self.sendRequestWithResponse(CMD_CHECK_EXCEPTION,
-                                            {
-                                                "ID": id,
-                                            })
+        return TaskHandler(newTask.id)
 
     def sendRequest(self, type, contents):
         self.commqueue.put(Request(type, contents, overNetwork=False))
