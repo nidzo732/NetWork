@@ -4,13 +4,13 @@ Each function is associated with a 3 letter code from commcodes.py
 """
 import pickle
 
-from NetWork import event, lock, manager, queue, semaphore, netprint, netobject
+from NetWork import event, lock, manager, queue, semaphore, netprint, netobject, task
 from .commcodes import *
 from .cntcodes import *
 from .request import Request
 
 
-plugins = [event, lock, manager, queue, semaphore, netprint, netobject]
+plugins = [event, lock, manager, queue, semaphore, netprint, netobject, task]
 
 
 class NoWorkersError(Exception): pass
@@ -35,42 +35,6 @@ def receiveSocketData(socket, commqueue, controls):
                           pickle.loads(receivedData[3:]), workerId, socket))
 
 
-def submitTask(request, controls):
-    workerId = request["WORKER"]
-    task = request["TASK"]
-    controls[CNT_WORKERS][workerId].executeTask(task)
-
-
-def taskRunning(request, controls):
-    taskId = request["ID"]
-    workerId = controls[CNT_TASK_EXECUTORS][taskId]
-    request.respond(controls[CNT_WORKERS][workerId].taskRunning(taskId))
-
-
-def terminateTask(request, controls):
-    taskId = request["ID"]
-    workerId = controls[CNT_TASK_EXECUTORS][taskId]
-    controls[CNT_WORKERS][workerId].terminateTask(taskId)
-
-
-def getException(request, controls):
-    taskId = request["ID"]
-    workerId = controls[CNT_TASK_EXECUTORS][taskId]
-    request.respond(controls[CNT_WORKERS][workerId].getException(taskId))
-
-
-def checkException(request, controls):
-    taskId = request["ID"]
-    workerId = controls[CNT_TASK_EXECUTORS][taskId]
-    request.respond(controls[CNT_WORKERS][workerId].exceptionRaised(taskId))
-
-
-def getResult(request, controls):
-    taskId = request["ID"]
-    workerId = controls[CNT_TASK_EXECUTORS][taskId]
-    request.respond(controls[CNT_WORKERS][workerId].getResult(taskId))
-
-
 def deathHandler(request, controls):
     deadWorkerSet = controls[CNT_DEAD_WORKERS]
     for worker in deadWorkerSet:
@@ -84,12 +48,7 @@ def deathHandler(request, controls):
             raise NoWorkersError("All workers died, unable to continue working")
 
 
-handlerList = {CMD_SUBMIT_TASK: submitTask,
-               CMD_TASK_RUNNING: taskRunning, CMD_GET_EXCEPTION: getException,
-               CMD_CHECK_EXCEPTION: checkException, CMD_TERMINATE_TASK: terminateTask,
-               CMD_GET_RESULT: getResult,
-               CMD_WORKER_DIED: deathHandler,
-               }
+handlerList = {CMD_WORKER_DIED: deathHandler}
 
 for plugin in plugins:
     handlerList.update(plugin.masterHandlers)

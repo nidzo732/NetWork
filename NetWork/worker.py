@@ -16,10 +16,6 @@ class DeadWorkerError(Exception):
 import pickle
 
 import NetWork.networking
-from .commcodes import *
-
-
-COMCODE_TASK_STARTED = b"TASKSTART"
 
 
 class Worker:
@@ -64,37 +60,3 @@ class Worker:
         except OSError:
             self.alive = False
             raise DeadWorkerError(self.id)
-
-    def executeTask(self, task):
-        self.myTasks[task.id] = task
-        self.sendRequest(CMD_SUBMIT_TASK, {"TASK": task})
-
-    def getResult(self, id):
-        return self.sendRequestWithResponse(CMD_GET_RESULT,
-                                            {
-                                                "ID": id
-                                            })
-
-    def terminateTask(self, id):
-        self.sendRequest(CMD_TERMINATE_TASK,
-                         {
-                             "ID": id
-                         })
-
-    def taskRunning(self, id):
-        return self.sendRequestWithResponse(CMD_TASK_RUNNING,
-                                            {
-                                                "ID": id
-                                            })
-
-    def getException(self, id):
-        return self.sendRequestWithResponse(CMD_GET_EXCEPTION,
-                                            {
-                                                "ID": id
-                                            })
-
-    def exceptionRaised(self, id):
-        return self.sendRequestWithResponse(CMD_CHECK_EXCEPTION,
-                                            {
-                                                "ID": id
-                                            })
