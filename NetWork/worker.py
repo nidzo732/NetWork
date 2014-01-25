@@ -2,6 +2,9 @@
 This file implements a worker class that is used to represent
 one worker computer and send messages to that computer.
 """
+import pickle
+
+import NetWork.networking
 
 
 class WorkerUnavailableError(Exception): pass
@@ -11,11 +14,6 @@ class DeadWorkerError(Exception):
     def __init__(self, id, message=None):
         self.id = id
         Exception.__init__(self, message)
-
-
-import pickle
-
-import NetWork.networking
 
 
 class Worker:
