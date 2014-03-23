@@ -7,7 +7,7 @@ of the same event the first task is waken up and continues it's work
 
 ::
 
-    #Usage examplu
+    #Usage example
     #Prints "Event has been raised" after 5 seconds
     import time
     from NetWork import Workgroup, Event
@@ -99,7 +99,6 @@ class NWEvent:
 
 
 def setEventMaster(request, controls):
-    #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controls[CNT_WORKERS]:
         worker.sendRequest(CMD_SET_EVENT, {"ID": id})
@@ -107,7 +106,6 @@ def setEventMaster(request, controls):
 
 
 def registerEventMaster(request, controls):
-    #A handler used by Workgroup.dispatcher
     id = request["ID"]
     for worker in controls[CNT_WORKERS]:
         worker.sendRequest(CMD_REGISTER_EVENT, {"ID": id})

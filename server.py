@@ -25,6 +25,7 @@ import NetWork.task as task
 from NetWork.request import Request
 from NetWork import networking
 from NetWork.args import getArgs
+from NetWork.autodiscovery import startDiscoveryServer
 import NetWork.request
 
 
@@ -78,6 +79,8 @@ if __name__ == "__main__":
         listenerSocket.close()
         exit()
     masterRegistered = False
+    if args.auto_discovery:
+        startDiscoveryServer(args.auto_discovery_method)
     while not masterRegistered:
         try:
             requestSocket = listenerSocket.accept()
