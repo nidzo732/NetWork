@@ -48,7 +48,6 @@ CMD_GET_FROM_QUEUE = b"QUG"
 CMD_GET_QUEUE_SIZE = b"QSZ"
 CNT_QUEUE_COUNT = "QUEUE_COUNT"
 
-
 queues = None
 queueHandlers = None
 queueLocks = None
@@ -120,9 +119,24 @@ class NWQueue:
         return queues[self.id].get()
 
     def size(self):
-        return sendRequestWithResponse(CMD_GET_QUEUE_SIZE, {"ID":self.id})
+        """
+        Get the number of items on the queue. Thic checks the number at the time of the
+        call, a non zero return doesn't guarantee that next :py:meth:`get` calls wont block
+
+        :return: number of items on the queue
+        """
+        return sendRequestWithResponse(CMD_GET_QUEUE_SIZE,
+                                       {
+                                           "ID": self.id
+                                       })
 
     def empty(self):
+        """
+        Check if there are items on the queue. Thic checks the status at the time of the
+        call, a :py:data:`True` return doesn't guarantee that next :py:meth:`get` calls wont block
+
+        :return: :py:data:`True` (there are items) or :py:data:`False` (no items)
+        """
         return self.size() == 0
 
     def __setstate__(self, state):
@@ -220,11 +234,12 @@ def putOnQueueWorker(request):
 def registerQueueWorker(request):
     queues[request["ID"]] = Queue()
 
+
 def queueSize(request, controls):
-    id=request["ID"]
+    id = request["ID"]
     request.respond(queueHandlers[id].size())
 
 
 masterHandlers = {CMD_GET_FROM_QUEUE: getFromQueueMaster, CMD_PUT_ON_QUEUE: putOnQueueMaster,
-                  CMD_REGISTER_QUEUE: registerQueueMaster, CMD_GET_QUEUE_SIZE:queueSize}
+                  CMD_REGISTER_QUEUE: registerQueueMaster, CMD_GET_QUEUE_SIZE: queueSize}
 workerHandlers = {CMD_REGISTER_QUEUE: registerQueueWorker, CMD_PUT_ON_QUEUE: putOnQueueWorker}

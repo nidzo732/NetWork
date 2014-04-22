@@ -1,3 +1,20 @@
+"""
+Autodiscovery lets the NetWork framework discovery worker computers for you.
+Instead of typing the addresses manualy, you just run :py:meth:`discoverWorkers` and pass its output
+to the Workgroup constructor.
+
+Currently, only discovery via UDP multicast is supported.
+
+Example
+
+.. code-block:: python
+
+    from NetWork import discoverWorkers, Workgroup
+    workerList = discoverWorkers("UDP", {"TTL": 2, "TIMEOUT": 5})
+    myWorkgorup = Workgroup(workerList)
+        ...do something...
+
+"""
 from .networking import NWSocket
 import socket
 import struct
@@ -78,6 +95,25 @@ discoveries = {"UDP": UDPDiscovery}
 
 
 def discoverWorkers(discoveryType, params={}):
+    """
+    Discover worker computers on the network. Returns a list of worker addresses which can then be passed
+    to :py:class:`Workgroup` constructor.
+
+    :type discoveryType: str
+    :param discoveryType: Method to use for discovery. Currently, only UDP multicast is available.
+    :type params: dict
+    :param params: Additional parameters for the discovery method
+
+        * UDP:
+
+          * :py:data:`"TTL"` time to live, how many routers will the discovery packet go through
+            :py:data:`1` usually means local network
+          * :py:data:`"TIMEOUT"` how long (in seconds) to wait for a response from workers, default is :py:data:`2`
+          * :py:data:`"REPEAT"` how many times to send a discovery packet, increase if the packet loss is high
+
+
+    :return: a list of discovered worker addresses
+    """
     return discoveries[discoveryType].discoverWorkers(params)
 
 

@@ -12,3 +12,7 @@ Printing
 ########
 If you want the output from your tasks to show up on the master screen you need to use :doc:`netPrint <NetPrint>`
 instead of regular print call.
+
+Automatic discovery of workers
+##############################
+If you need to discover worker computers programatically you can use the :doc:`autodiscovery <NetWork.autodiscovery>`
