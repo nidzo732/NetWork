@@ -1,0 +1,290 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>NetWork.netobject &mdash; NetWork 0.1-alpha documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1-alpha',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="NetWork 0.1-alpha documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">NetWork 0.1-alpha documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for NetWork.netobject</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">One of the problems caused by the networked architecture is the inability to use</span>
+<span class="sd">non-builtin objects. The objects get pickled on the master but they can&#39;t be unpickled on</span>
+<span class="sd">the workers because they aren&#39;t defined there.</span>
+<span class="sd">The NetObject class solves this problem, it wraps custom classes and enables them to be used</span>
+<span class="sd">in the tasks.</span>
+<span class="sd">To use class on the workgroup create a new wrapper :py:class:`NetObject`, after that you use that wrapper</span>
+<span class="sd">to create new instances of that class that can be passed freely around the workgroup.</span>
+
+<span class="sd">.. code-block:: python</span>
+
+<span class="sd">    from NetWork import Workgroup, NetObject</span>
+
+<span class="sd">    class MyClass:</span>
+
+<span class="sd">        def __init__(self,......):</span>
+<span class="sd">            some code, blah, blah</span>
+<span class="sd">            .....</span>
+<span class="sd">            .....</span>
+
+<span class="sd">        def doStuff(self,.......):</span>
+<span class="sd">            some other code, blah, blah</span>
+<span class="sd">            .....</span>
+<span class="sd">            .....</span>
+
+<span class="sd">    def someFunction(someObject):</span>
+<span class="sd">        return someObject.doStuff(......)</span>
+
+<span class="sd">    with Workgroup(workerList....) as w:</span>
+<span class="sd">        MyClassWrapped=NetObject(MyClass, w)</span>
+<span class="sd">        myInstance=MyClassWraped(......)</span>
+<span class="sd">        task1=w.submit(target=someFunction, args=(myInstance))</span>
+
+<span class="sd">Without the wrapping part, an exception would get raised in task1 about failed unpickling.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">types</span> <span class="kn">import</span> <span class="n">FunctionType</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">marshal</span>
+<span class="kn">from</span> <span class="nn">.cntcodes</span> <span class="kn">import</span> <span class="n">CNT_WORKERS</span>
+<span class="kn">from</span> <span class="nn">.request</span> <span class="kn">import</span> <span class="n">sendRequest</span>
+
+<span class="n">CMD_REGISTER_NETCLASS</span> <span class="o">=</span> <span class="n">b</span><span class="s">&quot;NCR&quot;</span>
+<span class="n">classCount</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">classMethods</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">staticMethods</span> <span class="o">=</span> <span class="p">{}</span>
+
+
+<span class="k">def</span> <span class="nf">isStaticMethod</span><span class="p">(</span><span class="n">attr</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">attr</span><span class="p">,</span> <span class="nb">staticmethod</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">MethodWrapper</span><span class="p">:</span>
+    <span class="c">#Methods get &quot;unbound&quot; when a class is registered, as a result the user</span>
+    <span class="c">#would need to give the self argument explicitly when calling the method. This wrapper</span>
+    <span class="c">#class prevents such behavior by adding the self argument before calling the method</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">owner</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">owner</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">owner</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">NetObjectInstance</span><span class="p">:</span>
+    <span class="c">#This class is created as an instance of any registered NetObject</span>
+    <span class="c">#It has an id that points to an apropriate descriptor in classMethods</span>
+    <span class="c">#and a dict called attrs that holds values of instance attributes</span>
+    <span class="n">attrs</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">classId</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">classId</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="s">&quot;attrs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="s">&quot;classId&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">classId</span>
+
+    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">attribute</span> <span class="o">=</span> <span class="n">classMethods</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">classId</span><span class="p">][</span><span class="n">item</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">MethodWrapper</span><span class="p">(</span><span class="n">attribute</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">attribute</span> <span class="o">=</span> <span class="n">staticMethods</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">classId</span><span class="p">][</span><span class="n">item</span><span class="p">]</span>
+                <span class="k">return</span> <span class="n">attribute</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="n">attribute</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">item</span><span class="p">]</span>
+                <span class="k">return</span> <span class="n">attribute</span>
+
+    <span class="k">def</span> <span class="nf">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&quot;attrs&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="s">&quot;attrs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&quot;ATT&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">,</span> <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">classId</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s">&quot;ATT&quot;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="NetObject"><a class="viewcode-back" href="../../NetObject.html#NetWork.netobject.NetObject">[docs]</a><span class="k">class</span> <span class="nc">NetObject</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrap the class to be used by the workgroup.</span>
+
+<span class="sd">    Don&#39;t use the original class to create instances, use this object instead.</span>
+
+<span class="sd">    :type base: class</span>
+<span class="sd">    :param base: The class to be wrapped</span>
+<span class="sd">    :type workgroup: NetWork.workgroup.Workgroup</span>
+<span class="sd">    :param workgroup: Workgroup that will be using this class</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">methodDict</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">workgroup</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">workgroup</span><span class="p">):</span>
+        <span class="n">methodList</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getmembers</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isfunction</span><span class="p">)</span>
+        <span class="n">staticMethodList</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getmembers</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">isStaticMethod</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">methodDict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">staticMethodDict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">methodList</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">methodDict</span><span class="p">[</span><span class="n">method</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">method</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">staticMethod</span> <span class="ow">in</span> <span class="n">staticMethodList</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">staticMethodDict</span><span class="p">[</span><span class="n">staticMethod</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">staticMethod</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">global</span> <span class="n">classCount</span>
+        <span class="n">classCount</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">classCount</span>
+        <span class="n">classMethods</span><span class="p">[</span><span class="n">classCount</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">methodDict</span>
+        <span class="n">staticMethods</span><span class="p">[</span><span class="n">classCount</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">staticMethodDict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span> <span class="o">=</span> <span class="n">workgroup</span>
+        <span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_REGISTER_NETCLASS</span><span class="p">,</span> <span class="p">{</span><span class="s">&quot;CLS&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="p">})</span>
+
+<div class="viewcode-block" id="NetObject.__call__"><a class="viewcode-back" href="../../NetObject.html#NetWork.netobject.NetObject.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new instance of the wrapped class. All arguments will be passed</span>
+<span class="sd">        to its` :py:meth:`__init__`.</span>
+
+<span class="sd">        :return: instance of the wrapped class</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">newObject</span> <span class="o">=</span> <span class="n">NetObjectInstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">classMethods</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">][</span><span class="s">&quot;__init__&quot;</span><span class="p">](</span><span class="n">newObject</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">newObject</span>
+</div>
+    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">classMethods</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">][</span><span class="n">item</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">staticMethods</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">][</span><span class="n">item</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">pickledMethods</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">pickledStaticMethods</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">methodDict</span><span class="p">:</span>
+            <span class="n">pickledMethods</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">marshal</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">methodDict</span><span class="p">[</span><span class="n">method</span><span class="p">]</span><span class="o">.</span><span class="n">__code__</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">staticMethod</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">staticMethodDict</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">isStaticMethod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">staticMethodDict</span><span class="p">[</span><span class="n">staticMethod</span><span class="p">]):</span>
+                <span class="n">pickledStaticMethods</span><span class="p">[</span><span class="n">staticMethod</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="n">marshal</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">staticMethodDict</span><span class="p">[</span><span class="n">staticMethod</span><span class="p">]</span><span class="o">.</span><span class="n">__func__</span><span class="o">.</span><span class="n">__code__</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">pickledStaticMethods</span><span class="p">[</span><span class="n">staticMethod</span><span class="p">]</span> <span class="o">=</span> <span class="n">marshal</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">staticMethodDict</span><span class="p">[</span><span class="n">staticMethod</span><span class="p">]</span><span class="o">.</span><span class="n">__code__</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s">&quot;METHODS&quot;</span><span class="p">:</span> <span class="n">pickledMethods</span><span class="p">,</span> <span class="s">&quot;STATIC&quot;</span><span class="p">:</span> <span class="n">pickledStaticMethods</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;ID&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">methodDict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">staticMethodDict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">state</span><span class="p">[</span><span class="s">&quot;METHODS&quot;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">methodDict</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">FunctionType</span><span class="p">(</span><span class="n">code</span><span class="o">=</span><span class="n">marshal</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s">&quot;METHODS&quot;</span><span class="p">][</span><span class="n">method</span><span class="p">]),</span>
+                                                   <span class="nb">globals</span><span class="o">=</span><span class="nb">globals</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">staticMethod</span> <span class="ow">in</span> <span class="n">state</span><span class="p">[</span><span class="s">&quot;STATIC&quot;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">staticMethodDict</span><span class="p">[</span><span class="n">staticMethod</span><span class="p">]</span> <span class="o">=</span> <span class="n">FunctionType</span><span class="p">(</span><span class="n">code</span><span class="o">=</span><span class="n">marshal</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s">&quot;STATIC&quot;</span><span class="p">][</span><span class="n">staticMethod</span><span class="p">]),</span>
+                                                               <span class="nb">globals</span><span class="o">=</span><span class="nb">globals</span><span class="p">())</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">classMethods</span><span class="p">:</span>
+            <span class="n">classMethods</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">methodDict</span>
+            <span class="n">staticMethods</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">staticMethodDict</span>
+
+</div>
+<span class="k">def</span> <span class="nf">masterInit</span><span class="p">(</span><span class="n">workgroup</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="k">def</span> <span class="nf">workerInit</span><span class="p">():</span>
+    <span class="k">pass</span>
+
+
+<span class="k">def</span> <span class="nf">registerClassMaster</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controlls</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">controlls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">]:</span>
+        <span class="n">worker</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_REGISTER_NETCLASS</span><span class="p">,</span> <span class="p">{</span><span class="s">&quot;CLS&quot;</span><span class="p">:</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;CLS&quot;</span><span class="p">]})</span>
+
+
+<span class="k">def</span> <span class="nf">registerClassWorker</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">classMethods</span><span class="p">[</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;CLS&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;CLS&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">methodDict</span>
+    <span class="n">staticMethods</span><span class="p">[</span><span class="n">request</span><span class="p">[</span><span class="s">&quot;CLS&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;CLS&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">staticMethodDict</span>
+
+<span class="n">masterHandlers</span> <span class="o">=</span> <span class="p">{</span><span class="n">CMD_REGISTER_NETCLASS</span><span class="p">:</span> <span class="n">registerClassMaster</span><span class="p">}</span>
+<span class="n">workerHandlers</span> <span class="o">=</span> <span class="p">{</span><span class="n">CMD_REGISTER_NETCLASS</span><span class="p">:</span> <span class="n">registerClassWorker</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">NetWork 0.1-alpha documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Nikola Pavlović.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

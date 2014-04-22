@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -79,11 +77,8 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Event</span>
 
-<span class="kn">from</span> <span class="nn">.networking</span> <span class="kn">import</span> <span class="n">sendRequest</span>
-<span class="kn">from</span> <span class="nn">.commcodes</span> <span class="kn">import</span> <span class="n">CMD_WORKER_DIED</span>
+<span class="kn">from</span> <span class="nn">.request</span> <span class="kn">import</span> <span class="n">sendRequest</span>
 <span class="kn">from</span> <span class="nn">.cntcodes</span> <span class="kn">import</span> <span class="n">CNT_WORKERS</span>
-<span class="kn">from</span> <span class="nn">.request</span> <span class="kn">import</span> <span class="n">Request</span>
-<span class="kn">from</span> <span class="nn">.worker</span> <span class="kn">import</span> <span class="n">DeadWorkerError</span>
 
 
 <span class="n">CMD_SET_EVENT</span> <span class="o">=</span> <span class="n">b</span><span class="s">&quot;EVS&quot;</span>
@@ -124,46 +119,25 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">controls</span><span class="p">[</span><span class="n">CNT_EVENT_COUNT</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">controls</span><span class="p">[</span><span class="n">CNT_EVENT_COUNT</span><span class="p">]</span>
         <span class="n">events</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">Event</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_REGISTER_EVENT</span><span class="p">,</span>
-                                   <span class="p">{</span>
-                                       <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
-                                   <span class="p">})</span>
-
-    <span class="k">def</span> <span class="nf">waitOnWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">events</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">setOnWorker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_SET_EVENT</span><span class="p">,</span>
+        <span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_REGISTER_EVENT</span><span class="p">,</span>
                     <span class="p">{</span>
                         <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
                     <span class="p">})</span>
-
-    <span class="k">def</span> <span class="nf">waitOnMaster</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">events</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">setOnMaster</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">workgroup</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_SET_EVENT</span><span class="p">,</span>
-                                   <span class="p">{</span>
-                                       <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
-                                   <span class="p">})</span>
 
 <div class="viewcode-block" id="NWEvent.set"><a class="viewcode-back" href="../../NetWork.event.html#NetWork.event.NWEvent.set">[docs]</a>    <span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set the event, any task that called the :py:meth:`wait` method will be waken up</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">setOnMaster</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">setOnWorker</span><span class="p">()</span>
+        <span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_SET_EVENT</span><span class="p">,</span>
+                    <span class="p">{</span>
+                        <span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+                    <span class="p">})</span>
 </div>
 <div class="viewcode-block" id="NWEvent.wait"><a class="viewcode-back" href="../../NetWork.event.html#NetWork.event.NWEvent.wait">[docs]</a>    <span class="k">def</span> <span class="nf">wait</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Sleep until some task calls the :py:meth:`set` method</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">runningOnMaster</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">waitOnMaster</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">waitOnWorker</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">events</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
 </div>
     <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s">&quot;id&quot;</span><span class="p">]</span>
@@ -173,27 +147,17 @@
         <span class="k">return</span> <span class="p">{</span><span class="s">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s">&quot;workgroup&quot;</span><span class="p">:</span> <span class="bp">None</span><span class="p">}</span>
 
 </div>
-<span class="k">def</span> <span class="nf">setEventMaster</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
-    <span class="c">#A handler used by Workgroup.dispatcher</span>
+<span class="k">def</span> <span class="nf">setEventMaster</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controls</span><span class="p">):</span>
     <span class="nb">id</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">controls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">]:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">worker</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_SET_EVENT</span><span class="p">,</span> <span class="p">{</span><span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="p">})</span>
-        <span class="k">except</span> <span class="n">DeadWorkerError</span><span class="p">:</span>
-            <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span>
-                                  <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span> <span class="n">worker</span><span class="p">}))</span>
+        <span class="n">worker</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_SET_EVENT</span><span class="p">,</span> <span class="p">{</span><span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="p">})</span>
     <span class="n">events</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">()</span>
 
 
-<span class="k">def</span> <span class="nf">registerEventMaster</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controls</span><span class="p">,</span> <span class="n">commqueue</span><span class="p">):</span>
-    <span class="c">#A handler used by Workgroup.dispatcher</span>
+<span class="k">def</span> <span class="nf">registerEventMaster</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">controls</span><span class="p">):</span>
     <span class="nb">id</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">controls</span><span class="p">[</span><span class="n">CNT_WORKERS</span><span class="p">]:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">worker</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_REGISTER_EVENT</span><span class="p">,</span> <span class="p">{</span><span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="p">})</span>
-        <span class="k">except</span> <span class="n">DeadWorkerError</span><span class="p">:</span>
-            <span class="n">commqueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">Request</span><span class="p">(</span><span class="n">CMD_WORKER_DIED</span><span class="p">,</span>
-                                  <span class="p">{</span><span class="s">&quot;WORKER&quot;</span><span class="p">:</span> <span class="n">worker</span><span class="p">}))</span>
+        <span class="n">worker</span><span class="o">.</span><span class="n">sendRequest</span><span class="p">(</span><span class="n">CMD_REGISTER_EVENT</span><span class="p">,</span> <span class="p">{</span><span class="s">&quot;ID&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="p">})</span>
 
 
 <span class="k">def</span> <span class="nf">setEventWorker</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
@@ -203,6 +167,7 @@
 <span class="k">def</span> <span class="nf">registerEventWorker</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
     <span class="nb">id</span> <span class="o">=</span> <span class="n">request</span><span class="p">[</span><span class="s">&quot;ID&quot;</span><span class="p">]</span>
     <span class="n">events</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">Event</span><span class="p">()</span>
+
 
 <span class="n">masterHandlers</span> <span class="o">=</span> <span class="p">{</span><span class="n">CMD_SET_EVENT</span><span class="p">:</span> <span class="n">setEventMaster</span><span class="p">,</span> <span class="n">CMD_REGISTER_EVENT</span><span class="p">:</span> <span class="n">registerEventMaster</span><span class="p">}</span>
 <span class="n">workerHandlers</span> <span class="o">=</span> <span class="p">{</span><span class="n">CMD_SET_EVENT</span><span class="p">:</span> <span class="n">setEventWorker</span><span class="p">,</span> <span class="n">CMD_REGISTER_EVENT</span><span class="p">:</span> <span class="n">registerEventWorker</span><span class="p">}</span>
@@ -245,7 +210,7 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, Nikola Pavlović.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

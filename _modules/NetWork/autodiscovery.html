@@ -1,0 +1,213 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>NetWork.autodiscovery &mdash; NetWork 0.1-alpha documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1-alpha',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="NetWork 0.1-alpha documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">NetWork 0.1-alpha documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for NetWork.autodiscovery</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Autodiscovery lets the NetWork framework discovery worker computers for you.</span>
+<span class="sd">Instead of typing the addresses manualy, you just run :py:meth:`discoverWorkers` and pass its output</span>
+<span class="sd">to the Workgroup constructor.</span>
+
+<span class="sd">Currently, only discovery via UDP multicast is supported.</span>
+
+<span class="sd">Example</span>
+
+<span class="sd">.. code-block:: python</span>
+
+<span class="sd">    from NetWork import discoverWorkers, Workgroup</span>
+<span class="sd">    workerList = discoverWorkers(&quot;UDP&quot;, {&quot;TTL&quot;: 2, &quot;TIMEOUT&quot;: 5})</span>
+<span class="sd">    myWorkgorup = Workgroup(workerList)</span>
+<span class="sd">        ...do something...</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">.networking</span> <span class="kn">import</span> <span class="n">NWSocket</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Queue</span>
+
+<span class="n">DEFAULT_MULTICAST_TTL</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">DEFAULT_MULTICAST_GROUP</span> <span class="o">=</span> <span class="s">&quot;224.5.6.7&quot;</span>
+<span class="n">DEFAULT_MULTICAST_PORT</span> <span class="o">=</span> <span class="mi">32152</span>
+<span class="n">DEFAULT_DISCOVERY_TIMEOUT</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">DEFAULT_REPEAT_COUNT</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">DEFAULT_MULTICAST_MESSAGE</span> <span class="o">=</span> <span class="n">b</span><span class="s">&quot;DISCOVERY&quot;</span>
+<span class="n">DEFAULT_DISCOVERY_PORT</span> <span class="o">=</span> <span class="mi">32153</span>
+
+<span class="n">PARAM_CODE_TTL</span> <span class="o">=</span> <span class="s">&quot;TTL&quot;</span>
+<span class="n">PARAM_CODE_TIMEOUT</span> <span class="o">=</span> <span class="s">&quot;TIMEOUT&quot;</span>
+<span class="n">PARAM_CODE_REPEAT_COUNT</span> <span class="o">=</span> <span class="s">&quot;REPEAT&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">UDPDiscovery</span><span class="p">:</span>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">discoverWorkers</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="n">ttl</span> <span class="o">=</span> <span class="n">DEFAULT_MULTICAST_TTL</span>
+        <span class="k">if</span> <span class="n">PARAM_CODE_TTL</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+            <span class="n">ttl</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="n">PARAM_CODE_TTL</span><span class="p">]</span>
+        <span class="n">timeout</span> <span class="o">=</span> <span class="n">DEFAULT_DISCOVERY_TIMEOUT</span>
+        <span class="k">if</span> <span class="n">PARAM_CODE_TIMEOUT</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+            <span class="n">timeout</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="n">PARAM_CODE_TIMEOUT</span><span class="p">]</span>
+        <span class="n">repeatCount</span> <span class="o">=</span> <span class="n">DEFAULT_REPEAT_COUNT</span>
+        <span class="k">if</span> <span class="n">PARAM_CODE_REPEAT_COUNT</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+            <span class="n">repeatCount</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="n">PARAM_CODE_REPEAT_COUNT</span><span class="p">]</span>
+        <span class="n">responseServer</span> <span class="o">=</span> <span class="n">NWSocket</span><span class="p">()</span>
+        <span class="n">responseServer</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="n">DEFAULT_DISCOVERY_PORT</span><span class="p">)</span>
+        <span class="n">responseServer</span><span class="o">.</span><span class="n">setTimeout</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+        <span class="n">responseQueue</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
+        <span class="n">responseThread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">UDPDiscovery</span><span class="o">.</span><span class="n">responseListenerThread</span><span class="p">,</span>
+                                          <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">responseServer</span><span class="p">,</span> <span class="n">responseQueue</span><span class="p">))</span>
+        <span class="n">responseThread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="n">emiterSocket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+        <span class="n">emiterSocket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">IPPROTO_IP</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">IP_MULTICAST_TTL</span><span class="p">,</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;b&quot;</span><span class="p">,</span> <span class="n">ttl</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">repeatCount</span><span class="p">):</span>
+            <span class="n">emiterSocket</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">DEFAULT_MULTICAST_MESSAGE</span><span class="p">,</span> <span class="p">(</span><span class="n">DEFAULT_MULTICAST_GROUP</span><span class="p">,</span> <span class="n">DEFAULT_MULTICAST_PORT</span><span class="p">))</span>
+        <span class="n">responseThread</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+        <span class="n">addedIPs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">responseQueue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+            <span class="n">addedIPs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">responseQueue</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">addedIPs</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">responseListenerThread</span><span class="p">(</span><span class="n">listenerSocket</span><span class="p">,</span> <span class="n">responseQueue</span><span class="p">):</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">newConnection</span> <span class="o">=</span> <span class="n">listenerSocket</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
+                <span class="n">responseQueue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">newConnection</span><span class="o">.</span><span class="n">address</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">timeout</span><span class="p">:</span>
+                <span class="k">return</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">responseSenderThread</span><span class="p">():</span>
+        <span class="n">listenerSocket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+        <span class="n">listenerSocket</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MULTICAST_PORT</span><span class="p">))</span>
+        <span class="n">socketSettings</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;4sL&quot;</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">inet_aton</span><span class="p">(</span><span class="n">DEFAULT_MULTICAST_GROUP</span><span class="p">),</span> <span class="n">socket</span><span class="o">.</span><span class="n">INADDR_ANY</span><span class="p">)</span>
+        <span class="n">listenerSocket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">IPPROTO_IP</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">IP_ADD_MEMBERSHIP</span><span class="p">,</span> <span class="n">socketSettings</span><span class="p">)</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">,</span> <span class="n">address</span> <span class="o">=</span> <span class="n">listenerSocket</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+            <span class="n">responder</span> <span class="o">=</span> <span class="n">NWSocket</span><span class="p">()</span>
+            <span class="n">responder</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">address</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">DEFAULT_DISCOVERY_PORT</span><span class="p">)</span>
+            <span class="n">responder</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">b</span><span class="s">&quot;DISCOVERY_RESPONSE&quot;</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">startDiscoveryServer</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="n">responderThread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">UDPDiscovery</span><span class="o">.</span><span class="n">responseSenderThread</span><span class="p">)</span>
+        <span class="n">responderThread</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">responderThread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+
+<span class="n">discoveries</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;UDP&quot;</span><span class="p">:</span> <span class="n">UDPDiscovery</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="discoverWorkers"><a class="viewcode-back" href="../../NetWork.autodiscovery.html#NetWork.autodiscovery.discoverWorkers">[docs]</a><span class="k">def</span> <span class="nf">discoverWorkers</span><span class="p">(</span><span class="n">discoveryType</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{}):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Discover worker computers on the network. Returns a list of worker addresses which can then be passed</span>
+<span class="sd">    to :py:class:`Workgroup` constructor.</span>
+
+<span class="sd">    :type discoveryType: str</span>
+<span class="sd">    :param discoveryType: Method to use for discovery. Currently, only UDP multicast is available.</span>
+<span class="sd">    :type params: dict</span>
+<span class="sd">    :param params: Additional parameters for the discovery method</span>
+
+<span class="sd">        * UDP:</span>
+
+<span class="sd">          * :py:data:`&quot;TTL&quot;` time to live, how many routers will the discovery packet go through</span>
+<span class="sd">            :py:data:`1` usually means local network</span>
+<span class="sd">          * :py:data:`&quot;TIMEOUT&quot;` how long (in seconds) to wait for a response from workers, default is :py:data:`2`</span>
+<span class="sd">          * :py:data:`&quot;REPEAT&quot;` how many times to send a discovery packet, increase if the packet loss is high</span>
+
+
+<span class="sd">    :return: a list of discovered worker addresses</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">discoveries</span><span class="p">[</span><span class="n">discoveryType</span><span class="p">]</span><span class="o">.</span><span class="n">discoverWorkers</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+</div>
+<span class="k">def</span> <span class="nf">startDiscoveryServer</span><span class="p">(</span><span class="n">discoveryType</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{}):</span>
+    <span class="n">discoveries</span><span class="p">[</span><span class="n">discoveryType</span><span class="p">]</span><span class="o">.</span><span class="n">startDiscoveryServer</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">NetWork 0.1-alpha documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Nikola Pavlović.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
