@@ -6,4 +6,5 @@ from .manager import NWManager as Manager
 from .semaphore import NWSemaphore as Semaphore
 from .netprint import netPrint
 from .netobject import NetObject
-__all__=[Workgroup, Event, Queue, Lock, Manager, Semaphore, netPrint, NetObject]
+from .autodiscovery import discoverWorkers
+__all__=[Workgroup, Event, Queue, Lock, Manager, Semaphore, netPrint, NetObject, discoverWorkers]

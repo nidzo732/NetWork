@@ -3,7 +3,7 @@ This program runs on worker computers and waits for requests from the master.
 It is responsible for running tasks and passing them data sent from the master.
 
 When it starts, it waits for the first message from the master, which should
-be COMMCODE_CHECKALIVE and it responds with COMCODE_ISALIVE.
+be COMCODE_CHECKALIVE and it responds with COMCODE_ISALIVE.
 Once the master is registered the mainloop starts receiving messages
 from the master. The messages start with a 3 letter code that determines
 their type, the mainloop reads that code and runs a handler function associated
@@ -25,6 +25,7 @@ import NetWork.task as task
 from NetWork.request import Request
 from NetWork import networking
 from NetWork.args import getArgs
+from NetWork.autodiscovery import startDiscoveryServer
 import NetWork.request
 
 
@@ -78,6 +79,8 @@ if __name__ == "__main__":
         listenerSocket.close()
         exit()
     masterRegistered = False
+    if args.auto_discovery:
+        startDiscoveryServer(args.auto_discovery_method)
     while not masterRegistered:
         try:
             requestSocket = listenerSocket.accept()

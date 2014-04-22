@@ -76,11 +76,14 @@ class NWSocketTCP:
         self.internalSocket.settimeout(DEFAULT_SOCKET_TIMEOUT)
         self.address = address
 
-    def listen(self):
+    def listen(self, port=DEFAULT_TCP_PORT):
         #listen for incomming connections
         self.internalSocket.settimeout(None)
-        self.internalSocket.bind((DEFAULT_LISTENING_ADDRESS, DEFAULT_TCP_PORT))
+        self.internalSocket.bind((DEFAULT_LISTENING_ADDRESS, port))
         self.internalSocket.listen(LISTEN_QUEUE_LENGTH)
+
+    def setTimeout(self, timeout):
+        self.internalSocket.settimeout(timeout)
 
     def recv(self):
         #safely receive all sent data
@@ -113,12 +116,12 @@ class NWSocketTCP:
         message = dataLength + MESSAGE_LENGTH_DELIMITER + data
         self.internalSocket.sendall(message)
 
-    def connect(self, address):
+    def connect(self, address, port=DEFAULT_TCP_PORT):
         #connect to the address
         self.address = address
-        self.internalSocket.connect((address, DEFAULT_TCP_PORT))
+        self.internalSocket.connect((address, port))
 
-    def accept(self):
+    def accept(self, timeout=0):
         #accept a connection request and return a communication socket
         requestData = self.internalSocket.accept()
         return NWSocket(requestData[0], requestData[1][0])

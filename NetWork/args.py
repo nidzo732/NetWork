@@ -32,6 +32,10 @@ def getArgs():
 
     networkArgs.add_argument("--local_key_password",
                              help="Password used to decrypt private key")
+    argumentParser.add_argument("--auto_discovery", "-a", action="store_true",
+                                help="Enable this worker to be automatically discovered by the master")
+    argumentParser.add_argument("--auto_discovery_method", default="UDP",
+                                help="Method used for autodiscovery, only UDP multicast is currently supported")
     args = argumentParser.parse_args()
     netArgs = {}
     
