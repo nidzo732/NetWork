@@ -55,6 +55,9 @@ from .request import sendRequest, sendRequestWithResponse
 CMD_REGISTER_MANAGER = b"MNR"
 CMD_SET_MANAGER_ITEM = b"MNS"
 CMD_GET_MANAGER_ITEM = b"MNG"
+CMD_CHECK_IF_MANAGER_CONTAINS = b"CON"
+CMD_GET_MANAGER_LENGTH = b"LGH"
+
 MANAGER_KEYERROR = b"KERR"
 CNT_MANAGER_COUNT = "MANAGER_COUNT"
 
@@ -163,6 +166,20 @@ class NWManager:
         """
         return ManagerNamespace(self.id, self.workgroup)
 
+    def __contains__(self, item):
+        return sendRequestWithResponse(CMD_CHECK_IF_MANAGER_CONTAINS,
+                                       {
+                                           "ID": self.id,
+                                           "ITEM": item
+                                       })
+
+    def __len__(self):
+        return sendRequestWithResponse(CMD_GET_MANAGER_LENGTH,
+                                       {
+                                           "ID": self.id
+
+                                       })
+
     def __setstate__(self, state):
         self.id = state["id"]
         self.workgroup = state["workgroup"]
@@ -228,5 +245,15 @@ def getManagerItemMaster(request, controlls):
         value = MANAGER_KEYERROR
     request.respond(value)
 
-masterHandlers = {CMD_SET_MANAGER_ITEM: setManagerItemMaster, CMD_GET_MANAGER_ITEM: getManagerItemMaster}
+
+def checkIfManagerContains(request, controlls):
+    request.respond(request["ITEM"] in managers[request["ID"]])
+
+
+def getManagerLength(request, controlls):
+    request.respond(len(managers[request["ID"]]))
+
+
+masterHandlers = {CMD_SET_MANAGER_ITEM: setManagerItemMaster, CMD_GET_MANAGER_ITEM: getManagerItemMaster,
+                  CMD_GET_MANAGER_LENGTH: getManagerLength, CMD_CHECK_IF_MANAGER_CONTAINS: checkIfManagerContains}
 workerHandlers = {}
