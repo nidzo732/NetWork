@@ -55,6 +55,7 @@ from .request import sendRequest, sendRequestWithResponse
 CMD_REGISTER_MANAGER = b"MNR"
 CMD_SET_MANAGER_ITEM = b"MNS"
 CMD_GET_MANAGER_ITEM = b"MNG"
+CMD_GET_MANAGER_KEYS = b"MNK"
 CMD_CHECK_IF_MANAGER_CONTAINS = b"CON"
 CMD_GET_MANAGER_LENGTH = b"LGH"
 
@@ -166,19 +167,6 @@ class NWManager:
         """
         return ManagerNamespace(self.id, self.workgroup)
 
-    def __contains__(self, item):
-        return sendRequestWithResponse(CMD_CHECK_IF_MANAGER_CONTAINS,
-                                       {
-                                           "ID": self.id,
-                                           "ITEM": item
-                                       })
-
-    def __len__(self):
-        return sendRequestWithResponse(CMD_GET_MANAGER_LENGTH,
-                                       {
-                                           "ID": self.id
-
-                                       })
 
     def __setstate__(self, state):
         self.id = state["id"]
@@ -202,6 +190,27 @@ class ManagerDict(NWManager):
         if initial:
             for key in initial:
                 self.setItem(key, initial[key])
+
+    def __contains__(self, item):
+        return sendRequestWithResponse(CMD_CHECK_IF_MANAGER_CONTAINS,
+                                       {
+                                           "ID": self.id,
+                                           "ITEM": item
+                                       })
+
+    def __len__(self):
+        return sendRequestWithResponse(CMD_GET_MANAGER_LENGTH,
+                                       {
+                                           "ID": self.id
+                                       })
+
+    def keys(self):
+        return sendRequestWithResponse(CMD_GET_MANAGER_KEYS,
+                                       {
+                                           "ID":self.id
+                                       })
+    def __iter__(self):
+        return iter(self.keys())
 
     def __getitem__(self, key):
         return self.getItem(key)
@@ -246,6 +255,10 @@ def getManagerItemMaster(request, controlls):
     request.respond(value)
 
 
+def getManagerKeys(request, controlls):
+    request.respond(managers[request["ID"]].keys())
+
+
 def checkIfManagerContains(request, controlls):
     request.respond(request["ITEM"] in managers[request["ID"]])
 
@@ -255,5 +268,6 @@ def getManagerLength(request, controlls):
 
 
 masterHandlers = {CMD_SET_MANAGER_ITEM: setManagerItemMaster, CMD_GET_MANAGER_ITEM: getManagerItemMaster,
-                  CMD_GET_MANAGER_LENGTH: getManagerLength, CMD_CHECK_IF_MANAGER_CONTAINS: checkIfManagerContains}
+                  CMD_GET_MANAGER_LENGTH: getManagerLength, CMD_CHECK_IF_MANAGER_CONTAINS: checkIfManagerContains,
+                  CMD_GET_MANAGER_KEYS: getManagerKeys,}
 workerHandlers = {}
