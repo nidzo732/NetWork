@@ -36,11 +36,14 @@ class Task:
         return state
 
     def __setstate__(self, state):
-        self.args = state["args"]
-        self.kwargs = state["kwargs"]
-        self.target = FunctionType(code=marshal.loads(state["target"]),
-                                   globals=globals())
-        self.id = state["id"]
+        try:
+            self.args = state["args"]
+            self.kwargs = state["kwargs"]
+            self.target = FunctionType(code=marshal.loads(state["target"]),
+                                       globals=globals())
+            self.id = state["id"]
+        except ValueError:
+            print("Failed to demarshal a function, this probably means that Python versions are different")
 
 
 class TaskHandler:

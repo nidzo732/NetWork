@@ -38,7 +38,7 @@ def receiveSocketData(socket, commqueue, controls):
 def deathHandler(request, controls):
     deadWorkerSet = controls[CNT_DEAD_WORKERS]
     for worker in deadWorkerSet:
-        if worker.id == request["WORKER"].id:
+        if worker == request["WORKER"]:
             break
     else:
         controls[CNT_WORKER_COUNT] -= 1

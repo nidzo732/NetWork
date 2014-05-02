@@ -167,7 +167,6 @@ class NWManager:
         """
         return ManagerNamespace(self.id, self.workgroup)
 
-
     def __setstate__(self, state):
         self.id = state["id"]
         self.workgroup = state["workgroup"]
@@ -207,8 +206,9 @@ class ManagerDict(NWManager):
     def keys(self):
         return sendRequestWithResponse(CMD_GET_MANAGER_KEYS,
                                        {
-                                           "ID":self.id
+                                           "ID": self.id
                                        })
+
     def __iter__(self):
         return iter(self.keys())
 
@@ -269,5 +269,5 @@ def getManagerLength(request, controlls):
 
 masterHandlers = {CMD_SET_MANAGER_ITEM: setManagerItemMaster, CMD_GET_MANAGER_ITEM: getManagerItemMaster,
                   CMD_GET_MANAGER_LENGTH: getManagerLength, CMD_CHECK_IF_MANAGER_CONTAINS: checkIfManagerContains,
-                  CMD_GET_MANAGER_KEYS: getManagerKeys,}
+                  CMD_GET_MANAGER_KEYS: getManagerKeys, }
 workerHandlers = {}

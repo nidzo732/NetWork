@@ -167,11 +167,17 @@ class NetObject:
         self.methodDict = {}
         self.staticMethodDict = {}
         for method in state["METHODS"]:
-            self.methodDict[method] = FunctionType(code=marshal.loads(state["METHODS"][method]),
-                                                   globals=globals())
+            try:
+                self.methodDict[method] = FunctionType(code=marshal.loads(state["METHODS"][method]),
+                                                       globals=globals())
+            except ValueError:
+                print("Demarshaling failed, this probably due to different python versions")
         for staticMethod in state["STATIC"]:
-            self.staticMethodDict[staticMethod] = FunctionType(code=marshal.loads(state["STATIC"][staticMethod]),
-                                                               globals=globals())
+            try:
+                self.staticMethodDict[staticMethod] = FunctionType(code=marshal.loads(state["STATIC"][staticMethod]),
+                                                                   globals=globals())
+            except:
+                print("Demarshaling failed, this probably due to different python versions")
         if not self.id in classMethods:
             classMethods[self.id] = self.methodDict
             staticMethods[self.id] = self.staticMethodDict
